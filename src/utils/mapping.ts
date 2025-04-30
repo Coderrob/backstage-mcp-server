@@ -1,4 +1,4 @@
-import { z, ZodTypeAny, ZodObject, ZodRawShape } from 'zod';
+import { ZodTypeAny, ZodObject, ZodRawShape } from 'zod';
 
 /**
  * Converts a ZodType into a ZodRawShape if possible.

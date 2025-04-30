@@ -1,10 +1,13 @@
-import { TOOL_METADATA_KEY } from '../decorators/tool.decorator';
-import { IToolRegistrationContext, ToolMetadata } from '../types';
-import { isFunction } from './guards';
 import { join } from 'path';
 import { readdir, writeFile } from 'fs/promises';
-import { validateToolMetadata } from './validate-tool-metadata';
-import { toZodRawShape } from './mapping';
+
+import {
+  ToolFactory,
+  ToolMetadata,
+  ToolMetadataProvider,
+  ToolRegistrar,
+  ToolValidator,
+} from '../types';
 
 interface ToolManifestEntry {
   name: string;
@@ -17,43 +20,32 @@ export class ToolLoader {
 
   constructor(
     private readonly directory: string,
-    private readonly context: IToolRegistrationContext
+    private readonly factory: ToolFactory,
+    private readonly registrar: ToolRegistrar,
+    private readonly validator: ToolValidator,
+    private readonly metadataProvider: ToolMetadataProvider
   ) {}
 
-  async registerAllTools(): Promise<void> {
-    const toolFiles = await this.findToolFiles();
-
-    for (const file of toolFiles) {
-      const loadedClass = await this.loadToolClass(join(this.directory, file));
-
-      if (!loadedClass) {
-        this.logInvalidTool(file);
+  async registerAll(): Promise<void> {
+    const files = await this.findToolFiles();
+    for (const file of files) {
+      const toolPath = join(this.directory, file);
+      const toolClass = await this.factory.loadTool(toolPath);
+      if (!toolClass) {
+        this.warnInvalid(file);
         continue;
       }
 
-      const metadata = Reflect.getMetadata(
-        TOOL_METADATA_KEY,
-        loadedClass
-      ) as ToolMetadata;
+      const metadata = this.metadataProvider.getMetadata(toolClass);
       if (!metadata) {
-        this.logInvalidTool(file);
+        this.warnInvalid(file);
         continue;
       }
 
-      validateToolMetadata(metadata, file);
-
-      this.registerTool(loadedClass, metadata);
+      this.validator.validate(metadata, file);
+      this.registrar.register(toolClass, metadata);
       this.addToManifest(metadata);
     }
-  }
-
-  private addToManifest({
-    name,
-    paramsSchema,
-    description,
-  }: ToolMetadata): void {
-    const params = paramsSchema ? Object.keys(paramsSchema) : [];
-    this.manifest.push({ name, description, params });
   }
 
   async exportManifest(filePath: string): Promise<void> {
@@ -67,33 +59,16 @@ export class ToolLoader {
     );
   }
 
-  private async loadToolClass(filePath: string): Promise<any> {
-    try {
-      const module = await import(filePath);
-      const loadedClass =
-        module.default ?? Object.values(module).find(isFunction);
-      return loadedClass;
-    } catch (error) {
-      console.error(`Failed to load tool from ${filePath}`, error);
-      return undefined;
-    }
+  private addToManifest({
+    name,
+    description,
+    paramsSchema,
+  }: ToolMetadata): void {
+    const params = paramsSchema ? Object.keys(paramsSchema) : [];
+    this.manifest.push({ name, description, params });
   }
 
-  private registerTool(
-    loadedClass: any,
-    { name, description, paramsSchema }: ToolMetadata
-  ) {
-    this.context.server.tool(
-      name,
-      description,
-      toZodRawShape(paramsSchema),
-      async (args, extra) => {
-        return loadedClass.execute(args, { ...this.context, extra });
-      }
-    );
-  }
-
-  private logInvalidTool(file: string): void {
+  private warnInvalid(file: string): void {
     console.warn(`No valid tool class with @Tool decorator found in ${file}`);
   }
 }

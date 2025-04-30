@@ -1,5 +1,6 @@
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { IApiResponse } from '../types';
+import { isBigInt } from './guards';
 
 /**
  *
@@ -14,6 +15,6 @@ export function JsonToTextResponse<T extends IApiResponse>(
   data: T
 ): CallToolResult {
   return TextResponse(
-    JSON.stringify(data, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
+    JSON.stringify(data, (_k, v) => (isBigInt(v) ? v.toString() : v), 2)
   );
 }
