@@ -16,10 +16,7 @@ export function validateToolMetadata(
 } {
   const parsed = toolMetadataSchema.safeParse(metadata);
   if (!parsed.success) {
-    console.error(
-      `Invalid tool metadata in ${fileName}:`,
-      parsed.error.format()
-    );
+    console.error(`Invalid tool metadata in ${fileName}:`, parsed.error.format());
     throw new Error(`Tool metadata validation failed for ${fileName}`);
   }
 }

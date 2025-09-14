@@ -1,7 +1,10 @@
+import 'reflect-metadata';
+
 import { z } from 'zod';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
+
 import { Tool } from '../decorators/tool.decorator';
+import { ApiStatus, IToolRegistrationContext } from '../types';
+import { formatLocation, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
 
 const paramsSchema = z.object({
   locationRef: z.string(),
@@ -13,11 +16,18 @@ const paramsSchema = z.object({
   paramsSchema,
 })
 export class GetLocationByRefTool {
-  static async execute(
-    { locationRef }: z.infer<typeof paramsSchema>,
-    context: IToolRegistrationContext
-  ) {
-    const result = await context.catalogClient.getLocationByRef(locationRef);
-    return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+  static async execute({ locationRef }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+    try {
+      const result = await context.catalogClient.getLocationByRef(locationRef);
+      return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatLocation);
+    } catch (error) {
+      console.error('Error getting location by ref:', error);
+      return JsonToTextResponse({
+        status: ApiStatus.ERROR,
+        data: {
+          message: `Failed to get location by ref: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      });
+    }
   }
 }

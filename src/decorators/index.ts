@@ -1,1 +1,2 @@
-export { TOOL_METADATA_KEY, Tool } from './tool.decorator';
+/* eslint-disable import/no-unused-modules */
+export { Tool, TOOL_METADATA_KEY } from './tool.decorator';

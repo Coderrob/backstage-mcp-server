@@ -1,7 +1,10 @@
+import 'reflect-metadata';
+
 import { z } from 'zod';
+
+import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
-import { Tool } from '../decorators/tool.decorator';
 
 const paramsSchema = z.object({
   locationId: z.string(),
@@ -13,11 +16,18 @@ const paramsSchema = z.object({
   paramsSchema,
 })
 export class RemoveLocationByIdTool {
-  static async execute(
-    { locationId }: z.infer<typeof paramsSchema>,
-    context: IToolRegistrationContext
-  ) {
-    await context.catalogClient.removeLocationById(locationId);
-    return JsonToTextResponse({ status: ApiStatus.SUCCESS });
+  static async execute({ locationId }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+    try {
+      await context.catalogClient.removeLocationById(locationId);
+      return JsonToTextResponse({ status: ApiStatus.SUCCESS });
+    } catch (error) {
+      console.error('Error removing location by ID:', error);
+      return JsonToTextResponse({
+        status: ApiStatus.ERROR,
+        data: {
+          message: `Failed to remove location by ID: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      });
+    }
   }
 }

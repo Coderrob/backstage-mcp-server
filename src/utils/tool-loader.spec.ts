@@ -1,5 +1,4 @@
 import { ToolLoader } from './tool-loader';
-import { join } from 'path';
 
 describe('ToolLoader', () => {
   const validTool = {
@@ -28,13 +27,13 @@ describe('ToolLoader', () => {
     getMetadata: jest.fn(),
   };
 
-  const loader = new ToolLoader(
-    join(__dirname, '__fixtures__'),
-    mockFactory,
-    mockRegistrar,
-    mockValidator,
-    mockMetadataProvider
-  );
+  class TestToolLoader extends ToolLoader {
+    protected async findToolFiles(): Promise<string[]> {
+      return ['test.tool.js'];
+    }
+  }
+
+  const loader = new TestToolLoader('', mockFactory, mockRegistrar, mockValidator, mockMetadataProvider);
 
   afterEach(() => jest.clearAllMocks());
 
@@ -55,13 +54,7 @@ describe('ToolLoader', () => {
     mockFactory.loadTool.mockResolvedValue(validTool);
     mockMetadataProvider.getMetadata.mockReturnValue(validMetadata);
     await loader.registerAll();
-    expect(mockValidator.validate).toHaveBeenCalledWith(
-      validMetadata,
-      expect.any(String)
-    );
-    expect(mockRegistrar.register).toHaveBeenCalledWith(
-      validTool,
-      validMetadata
-    );
+    expect(mockValidator.validate).toHaveBeenCalledWith(validMetadata, expect.any(String));
+    expect(mockRegistrar.register).toHaveBeenCalledWith(validTool, validMetadata);
   });
 });

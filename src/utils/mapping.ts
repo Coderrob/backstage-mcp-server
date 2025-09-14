@@ -1,4 +1,4 @@
-import { ZodTypeAny, ZodObject, ZodRawShape } from 'zod';
+import { ZodObject, ZodRawShape, ZodTypeAny } from 'zod';
 
 /**
  * Converts a ZodType into a ZodRawShape if possible.
@@ -9,7 +9,5 @@ export function toZodRawShape<T extends ZodTypeAny>(schema: T): ZodRawShape {
   if (schema instanceof ZodObject) {
     return schema.shape;
   }
-  throw new TypeError(
-    'Provided schema is not a ZodObject and cannot be converted to a ZodRawShape.'
-  );
+  throw new TypeError('Provided schema is not a ZodObject and cannot be converted to a ZodRawShape.');
 }

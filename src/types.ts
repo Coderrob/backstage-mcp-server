@@ -1,10 +1,9 @@
-import { CatalogApi } from '@backstage/catalog-client';
-import {
-  McpServer,
-  RegisteredTool,
-} from '@modelcontextprotocol/sdk/server/mcp.js';
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+/* eslint-disable import/no-unused-modules */
+import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+
+import { BackstageCatalogApi } from './api/backstage-catalog-api';
 
 export enum ApiStatus {
   SUCCESS = 'success',
@@ -21,12 +20,10 @@ export interface IApiDataResponse<T> extends IApiResponse {
 
 export interface IToolRegistrationContext {
   server: McpServer;
-  catalogClient: CatalogApi;
+  catalogClient: BackstageCatalogApi;
 }
 
-export type ToolRegistration = (
-  context: IToolRegistrationContext
-) => RegisteredTool;
+export type ToolRegistration = (context: IToolRegistrationContext) => RegisteredTool;
 
 export interface ToolMetadata {
   name: string;

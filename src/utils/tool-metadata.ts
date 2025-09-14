@@ -1,8 +1,8 @@
-import { TOOL_METADATA_KEY } from '../decorators/tool.decorator';
+import { ToolClass, toolMetadataMap } from '../decorators/tool.decorator';
 import { ToolMetadata, ToolMetadataProvider } from '../types';
 
 export class ReflectToolMetadataProvider implements ToolMetadataProvider {
-  getMetadata(toolClass: object): ToolMetadata | undefined {
-    return Reflect.getMetadata(TOOL_METADATA_KEY, toolClass);
+  getMetadata(toolClass: ToolClass | object): ToolMetadata | undefined {
+    return toolMetadataMap.get(toolClass as ToolClass);
   }
 }
