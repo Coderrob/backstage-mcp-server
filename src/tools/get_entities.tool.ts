@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { BackstageCatalogApi } from '../api/backstage-catalog-api';
-import { inputSanitizer } from '../auth/input-sanitizer';
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { logger, ToolErrorHandler } from '../utils';
-import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
+import { BackstageCatalogApi } from '../api';
+import { inputSanitizer } from '../auth';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { formatEntityList, FormattedTextResponse, JsonToTextResponse, logger, ToolErrorHandler } from '../utils';
 
 const entityFilterSchema = z.object({
   key: z.string(),
@@ -23,14 +23,17 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_entities',
+  name: ToolName.GET_ENTITIES,
   description: 'Get all entities in the catalog. Supports pagination and JSON:API formatting for enhanced LLM context.',
   paramsSchema,
 })
 export class GetEntitiesTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_entities',
+      ToolName.GET_ENTITIES,
       'get_entities',
       async (req: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         logger.debug('Executing get_entities tool', { request: req });

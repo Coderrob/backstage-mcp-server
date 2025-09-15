@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const paramsSchema = z.object({
   type: z.string(),
@@ -13,14 +13,17 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'add_location',
+  name: ToolName.ADD_LOCATION,
   description: 'Create a new location in the catalog.',
   paramsSchema: paramsSchema,
 })
 export class AddLocationTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'add_location',
+      ToolName.ADD_LOCATION,
       'addLocation',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         const result = await ctx.catalogClient.addLocation(args);

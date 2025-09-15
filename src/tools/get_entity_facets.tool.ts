@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const entityFilterSchema = z.object({
   key: z.string(),
@@ -18,14 +18,17 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_entity_facets',
+  name: ToolName.GET_ENTITY_FACETS,
   description: 'Get entity facets for a specified field.',
   paramsSchema,
 })
 export class GetEntityFacetsTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_entity_facets',
+      ToolName.GET_ENTITY_FACETS,
       'getEntityFacets',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         const result = await ctx.catalogClient.getEntityFacets(args);

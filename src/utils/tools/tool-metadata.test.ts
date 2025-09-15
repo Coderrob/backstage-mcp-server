@@ -1,6 +1,6 @@
-import { toolMetadataMap } from '../decorators/tool.decorator';
-import { IToolMetadata } from '../types';
-import { ReflectToolMetadataProvider } from './tool-metadata';
+import { toolMetadataMap } from '../../decorators/tool.decorator';
+import { IToolMetadata } from '../../types';
+import { ReflectToolMetadataProvider } from './tool-metadata.js';
 
 describe('ReflectToolMetadataProvider', () => {
   let provider: ReflectToolMetadataProvider;

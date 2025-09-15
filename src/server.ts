@@ -1,22 +1,31 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
-import { BackstageCatalogApi } from './api/backstage-catalog-api';
-import { type AuthConfig } from './auth/auth-manager';
+import { BackstageCatalogApi } from './api';
+import { AuthConfig } from './auth/auth-manager';
 import { IToolRegistrationContext } from './types';
-import { logger } from './utils';
-import { DefaultToolFactory } from './utils/tool-factory';
-import { ToolLoader } from './utils/tool-loader';
-import { ReflectToolMetadataProvider } from './utils/tool-metadata';
-import { DefaultToolRegistrar } from './utils/tool-registrar';
-import { DefaultToolValidator } from './utils/tool-validator';
+import {
+  DefaultToolFactory,
+  DefaultToolRegistrar,
+  DefaultToolValidator,
+  isNonEmptyString,
+  isString,
+  logger,
+  ReflectToolMetadataProvider,
+  ToolLoader,
+} from './utils';
 
 export async function startServer(): Promise<void> {
   logger.info('Starting Backstage MCP Server');
 
+  // ESM doesn't provide a __dirname variable - synthesize one from import.meta.url
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
   const baseUrl = process.env.BACKSTAGE_BASE_URL;
-  if (typeof baseUrl !== 'string' || baseUrl.length === 0) {
+  if (!isString(baseUrl) || baseUrl.length === 0) {
     logger.error('BACKSTAGE_BASE_URL environment variable is required');
     throw new Error('BACKSTAGE_BASE_URL environment variable is required');
   }
@@ -50,7 +59,7 @@ export async function startServer(): Promise<void> {
 
   if (process.env.NODE_ENV !== 'production') {
     logger.info('Exporting tools manifest for development');
-    await toolLoader.exportManifest('./tools-manifest.json');
+    await toolLoader.exportManifest(join(__dirname, '..', 'tools-manifest.json'));
   }
 
   logger.debug('Setting up transport and connecting server');
@@ -70,17 +79,10 @@ function buildAuthConfig(): AuthConfig {
   const serviceAccountKey = process.env.BACKSTAGE_SERVICE_ACCOUNT_KEY;
 
   // Determine authentication type based on available environment variables
-  if (typeof token === 'string' && token.length > 0) {
+  if (isNonEmptyString(token)) {
     return { type: 'bearer', token };
   }
-  if (
-    typeof clientId === 'string' &&
-    clientId.length > 0 &&
-    typeof clientSecret === 'string' &&
-    clientSecret.length > 0 &&
-    typeof tokenUrl === 'string' &&
-    tokenUrl.length > 0
-  ) {
+  if (isNonEmptyString(clientId) && isNonEmptyString(clientSecret) && isNonEmptyString(tokenUrl)) {
     return {
       type: 'oauth',
       clientId,
@@ -88,10 +90,10 @@ function buildAuthConfig(): AuthConfig {
       tokenUrl,
     };
   }
-  if (typeof apiKey === 'string' && apiKey.length > 0) {
+  if (isNonEmptyString(apiKey)) {
     return { type: 'api-key', apiKey };
   }
-  if (typeof serviceAccountKey === 'string' && serviceAccountKey.length > 0) {
+  if (isNonEmptyString(serviceAccountKey)) {
     return { type: 'service-account', serviceAccountKey };
   }
 

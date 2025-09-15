@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 
 import { stringifyEntityRef } from '@backstage/catalog-model';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -19,17 +19,20 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_entities_by_refs',
+  name: ToolName.GET_ENTITIES_BY_REFS,
   description: 'Get multiple entities by their refs.',
   paramsSchema,
 })
 export class GetEntitiesByRefsTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_entities_by_refs',
+      ToolName.GET_ENTITIES_BY_REFS,
       'getEntitiesByRefs',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        const entityRefs = args.entityRefs.map((ref) => (typeof ref === 'string' ? ref : stringifyEntityRef(ref)));
+        const entityRefs = args.entityRefs.map((ref) => (isString(ref) ? ref : stringifyEntityRef(ref)));
         const result = await ctx.catalogClient.getEntitiesByRefs({
           entityRefs,
         });

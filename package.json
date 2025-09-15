@@ -1,5 +1,6 @@
 {
   "author": "Robert Lindley",
+  "type": "module",
   "dependencies": {
     "@backstage/catalog-client": "^1.9.1",
     "@backstage/catalog-model": "^1.7.3",

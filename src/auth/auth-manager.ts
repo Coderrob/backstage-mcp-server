@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 
-import { logger } from '../utils';
+import { isNonEmptyString, isNumber, logger } from '../utils';
 
 export interface AuthConfig {
   type: 'bearer' | 'oauth' | 'api-key' | 'service-account';
@@ -92,7 +92,7 @@ export class AuthManager {
   }
 
   private async handleBearerToken(): Promise<TokenInfo> {
-    if (typeof this.config.token !== 'string' || this.config.token.length === 0) {
+    if (!isNonEmptyString(this.config.token)) {
       throw new Error('Bearer token not configured');
     }
     return {
@@ -103,21 +103,14 @@ export class AuthManager {
 
   private async handleOAuthRefresh(): Promise<TokenInfo> {
     if (
-      typeof this.config.clientId !== 'string' ||
-      this.config.clientId.length === 0 ||
-      typeof this.config.clientSecret !== 'string' ||
-      this.config.clientSecret.length === 0 ||
-      typeof this.config.tokenUrl !== 'string' ||
-      this.config.tokenUrl.length === 0
+      !isNonEmptyString(this.config.clientId) ||
+      !isNonEmptyString(this.config.clientSecret) ||
+      !isNonEmptyString(this.config.tokenUrl)
     ) {
       throw new Error('OAuth configuration incomplete');
     }
 
-    if (
-      !this.tokenInfo ||
-      typeof this.tokenInfo.refreshToken !== 'string' ||
-      this.tokenInfo.refreshToken.length === 0
-    ) {
+    if (!isNonEmptyString(this.tokenInfo?.refreshToken)) {
       throw new Error('No refresh token available for OAuth');
     }
 
@@ -132,7 +125,7 @@ export class AuthManager {
   }
 
   private async handleApiKey(): Promise<TokenInfo> {
-    if (typeof this.config.apiKey !== 'string' || this.config.apiKey.length === 0) {
+    if (!isNonEmptyString(this.config.apiKey)) {
       throw new Error('API key not configured');
     }
     return {
@@ -142,7 +135,7 @@ export class AuthManager {
   }
 
   private async handleServiceAccount(): Promise<TokenInfo> {
-    if (typeof this.config.serviceAccountKey !== 'string' || this.config.serviceAccountKey.length === 0) {
+    if (!isNonEmptyString(this.config.serviceAccountKey)) {
       throw new Error('Service account key not configured');
     }
 
@@ -162,15 +155,13 @@ export class AuthManager {
       token_type?: string;
     };
     const expiresAt =
-      typeof data.expires_in === 'number' && !Number.isNaN(data.expires_in)
-        ? Date.now() + data.expires_in * 1000
-        : undefined;
+      isNumber(data.expires_in) && !Number.isNaN(data.expires_in) ? Date.now() + data.expires_in * 1000 : undefined;
 
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt,
-      tokenType: typeof data.token_type === 'string' && data.token_type.length > 0 ? data.token_type : 'Bearer',
+      tokenType: isNonEmptyString(data.token_type) ? data.token_type : 'Bearer',
     };
   }
 

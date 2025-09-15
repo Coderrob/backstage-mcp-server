@@ -1,4 +1,4 @@
-import { RawToolMetadata } from '../types/tool-metadata';
+import { RawToolMetadata } from '../../types';
 import { validateToolMetadata } from './validate-tool-metadata';
 
 describe('validateToolMetadata', () => {

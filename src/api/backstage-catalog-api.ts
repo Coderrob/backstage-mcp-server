@@ -18,21 +18,17 @@ import {
 import { CompoundEntityRef, Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import axios, { AxiosInstance, isAxiosError } from 'axios';
 
-import { type AuthConfig } from '../auth';
-import { AuthManager } from '../auth/auth-manager';
-import { securityAuditor, SecurityEventType } from '../auth/security-auditor';
-import { CacheManager } from '../cache/cache-manager';
-import { logger } from '../utils';
-import { isString } from '../utils/guards';
-import { JsonApiDocument, JsonApiFormatter } from '../utils/jsonapi-formatter';
-import { PaginationHelper, PaginationParams } from '../utils/pagination-helper';
+import { AuthConfig, AuthManager, securityAuditor } from '../auth';
+import { CacheManager } from '../cache';
+import { IBackstageCatalogApi, JsonApiDocument, PaginationParams, SecurityEventType } from '../types';
+import { isNonEmptyString, isNumber, isString, JsonApiFormatter, logger, PaginationHelper } from '../utils';
 
 interface BackstageCatalogApiOptions {
   baseUrl: string;
   auth: AuthConfig;
 }
 
-export class BackstageCatalogApi {
+export class BackstageCatalogApi implements IBackstageCatalogApi {
   private readonly client: AxiosInstance;
   private readonly authManager: AuthManager;
   private readonly cacheManager: CacheManager;
@@ -60,16 +56,13 @@ export class BackstageCatalogApi {
 
         // Add authorization header if provided
         const authHeader = await this.authManager.getAuthorizationHeader();
-        if (typeof authHeader === 'string' && authHeader.length > 0) {
+        if (isNonEmptyString(authHeader)) {
           config.headers.Authorization = authHeader;
         }
 
         // Log security event with explicit fallbacks
-        const resource = typeof config.url === 'string' && config.url.length > 0 ? String(config.url) : 'unknown';
-        const action =
-          typeof config.method === 'string' && config.method.length > 0
-            ? String(config.method).toUpperCase()
-            : 'UNKNOWN';
+        const resource = isNonEmptyString(config.url) ? String(config.url) : 'unknown';
+        const action = isNonEmptyString(config.method) ? String(config.method).toUpperCase() : 'UNKNOWN';
 
         securityAuditor.logEvent({
           type: SecurityEventType.AUTH_SUCCESS,
@@ -85,20 +78,11 @@ export class BackstageCatalogApi {
         let resource: string = 'unknown';
         let action = 'UNKNOWN';
         if (isAxiosError(error)) {
-          resource =
-            typeof error.config?.url === 'string' && error.config?.url!.length > 0
-              ? String(error.config!.url)
-              : resource;
-          action =
-            typeof error.config?.method === 'string' && error.config?.method!.length > 0
-              ? String(error.config!.method).toUpperCase()
-              : action;
+          resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : resource;
+          action = isNonEmptyString(error.config?.method) ? String(error.config!.method).toUpperCase() : action;
         } else {
-          resource = typeof config.url === 'string' && config.url.length > 0 ? String(config.url) : resource;
-          action =
-            typeof config.method === 'string' && config.method.length > 0
-              ? String(config.method).toUpperCase()
-              : action;
+          resource = isNonEmptyString(config.url) ? String(config.url) : resource;
+          action = isNonEmptyString(config.method) ? String(config.method).toUpperCase() : action;
         }
 
         securityAuditor.logEvent({
@@ -118,14 +102,10 @@ export class BackstageCatalogApi {
       (error) => {
         // Log security events for certain error types. Narrow to axios errors first
         if (isAxiosError(error)) {
-          const resource =
-            typeof error.config?.url === 'string' && error.config?.url!.length > 0
-              ? String(error.config!.url)
-              : 'unknown';
-          const action =
-            typeof error.config?.method === 'string' && error.config?.method!.length > 0
-              ? String(error.config!.method).toUpperCase()
-              : 'UNKNOWN';
+          const resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : 'unknown';
+          const action = isNonEmptyString(error.config?.method)
+            ? String(error.config!.method).toUpperCase()
+            : 'UNKNOWN';
 
           if (error.response?.status === 401) {
             securityAuditor.logEvent({
@@ -148,7 +128,7 @@ export class BackstageCatalogApi {
           // Fallback for non-axios errors that may still have a response shape
           const maybe = error as unknown as { response?: { status?: number } } | undefined;
           const maybeResponse = maybe && maybe.response ? maybe.response : undefined;
-          if (maybeResponse !== undefined && typeof maybeResponse.status === 'number' && maybeResponse.status === 401) {
+          if (isNumber(maybeResponse?.status) && maybeResponse.status === 401) {
             securityAuditor.logEvent({
               type: SecurityEventType.UNAUTHORIZED_ACCESS,
               resource: 'unknown',
@@ -156,11 +136,7 @@ export class BackstageCatalogApi {
               success: false,
               errorMessage: 'Unauthorized access',
             });
-          } else if (
-            maybeResponse !== undefined &&
-            typeof maybeResponse.status === 'number' &&
-            maybeResponse.status === 429
-          ) {
+          } else if (isNumber(maybeResponse?.status) && maybeResponse.status === 429) {
             securityAuditor.logEvent({
               type: SecurityEventType.RATE_LIMIT_EXCEEDED,
               resource: 'unknown',
@@ -344,7 +320,6 @@ export class BackstageCatalogApi {
    */
   async getEntitiesJsonApi(request?: GetEntitiesRequest & PaginationParams): Promise<JsonApiDocument> {
     const entities = await this.getEntities(request);
-
     // Convert to JSON:API format
     return JsonApiFormatter.entitiesToDocument(entities.items ?? []);
   }

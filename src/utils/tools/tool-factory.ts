@@ -1,16 +1,15 @@
 import { pathToFileURL } from 'url';
 
-import { IToolConstructor, IToolFactory } from '../types';
-import { logger } from '../utils';
-import { isFunction } from '../utils/guards';
+import { ITool, IToolFactory } from '../../types';
+import { isFunction, logger } from '../core';
 
 export class DefaultToolFactory implements IToolFactory {
-  async loadTool(filePath: string): Promise<IToolConstructor | undefined> {
+  async loadTool(filePath: string): Promise<ITool | undefined> {
     try {
       logger.debug(`Loading tool module from ${filePath}`);
       const modulePath = filePath.replace(/\.ts$/, '.js');
       const module = await import(pathToFileURL(modulePath).href);
-      const toolClass = Object.values(module).find(isFunction) as unknown as IToolConstructor;
+      const toolClass = Object.values(module).find(isFunction) as unknown as ITool;
       if (toolClass != null) {
         logger.debug(`Successfully loaded tool class from ${filePath}`);
       } else {

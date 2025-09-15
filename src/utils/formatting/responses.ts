@@ -1,8 +1,9 @@
 /* eslint-disable import/no-unused-modules */
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { ApiStatus, IApiResponse } from '../types';
-import { isBigInt } from './guards';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+import { ApiStatus, IApiResponse, ResponseMessage } from '../../types';
+import { isBigInt } from '../core';
 
 type ContentItem = {
   type: 'text';
@@ -104,14 +105,14 @@ export function FormattedTextResponse<T extends IApiResponse>(
   let text: string;
 
   if (isErrorResponse(data)) {
-    text = `❌ Error: ${data.data?.message || 'Unknown error occurred'}`;
+    text = `${ResponseMessage.ERROR_PREFIX}: ${data.data?.message || ResponseMessage.UNKNOWN_ERROR}`;
   } else if (formatter) {
     text = formatter(data);
   } else {
     // Default formatter for success responses
     const successData = data as IApiSuccessResponse;
     const hasSuccessData = successData.data !== undefined && successData.data !== null;
-    text = `✅ Success${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`;
+    text = `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`;
   }
 
   return TextResponse(text);
@@ -142,7 +143,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
     const hasSuccessData = successData.data !== undefined && successData.data !== null;
     content.push({
       type: 'text',
-      text: `✅ Success${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`,
+      text: `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`,
     });
   }
 
@@ -167,7 +168,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
   const count = entities.length;
 
   if (count === 0) {
-    return '✅ Success: No entities found';
+    return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.NO_ENTITIES_FOUND}`;
   }
 
   // Group by kind
@@ -190,7 +191,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
  */
 export function formatEntity(data: IApiSuccessResponse): string {
   if (data.data === undefined || data.data === null) {
-    return '✅ Success: Entity not found';
+    return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.ENTITY_NOT_FOUND}`;
   }
 
   const entity = data.data as Record<string, unknown>;
@@ -210,7 +211,7 @@ export function formatEntity(data: IApiSuccessResponse): string {
  */
 export function formatLocation(data: IApiSuccessResponse): string {
   if (data.data === undefined || data.data === null) {
-    return '✅ Success: Location not found';
+    return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.LOCATION_NOT_FOUND}`;
   }
 
   const location = data.data as Record<string, unknown>;
@@ -219,11 +220,11 @@ export function formatLocation(data: IApiSuccessResponse): string {
   const target = location.target !== undefined && location.target !== null ? String(location.target) : 'unknown';
   const tags = Array.isArray(location.tags as unknown) ? (location.tags as string[]) : [];
 
-  return `✅ Location found:
-📍 ID: ${id}
-🎯 Type: ${type}
-🔗 Target: ${target}
-🏷️ Tags: ${tags.length > 0 ? tags.join(', ') : 'None'}`;
+  return `Location found:
+  ID: ${id}
+  Type: ${type}
+  Target: ${target}
+  Tags: ${tags.length > 0 ? tags.join(', ') : 'None'}`;
 }
 
 /**

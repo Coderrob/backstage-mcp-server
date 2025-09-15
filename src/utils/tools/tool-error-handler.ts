@@ -1,9 +1,11 @@
 /* eslint-disable import/no-unused-modules */
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { IToolRegistrationContext } from '../types';
-import { logger } from './logger';
-import { createSimpleError, createStandardError, ErrorType } from './responses';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { isObject } from 'util';
+
+import { IToolRegistrationContext } from '../../types';
+import { logger } from '../core';
+import { createSimpleError, createStandardError, ErrorType } from '../formatting';
 
 /**
  * Tool execution wrapper that provides standardized error handling
@@ -120,7 +122,7 @@ export class ToolErrorHandler {
    * Sanitizes arguments for logging (removes sensitive data)
    */
   private static sanitizeArgs(args: unknown): unknown {
-    if (typeof args !== 'object' || args === null) {
+    if (!isObject(args)) {
       return args;
     }
 

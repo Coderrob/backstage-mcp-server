@@ -1,6 +1,7 @@
 import { Bindings, Logger, LoggerOptions, pino, stdTimeFunctions } from 'pino';
 
-import { ILogger } from '../types';
+import { ILogger } from '../../types';
+import { isString } from './guards';
 
 // Ensure Node.js globals are available
 declare const process: {
@@ -8,13 +9,13 @@ declare const process: {
   argv: string[];
 };
 
-export class PinoLogger implements ILogger {
+class PinoLogger implements ILogger {
   private logger: Logger;
 
   constructor(options: LoggerOptions = {}) {
     // Detect if we're running in Jest for pretty printing
     const isJest =
-      typeof process.env.JEST_WORKER_ID !== 'undefined' ||
+      isString(process.env.JEST_WORKER_ID) ||
       process.env.NODE_ENV === 'test' ||
       process.argv.some((arg: string) => arg.includes('jest'));
 

@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const paramsSchema = z.object({
   entity: z.any(),
@@ -13,14 +13,17 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'validate_entity',
+  name: ToolName.VALIDATE_ENTITY,
   description: 'Validate an entity structure.',
   paramsSchema,
 })
 export class ValidateEntityTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'validate_entity',
+      ToolName.VALIDATE_ENTITY,
       'validateEntity',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         const result = await ctx.catalogClient.validateEntity(args.entity, args.locationRef);

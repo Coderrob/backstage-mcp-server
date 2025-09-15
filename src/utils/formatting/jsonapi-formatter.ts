@@ -2,53 +2,8 @@
 // JSON:API specification implementation for richer LLM context
 // https://jsonapi.org/
 
-export interface JsonApiResource {
-  id: string;
-  type: string;
-  attributes?: Record<string, unknown>;
-  relationships?: Record<string, JsonApiRelationship>;
-  links?: Record<string, string>;
-  meta?: Record<string, unknown>;
-}
-
-export interface JsonApiRelationship {
-  data?: JsonApiResourceIdentifier | JsonApiResourceIdentifier[];
-  links?: Record<string, string>;
-  meta?: Record<string, unknown>;
-}
-
-export interface JsonApiResourceIdentifier {
-  id: string;
-  type: string;
-  meta?: Record<string, unknown>;
-}
-
-export interface JsonApiDocument {
-  data?: JsonApiResource | JsonApiResource[];
-  errors?: JsonApiError[];
-  meta?: Record<string, unknown>;
-  links?: Record<string, string>;
-  included?: JsonApiResource[];
-  jsonapi?: {
-    version: string;
-    meta?: Record<string, unknown>;
-  };
-}
-
-export interface JsonApiError {
-  id?: string;
-  links?: Record<string, string>;
-  status?: string;
-  code?: string;
-  title?: string;
-  detail?: string;
-  source?: {
-    pointer?: string;
-    parameter?: string;
-    header?: string;
-  };
-  meta?: Record<string, unknown>;
-}
+import { DefaultValue, EntityField, JsonApiDocument, JsonApiError, JsonApiResource } from '../../types';
+import { isNonEmptyString, isObject, isString, isStringOrNumber } from '../core';
 
 export class JsonApiFormatter {
   private static readonly JSON_API_VERSION = '1.0';
@@ -57,11 +12,13 @@ export class JsonApiFormatter {
    * Convert Backstage entity to JSON:API resource
    */
   static entityToResource(entity: Record<string, unknown>): JsonApiResource {
-    const kind =
-      typeof entity.kind === 'string' && entity.kind.length > 0 ? String(entity.kind).toLowerCase() : 'entity';
-    const metaNamespace =
-      typeof entity.namespace === 'string' && entity.namespace.length > 0 ? String(entity.namespace) : 'default';
-    const metaName = typeof entity.name === 'string' && entity.name.length > 0 ? String(entity.name) : undefined;
+    const kind = isNonEmptyString(entity[EntityField.KIND])
+      ? String(entity[EntityField.KIND]).toLowerCase()
+      : DefaultValue.ENTITY;
+    const metaNamespace = isNonEmptyString(entity[EntityField.NAMESPACE])
+      ? String(entity[EntityField.NAMESPACE])
+      : 'default';
+    const metaName = isNonEmptyString(entity[EntityField.NAME]) ? String(entity[EntityField.NAME]) : undefined;
 
     const resource: JsonApiResource = {
       id: this.getEntityId(entity),
@@ -70,13 +27,13 @@ export class JsonApiFormatter {
       links: {},
       meta: {
         namespace: metaNamespace,
-        kind: entity.kind,
+        kind: entity[EntityField.KIND],
         name: metaName,
       },
     };
 
     // Add core attributes
-    const metadata = (entity.metadata as Record<string, unknown> | undefined) ?? undefined;
+    const metadata = (entity[EntityField.METADATA] as Record<string, unknown> | undefined) ?? undefined;
     if (metadata) {
       const metadataTyped = metadata as Record<string, unknown>;
       const rawTags: unknown = metadataTyped['tags'];
@@ -84,31 +41,20 @@ export class JsonApiFormatter {
       const rawLabels: unknown = metadataTyped['labels'];
       const rawTitle: unknown = metadataTyped['title'];
       const rawDescription: unknown = metadataTyped['description'];
-      const rawSpec: unknown = entity.spec;
+      const rawSpec: unknown = entity[EntityField.SPEC];
 
       const tags = Array.isArray(rawTags) ? (rawTags as unknown[]) : [];
-      const annotations =
-        rawAnnotations !== undefined &&
-        rawAnnotations !== null &&
-        typeof rawAnnotations === 'object' &&
-        !Array.isArray(rawAnnotations)
-          ? (rawAnnotations as Record<string, unknown>)
-          : {};
-      const labels =
-        rawLabels !== undefined && rawLabels !== null && typeof rawLabels === 'object' && !Array.isArray(rawLabels)
-          ? (rawLabels as Record<string, unknown>)
-          : {};
+      const annotations = isObject(rawAnnotations) ? rawAnnotations : {};
+      const labels = isObject(rawLabels) ? rawLabels : {};
       const spec =
-        rawSpec !== undefined && rawSpec !== null && typeof rawSpec === 'object' && !Array.isArray(rawSpec)
-          ? (rawSpec as Record<string, unknown>)
-          : {};
+        rawSpec !== undefined && rawSpec !== null && isObject(rawSpec) ? (rawSpec as Record<string, unknown>) : {};
 
       const title = rawTitle;
       const description = rawDescription;
 
       resource.attributes = {
-        title: typeof title === 'string' ? title : undefined,
-        description: typeof description === 'string' ? description : undefined,
+        title: isString(title) ? title : undefined,
+        description: isString(description) ? description : undefined,
         tags,
         annotations,
         labels,
@@ -122,18 +68,14 @@ export class JsonApiFormatter {
       resource.relationships = {};
       relations.forEach((relation: unknown) => {
         const rel = relation as Record<string, unknown> | undefined;
-        if (rel && typeof rel === 'object' && !Array.isArray(rel)) {
-          const relKey =
-            typeof rel.type === 'string' && rel.type.length > 0 ? String(rel.type).toLowerCase() : 'unknown';
+        if (rel && isObject(rel)) {
+          const relKey = isNonEmptyString(rel.type) ? String(rel.type).toLowerCase() : 'unknown';
           const targetRef = rel.targetRef as Record<string, unknown> | undefined;
-          if (!targetRef || typeof targetRef !== 'object' || Array.isArray(targetRef)) return;
+          if (!targetRef || !isObject(targetRef)) return;
           resource.relationships![relKey] = {
             data: {
               id: this.getEntityId(targetRef),
-              type:
-                typeof targetRef.kind === 'string' && targetRef.kind.length > 0
-                  ? String(targetRef.kind).toLowerCase()
-                  : 'entity',
+              type: isNonEmptyString(targetRef.kind) ? String(targetRef.kind).toLowerCase() : 'entity',
             },
           };
         }
@@ -141,9 +83,8 @@ export class JsonApiFormatter {
     }
 
     // Add self link
-    const ns =
-      typeof entity.namespace === 'string' && entity.namespace.length > 0 ? String(entity.namespace) : 'default';
-    const nm = typeof entity.name === 'string' && entity.name.length > 0 ? String(entity.name) : '';
+    const ns = isNonEmptyString(entity.namespace) ? String(entity.namespace) : 'default';
+    const nm = isNonEmptyString(entity.name) ? String(entity.name) : '';
     resource.links = {
       self: `/api/catalog/entities/${resource.type}/${ns}/${nm}`,
     };
@@ -220,7 +161,7 @@ export class JsonApiFormatter {
    * Convert location to JSON:API resource
    */
   static locationToResource(location: Record<string, unknown>): JsonApiResource {
-    const id = typeof location['id'] === 'string' || typeof location['id'] === 'number' ? String(location['id']) : '';
+    const id = isStringOrNumber(location['id']) ? String(location['id']) : '';
     const tags = Array.isArray(location['tags'] as unknown) ? (location['tags'] as unknown[]) : [];
     return {
       id: String(id),
@@ -248,7 +189,7 @@ export class JsonApiFormatter {
       status: status ?? '500',
       code: code ?? 'INTERNAL_ERROR',
       title: 'Internal Server Error',
-      detail: typeof error === 'string' ? error : error.message,
+      detail: isString(error) ? error : error.message,
     };
 
     return {
@@ -262,9 +203,12 @@ export class JsonApiFormatter {
   /**
    * Create success document with meta information
    */
-  static createSuccessDocument(data: unknown, meta?: Record<string, unknown>): JsonApiDocument {
+  static createSuccessDocument(
+    data: JsonApiResource | JsonApiResource[] | undefined,
+    meta?: Record<string, unknown>
+  ): JsonApiDocument {
     return {
-      data: data as JsonApiResource | JsonApiResource[] | undefined,
+      data: data,
       meta: meta,
       jsonapi: {
         version: this.JSON_API_VERSION,
@@ -273,12 +217,9 @@ export class JsonApiFormatter {
   }
 
   private static getEntityId(entity: Record<string, unknown>): string {
-    const namespace =
-      typeof entity['namespace'] === 'string' && entity['namespace'].length > 0
-        ? String(entity['namespace'])
-        : 'default';
-    const kind = typeof entity['kind'] === 'string' && entity['kind'].length > 0 ? String(entity['kind']) : 'unknown';
-    const name = typeof entity['name'] === 'string' && entity['name'].length > 0 ? String(entity['name']) : 'unnamed';
+    const namespace = isNonEmptyString(entity['namespace']) ? String(entity['namespace']) : 'default';
+    const kind = isNonEmptyString(entity['kind']) ? String(entity['kind']) : 'unknown';
+    const name = isNonEmptyString(entity['name']) ? String(entity['name']) : 'unnamed';
     return `${String(kind).toLowerCase()}:${namespace}:${name}`;
   }
 }

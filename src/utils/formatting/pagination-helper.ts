@@ -1,3 +1,5 @@
+import { isNumber } from '../core/guards';
+
 /* eslint-disable import/no-unused-modules */
 export interface PaginationParams {
   limit?: number;
@@ -45,7 +47,7 @@ export class PaginationHelper {
     return {
       limit,
       offset,
-      page: typeof page === 'number' && !Number.isNaN(page) && page > 0 ? page : Math.floor(offset / limit) + 1,
+      page: isNumber(page) && !Number.isNaN(page) && page > 0 ? page : Math.floor(offset / limit) + 1,
     };
   }
 
@@ -95,7 +97,7 @@ export class PaginationHelper {
     const links: Record<string, string> = {};
 
     // Helper to build URL with params
-    const buildUrl = (params: Record<string, string | number>) => {
+    const buildUrl = (params: Record<string, string | number>): string => {
       const url = new URL(baseUrl, 'http://localhost'); // Base URL for URL construction
       Object.entries({ ...queryParams, ...params }).forEach(([key, value]) => {
         url.searchParams.set(key, String(value));

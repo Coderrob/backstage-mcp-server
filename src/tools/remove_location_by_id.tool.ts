@@ -1,25 +1,28 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const paramsSchema = z.object({
   locationId: z.string(),
 });
 
 @Tool({
-  name: 'remove_location_by_id',
+  name: ToolName.REMOVE_LOCATION_BY_ID,
   description: 'Remove a location from the catalog by id.',
   paramsSchema,
 })
 export class RemoveLocationByIdTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'remove_location_by_id',
+      ToolName.REMOVE_LOCATION_BY_ID,
       'removeLocationById',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         await ctx.catalogClient.removeLocationById(args.locationId);

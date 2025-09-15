@@ -1,21 +1,20 @@
 import { z } from 'zod';
 
-import type { BackstageCatalogApi } from '../api/backstage-catalog-api';
-import { IToolConstructor, IToolMetadata, IToolRegistrationContext } from '../types';
-import { logger } from './index';
+import { IBackstageCatalogApi, ITool, IToolMetadata, IToolRegistrationContext } from '../../types';
+import { logger } from '../core/logger';
 import { DefaultToolRegistrar } from './tool-registrar';
 
-jest.mock('./index', () => ({
+jest.mock('../core/logger', () => ({
   logger: {
     debug: jest.fn(),
   },
 }));
-jest.mock('./mapping', () => ({
+jest.mock('../core/mapping', () => ({
   toZodRawShape: jest.fn(() => 'zodShape'),
 }));
 
 describe('DefaultToolRegistrar', () => {
-  const mockTool: IToolConstructor = {
+  const mockTool: ITool = {
     execute: jest.fn(),
   };
   const mockServerTool = jest.fn();
@@ -24,7 +23,7 @@ describe('DefaultToolRegistrar', () => {
   } as unknown as IToolRegistrationContext['server'] & { tool: jest.Mock };
   const mockContext: IToolRegistrationContext = {
     server: mockServer,
-    catalogClient: {} as unknown as BackstageCatalogApi,
+    catalogClient: {} as unknown as IBackstageCatalogApi,
   };
   const toolMetadata: IToolMetadata = {
     name: 'testTool',
@@ -32,7 +31,7 @@ describe('DefaultToolRegistrar', () => {
     paramsSchema: z.object({ foo: z.string() }),
   };
 
-  beforeEach(() => {
+  afterEach(() => {
     jest.clearAllMocks();
   });
 

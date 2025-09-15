@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 
 import { stringifyEntityRef } from '@backstage/catalog-model';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -19,17 +19,20 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_entity_ancestors',
+  name: ToolName.GET_ENTITY_ANCESTORS,
   description: 'Get the ancestry tree for an entity.',
   paramsSchema,
 })
 export class GetEntityAncestorsTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_entity_ancestors',
+      ToolName.GET_ENTITY_ANCESTORS,
       'getEntityAncestors',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        const entityRef = typeof args.entityRef === 'string' ? args.entityRef : stringifyEntityRef(args.entityRef);
+        const entityRef = isString(args.entityRef) ? args.entityRef : stringifyEntityRef(args.entityRef);
         const result = await ctx.catalogClient.getEntityAncestors({
           entityRef,
         });

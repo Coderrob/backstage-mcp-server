@@ -1,18 +1,5 @@
-/* eslint-disable import/no-unused-modules */
-import { logger } from '../utils/logger';
-
-export interface CacheEntry<T = unknown> {
-  data: T;
-  timestamp: number;
-  ttl: number; // Time to live in milliseconds
-  hits: number;
-}
-
-export interface CacheConfig {
-  defaultTtl: number; // Default TTL in milliseconds
-  maxSize: number; // Maximum number of entries
-  cleanupInterval: number; // Cleanup interval in milliseconds
-}
+import { CacheConfig, CacheEntry } from '../types';
+import { isNumber, logger } from '../utils';
 
 export class CacheManager {
   private cache = new Map<string, CacheEntry>();
@@ -63,12 +50,12 @@ export class CacheManager {
    */
   set<T>(key: string, value: T, ttl?: number): void {
     // Evict oldest entries if at capacity
-    if (typeof this.config.maxSize === 'number' && this.cache.size >= this.config.maxSize) {
+    if (isNumber(this.config.maxSize) && this.cache.size >= this.config.maxSize) {
       logger.debug('Cache at capacity, evicting oldest entry');
       this.evictOldest();
     }
 
-    const finalTtl = typeof ttl === 'number' && !Number.isNaN(ttl) ? ttl : this.config.defaultTtl;
+    const finalTtl = isNumber(ttl) && !Number.isNaN(ttl) ? ttl : this.config.defaultTtl;
     this.cache.set(key, {
       data: value,
       timestamp: Date.now(),
@@ -180,6 +167,3 @@ export class CacheManager {
     }
   }
 }
-
-// Global cache instance
-export const cacheManager = new CacheManager();

@@ -1,25 +1,28 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const paramsSchema = z.object({
   uid: z.string().uuid(),
 });
 
 @Tool({
-  name: 'remove_entity_by_uid',
+  name: ToolName.REMOVE_ENTITY_BY_UID,
   description: 'Remove an entity by UID.',
   paramsSchema,
 })
 export class RemoveEntityByUidTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'remove_entity_by_uid',
+      ToolName.REMOVE_ENTITY_BY_UID,
       'removeEntityByUid',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         await ctx.catalogClient.removeEntityByUid(args.uid);

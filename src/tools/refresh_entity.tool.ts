@@ -1,25 +1,28 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const paramsSchema = z.object({
   entityRef: z.string(),
 });
 
 @Tool({
-  name: 'refresh_entity',
+  name: ToolName.REFRESH_ENTITY,
   description: 'Trigger a refresh of an entity.',
   paramsSchema,
 })
 export class RefreshEntityTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'refresh_entity',
+      ToolName.REFRESH_ENTITY,
       'refreshEntity',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         await ctx.catalogClient.refreshEntity(args.entityRef);

@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 
 import { stringifyEntityRef } from '@backstage/catalog-model';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils/tool-error-handler';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
+import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -19,17 +19,20 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_location_by_entity',
+  name: ToolName.GET_LOCATION_BY_ENTITY,
   description: 'Get the location associated with an entity.',
   paramsSchema,
 })
 export class GetLocationByEntityTool {
-  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    request: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_location_by_entity',
+      ToolName.GET_LOCATION_BY_ENTITY,
       'getLocationByEntity',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        const ref = typeof args.entityRef === 'string' ? args.entityRef : stringifyEntityRef(args.entityRef);
+        const ref = isString(args.entityRef) ? args.entityRef : stringifyEntityRef(args.entityRef);
         const result = await ctx.catalogClient.getLocationByEntity(ref);
         return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },

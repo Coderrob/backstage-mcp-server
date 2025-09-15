@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { inputSanitizer } from '../auth/input-sanitizer';
-import { Tool } from '../decorators/tool.decorator';
-import { ApiStatus, IToolRegistrationContext } from '../types';
+import { inputSanitizer } from '../auth';
+import { Tool } from '../decorators';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
 import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils';
 
 const compoundEntityRefSchema = z.object({
@@ -18,14 +19,17 @@ const paramsSchema = z.object({
 });
 
 @Tool({
-  name: 'get_entity_by_ref',
+  name: ToolName.GET_ENTITY_BY_REF,
   description: 'Get a single entity by its reference (namespace/name or compound ref).',
   paramsSchema,
 })
 export class GetEntityByRefTool {
-  static async execute({ entityRef }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+  static async execute(
+    { entityRef }: z.infer<typeof paramsSchema>,
+    context: IToolRegistrationContext
+  ): Promise<CallToolResult> {
     return ToolErrorHandler.executeTool(
-      'get_entity_by_ref',
+      ToolName.GET_ENTITY_BY_REF,
       'get_entity_by_ref',
       async ({ entityRef: ref }: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         // Sanitize entity reference input

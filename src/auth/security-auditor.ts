@@ -1,27 +1,6 @@
 import { z } from 'zod';
 
-export enum SecurityEventType {
-  AUTH_SUCCESS = 'auth_success',
-  AUTH_FAILURE = 'auth_failure',
-  TOKEN_REFRESH = 'token_refresh',
-  RATE_LIMIT_EXCEEDED = 'rate_limit_exceeded',
-  INVALID_REQUEST = 'invalid_request',
-  UNAUTHORIZED_ACCESS = 'unauthorized_access',
-}
-
-export interface SecurityEvent {
-  id: string;
-  timestamp: Date;
-  type: SecurityEventType;
-  userId?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  resource: string;
-  action: string;
-  success: boolean;
-  details?: Record<string, unknown>;
-  errorMessage?: string;
-}
+import { ISecurityEvent, SecurityEventType } from '../types';
 
 const SecurityEventSchema = z.object({
   id: z.string(),
@@ -38,11 +17,11 @@ const SecurityEventSchema = z.object({
 });
 
 export class SecurityAuditor {
-  private events: SecurityEvent[] = [];
+  private events: ISecurityEvent[] = [];
   private readonly maxEvents = 10000; // Keep last 10k events in memory
 
-  logEvent(event: Omit<SecurityEvent, 'id' | 'timestamp'>): void {
-    const fullEvent: SecurityEvent = {
+  logEvent(event: Omit<ISecurityEvent, 'id' | 'timestamp'>): void {
+    const fullEvent: ISecurityEvent = {
       ...event,
       id: this.generateEventId(),
       timestamp: new Date(),
@@ -61,7 +40,7 @@ export class SecurityAuditor {
     // Log to console in development (use warn so eslint no-console rule permits it)
     if (process.env.NODE_ENV !== 'production') {
       console.warn(
-        `[SECURITY] ${event.type}: ${event.resource} - ${event.action} (${event.success ? 'SUCCESS' : 'FAILED'})`
+        `[SECURITY] ${event.type}: ${event.resource} - ${event.action} (${event.success === true ? 'SUCCESS' : 'FAILED'})`
       );
     }
 
@@ -73,7 +52,7 @@ export class SecurityAuditor {
     return `sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private persistEvent(_event: SecurityEvent): void {
+  private persistEvent(_event: ISecurityEvent): void {
     // In a real implementation, this would:
     // - Send to SIEM system
     // - Write to audit database
@@ -81,7 +60,7 @@ export class SecurityAuditor {
     // For now, we'll just keep in memory
   }
 
-  getEvents(filter?: { type?: SecurityEventType; userId?: string; since?: Date; limit?: number }): SecurityEvent[] {
+  getEvents(filter?: { type?: SecurityEventType; userId?: string; since?: Date; limit?: number }): ISecurityEvent[] {
     let filtered = this.events;
 
     if (filter && filter.type !== undefined) {
@@ -110,7 +89,7 @@ export class SecurityAuditor {
     authSuccessCount: number;
     authFailureCount: number;
     rateLimitCount: number;
-    recentEvents: SecurityEvent[];
+    recentEvents: ISecurityEvent[];
   } {
     const recentEvents = this.events.slice(-100); // Last 100 events
 

@@ -1,4 +1,4 @@
-import { RawToolMetadata, rawToolMetadataSchema } from '../types/tool-metadata';
+import { RawToolMetadata, rawToolMetadataSchema } from '../../types';
 
 export function validateToolMetadata(metadata: unknown, fileName: string): asserts metadata is RawToolMetadata {
   const parsed = rawToolMetadataSchema.safeParse(metadata);

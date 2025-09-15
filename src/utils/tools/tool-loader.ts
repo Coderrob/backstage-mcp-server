@@ -1,8 +1,9 @@
 import { readdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { z } from 'zod';
 
-import { IToolFactory, IToolMetadata, IToolMetadataProvider, IToolRegistrar, IToolValidator } from '../types';
-import { logger } from '../utils';
+import { IToolFactory, IToolMetadata, IToolMetadataProvider, IToolRegistrar, IToolValidator } from '../../types';
+import { logger } from '../core';
 
 interface ToolManifestEntry {
   name: string;
@@ -11,7 +12,7 @@ interface ToolManifestEntry {
 }
 
 export class ToolLoader {
-  private readonly manifest: ToolManifestEntry[] = [];
+  protected readonly manifest: ToolManifestEntry[] = [];
 
   constructor(
     private readonly directory: string,
@@ -63,13 +64,10 @@ export class ToolLoader {
     return files.filter((file) => file.endsWith('.tool.ts') || file.endsWith('.tool.js'));
   }
 
-  private addToManifest({ name, description, paramsSchema }: IToolMetadata): void {
+  protected addToManifest({ name, description, paramsSchema }: IToolMetadata): void {
     const params =
-      paramsSchema !== undefined &&
-      paramsSchema !== null &&
-      typeof paramsSchema === 'object' &&
-      !Array.isArray(paramsSchema)
-        ? Object.keys(paramsSchema as unknown as Record<string, unknown>)
+      paramsSchema !== undefined && paramsSchema !== null && paramsSchema instanceof z.ZodObject
+        ? Object.keys(paramsSchema.shape)
         : [];
     this.manifest.push({ name, description, params });
   }

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { isObject, isString } from '../utils';
+
 export class InputSanitizer {
   private readonly maxStringLength = 10000;
   private readonly maxArrayLength = 1000;
@@ -9,7 +11,7 @@ export class InputSanitizer {
    * Sanitizes a string input
    */
   sanitizeString(input: string, fieldName: string): string {
-    if (typeof input !== 'string') {
+    if (!isString(input)) {
       throw new Error(`Invalid input type for ${fieldName}: expected string, got ${typeof input}`);
     }
 
@@ -58,11 +60,11 @@ export class InputSanitizer {
   sanitizeEntityRef(
     entityRef: string | { kind: string; namespace: string; name: string }
   ): string | { kind: string; namespace: string; name: string } {
-    if (typeof entityRef === 'string') {
+    if (isString(entityRef)) {
       return this.sanitizeString(entityRef, 'entityRef');
     }
 
-    if (typeof entityRef === 'object' && entityRef !== null) {
+    if (isObject(entityRef)) {
       return {
         kind: this.sanitizeString(entityRef.kind, 'entityRef.kind'),
         namespace: this.sanitizeString(entityRef.namespace, 'entityRef.namespace'),
@@ -134,4 +136,5 @@ export class InputSanitizer {
 }
 
 // Global input sanitizer instance
+/* eslint-disable-next-line import/no-unused-modules */
 export const inputSanitizer = new InputSanitizer();
