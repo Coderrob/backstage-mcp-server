@@ -1,7 +1,7 @@
 import { readdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import { ToolFactory, ToolMetadata, ToolMetadataProvider, ToolRegistrar, ToolValidator } from '../types';
+import { IToolFactory, IToolMetadata, IToolMetadataProvider, IToolRegistrar, IToolValidator } from '../types';
 import { logger } from '../utils';
 
 interface ToolManifestEntry {
@@ -15,14 +15,15 @@ export class ToolLoader {
 
   constructor(
     private readonly directory: string,
-    private readonly factory: ToolFactory,
-    private readonly registrar: ToolRegistrar,
-    private readonly validator: ToolValidator,
-    private readonly metadataProvider: ToolMetadataProvider
+    private readonly factory: IToolFactory,
+    private readonly registrar: IToolRegistrar,
+    private readonly validator: IToolValidator,
+    private readonly metadataProvider: IToolMetadataProvider
   ) {}
 
   async registerAll(): Promise<void> {
     logger.debug('Starting tool registration process');
+
     const files = await this.findToolFiles();
     logger.info(`Found ${files.length} tool files to process`);
 
@@ -62,7 +63,7 @@ export class ToolLoader {
     return files.filter((file) => file.endsWith('.tool.ts') || file.endsWith('.tool.js'));
   }
 
-  private addToManifest({ name, description, paramsSchema }: ToolMetadata): void {
+  private addToManifest({ name, description, paramsSchema }: IToolMetadata): void {
     const params =
       paramsSchema !== undefined &&
       paramsSchema !== null &&

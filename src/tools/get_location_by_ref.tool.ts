@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
-import { formatLocation, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
+import { formatLocation, FormattedTextResponse } from '../utils/responses';
 import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const paramsSchema = z.object({

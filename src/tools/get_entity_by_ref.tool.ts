@@ -6,7 +6,6 @@ import { inputSanitizer } from '../auth/input-sanitizer';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils';
-import { logger } from '../utils';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),

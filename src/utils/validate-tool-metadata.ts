@@ -1,20 +1,7 @@
-import { z } from 'zod';
+import { RawToolMetadata, rawToolMetadataSchema } from '../types/tool-metadata';
 
-const toolMetadataSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().min(1),
-  paramsSchema: z.record(z.any()).optional(),
-});
-
-export function validateToolMetadata(
-  metadata: unknown,
-  fileName: string
-): asserts metadata is {
-  name: string;
-  description: string;
-  paramsSchema?: unknown;
-} {
-  const parsed = toolMetadataSchema.safeParse(metadata);
+export function validateToolMetadata(metadata: unknown, fileName: string): asserts metadata is RawToolMetadata {
+  const parsed = rawToolMetadataSchema.safeParse(metadata);
   if (!parsed.success) {
     console.error(`Invalid tool metadata in ${fileName}:`, parsed.error.format());
     throw new Error(`Tool metadata validation failed for ${fileName}`);

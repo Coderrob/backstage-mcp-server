@@ -1,9 +1,18 @@
 /* eslint-disable import/no-unused-modules */
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
 
 import { BackstageCatalogApi } from './api/backstage-catalog-api';
+export type { IToolMetadata, RawToolMetadata } from './types/tool-metadata';
+import type { IToolMetadata } from './types/tool-metadata';
+
+export interface ILogger {
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+  fatal(message: string, ...args: unknown[]): void;
+}
 
 export enum ApiStatus {
   SUCCESS = 'success',
@@ -25,34 +34,30 @@ export interface IToolRegistrationContext {
 
 export type ToolRegistration = (context: IToolRegistrationContext) => RegisteredTool;
 
-export interface ToolMetadata {
-  name: string;
-  description: string;
-  paramsSchema: z.ZodTypeAny;
-}
+// IToolMetadata is exported from src/types/tool-metadata.ts
 
-export interface Tool {
+export interface ITool {
   execute(args: unknown, context: object): Promise<CallToolResult>;
 }
 
-export interface ToolMetadataProvider {
-  getMetadata(toolClass: unknown): ToolMetadata | undefined;
+export interface IToolMetadataProvider {
+  getMetadata(toolClass: ToolClass): IToolMetadata | undefined;
 }
 
-export interface ToolValidator {
-  validate(metadata: ToolMetadata, file: string): void;
+export interface IToolValidator {
+  validate(metadata: IToolMetadata, file: string): void;
 }
 
-export interface ToolRegistrar {
-  register(toolClass: ToolConstructor, metadata: ToolMetadata): void;
+export interface IToolRegistrar {
+  register(toolClass: ToolClass, metadata: IToolMetadata): void;
 }
 
-export interface ToolFactory {
-  loadTool(filePath: string): Promise<ToolConstructor | undefined>;
+export interface IToolFactory {
+  loadTool(filePath: string): Promise<IToolConstructor | undefined>;
 }
 
-export type ToolConstructor = {
+export interface IToolConstructor {
   execute(args: unknown, context: object): Promise<CallToolResult>;
-};
+}
 
-export type ToolClass = ToolConstructor | undefined;
+export type ToolClass = unknown;

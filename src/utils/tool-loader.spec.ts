@@ -1,3 +1,5 @@
+import { IToolRegistrar, IToolValidator } from '../types';
+import { RawToolMetadata } from '../types/tool-metadata';
 import { ToolLoader } from './tool-loader';
 
 describe('ToolLoader', () => {
@@ -5,7 +7,7 @@ describe('ToolLoader', () => {
     execute: jest.fn(),
   };
 
-  const validMetadata = {
+  const validMetadata: RawToolMetadata = {
     name: 'demoTool',
     description: 'Demo',
     paramsSchema: { foo: 'bar' },
@@ -15,11 +17,11 @@ describe('ToolLoader', () => {
     loadTool: jest.fn(),
   };
 
-  const mockRegistrar = {
+  const mockRegistrar: IToolRegistrar = {
     register: jest.fn(),
   };
 
-  const mockValidator = {
+  const mockValidator: IToolValidator = {
     validate: jest.fn(),
   };
 
@@ -34,6 +36,8 @@ describe('ToolLoader', () => {
   }
 
   const loader = new TestToolLoader('', mockFactory, mockRegistrar, mockValidator, mockMetadataProvider);
+
+  beforeEach(() => {});
 
   afterEach(() => jest.clearAllMocks());
 

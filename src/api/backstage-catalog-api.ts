@@ -18,13 +18,13 @@ import {
 import { CompoundEntityRef, Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import axios, { AxiosInstance, isAxiosError } from 'axios';
 
-import { AuthManager } from '../auth/auth-manager';
 import { type AuthConfig } from '../auth';
-import { CacheManager } from '../cache/cache-manager';
+import { AuthManager } from '../auth/auth-manager';
 import { securityAuditor, SecurityEventType } from '../auth/security-auditor';
-import { JsonApiDocument, JsonApiFormatter } from '../utils/jsonapi-formatter';
+import { CacheManager } from '../cache/cache-manager';
 import { logger } from '../utils';
 import { isString } from '../utils/guards';
+import { JsonApiDocument, JsonApiFormatter } from '../utils/jsonapi-formatter';
 import { PaginationHelper, PaginationParams } from '../utils/pagination-helper';
 
 interface BackstageCatalogApiOptions {

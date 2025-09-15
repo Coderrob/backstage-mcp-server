@@ -6,9 +6,8 @@ import { BackstageCatalogApi } from '../api/backstage-catalog-api';
 import { inputSanitizer } from '../auth/input-sanitizer';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
+import { logger, ToolErrorHandler } from '../utils';
 import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
-import { ToolErrorHandler } from '../utils';
-import { logger } from '../utils';
 
 const entityFilterSchema = z.object({
   key: z.string(),

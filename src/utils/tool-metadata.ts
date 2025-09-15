@@ -1,8 +1,15 @@
-import { ToolClass, toolMetadataMap } from '../decorators/tool.decorator';
-import { ToolMetadata, ToolMetadataProvider } from '../types';
+import { toolMetadataMap } from '../decorators/tool.decorator';
+import { IToolMetadata, IToolMetadataProvider, ToolClass } from '../types';
 
-export class ReflectToolMetadataProvider implements ToolMetadataProvider {
-  getMetadata(toolClass: ToolClass | object): ToolMetadata | undefined {
-    return toolMetadataMap.get(toolClass as ToolClass);
+export class ReflectToolMetadataProvider implements IToolMetadataProvider {
+  getMetadata(toolClass: ToolClass | object): IToolMetadata | undefined {
+    // Allow callers to pass either a class (constructor) or an instance.
+    const key =
+      typeof toolClass === 'function'
+        ? toolClass
+        : toolClass != null && typeof toolClass === 'object'
+          ? (toolClass as { constructor: unknown }).constructor
+          : toolClass;
+    return toolMetadataMap.get(key as ToolClass);
   }
 }

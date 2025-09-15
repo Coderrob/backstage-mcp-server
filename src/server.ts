@@ -5,12 +5,12 @@ import { join } from 'path';
 import { BackstageCatalogApi } from './api/backstage-catalog-api';
 import { type AuthConfig } from './auth/auth-manager';
 import { IToolRegistrationContext } from './types';
+import { logger } from './utils';
 import { DefaultToolFactory } from './utils/tool-factory';
 import { ToolLoader } from './utils/tool-loader';
 import { ReflectToolMetadataProvider } from './utils/tool-metadata';
 import { DefaultToolRegistrar } from './utils/tool-registrar';
 import { DefaultToolValidator } from './utils/tool-validator';
-import { logger } from './utils';
 
 export async function startServer(): Promise<void> {
   logger.info('Starting Backstage MCP Server');
