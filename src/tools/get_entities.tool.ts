@@ -7,6 +7,7 @@ import { inputSanitizer } from '../auth/input-sanitizer';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils';
 import { logger } from '../utils';
 
 const entityFilterSchema = z.object({
@@ -29,42 +30,42 @@ const paramsSchema = z.object({
 })
 export class GetEntitiesTool {
   static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    logger.debug('Executing get_entities tool', { request });
-    try {
-      // Sanitize and validate inputs
-      const sanitizedRequest = {
-        filter: request.filter ? inputSanitizer.sanitizeFilter(request.filter) : undefined,
-        fields: request.fields
-          ? inputSanitizer.sanitizeArray(request.fields, 'fields', (field) =>
-              inputSanitizer.sanitizeString(field, 'field')
-            )
-          : undefined,
-        limit: request.limit,
-        offset: request.offset,
-      };
+    return ToolErrorHandler.executeTool(
+      'get_entities',
+      'get_entities',
+      async (req: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        logger.debug('Executing get_entities tool', { request: req });
 
-      const result = await context.catalogClient.getEntities(sanitizedRequest);
+        // Sanitize and validate inputs
+        const sanitizedRequest = {
+          filter: req.filter ? inputSanitizer.sanitizeFilter(req.filter) : undefined,
+          fields: req.fields
+            ? inputSanitizer.sanitizeArray(req.fields, 'fields', (field) =>
+                inputSanitizer.sanitizeString(field, 'field')
+              )
+            : undefined,
+          limit: req.limit,
+          offset: req.offset,
+        };
 
-      if (request.format === 'jsonapi') {
-        const jsonApiResult = await (context.catalogClient as BackstageCatalogApi).getEntitiesJsonApi(sanitizedRequest);
-        const count = Array.isArray(jsonApiResult.data) ? jsonApiResult.data.length : jsonApiResult.data ? 1 : 0;
-        logger.debug('Returning JSON:API formatted entities', { count });
-        return JsonToTextResponse({
-          status: ApiStatus.SUCCESS,
-          data: jsonApiResult,
-        });
-      }
+        const result = await ctx.catalogClient.getEntities(sanitizedRequest);
 
-      logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
-      return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntityList);
-    } catch (error) {
-      logger.error('Error getting entities', { error: error instanceof Error ? error.message : String(error) });
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to get entities: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+        if (req.format === 'jsonapi') {
+          const jsonApiResult = await (ctx.catalogClient as BackstageCatalogApi).getEntitiesJsonApi(sanitizedRequest);
+          const count = Array.isArray(jsonApiResult.data) ? jsonApiResult.data.length : jsonApiResult.data ? 1 : 0;
+          logger.debug('Returning JSON:API formatted entities', { count });
+          return JsonToTextResponse({
+            status: ApiStatus.SUCCESS,
+            data: jsonApiResult,
+          });
+        }
+
+        logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
+        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntityList);
+      },
+      request,
+      context,
+      false // Use simple error format for now
+    );
   }
 }

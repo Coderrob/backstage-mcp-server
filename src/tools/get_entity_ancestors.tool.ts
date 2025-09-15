@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -24,21 +25,19 @@ const paramsSchema = z.object({
 })
 export class GetEntityAncestorsTool {
   static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      const entityRef =
-        typeof request.entityRef === 'string' ? request.entityRef : stringifyEntityRef(request.entityRef);
-      const result = await context.catalogClient.getEntityAncestors({
-        entityRef,
-      });
-      return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
-    } catch (error) {
-      console.error('Error getting entity ancestors:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to get entity ancestors: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+    return ToolErrorHandler.executeTool(
+      'get_entity_ancestors',
+      'getEntityAncestors',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const entityRef = typeof args.entityRef === 'string' ? args.entityRef : stringifyEntityRef(args.entityRef);
+        const result = await ctx.catalogClient.getEntityAncestors({
+          entityRef,
+        });
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

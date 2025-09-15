@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -24,20 +25,19 @@ const paramsSchema = z.object({
 })
 export class GetEntitiesByRefsTool {
   static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      const entityRefs = request.entityRefs.map((ref) => (typeof ref === 'string' ? ref : stringifyEntityRef(ref)));
-      const result = await context.catalogClient.getEntitiesByRefs({
-        entityRefs,
-      });
-      return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
-    } catch (error) {
-      console.error('Error getting entities by refs:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to get entities by refs: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+    return ToolErrorHandler.executeTool(
+      'get_entities_by_refs',
+      'getEntitiesByRefs',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const entityRefs = args.entityRefs.map((ref) => (typeof ref === 'string' ? ref : stringifyEntityRef(ref)));
+        const result = await ctx.catalogClient.getEntitiesByRefs({
+          entityRefs,
+        });
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

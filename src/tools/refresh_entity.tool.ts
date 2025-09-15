@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const paramsSchema = z.object({
   entityRef: z.string(),
@@ -16,18 +17,17 @@ const paramsSchema = z.object({
   paramsSchema,
 })
 export class RefreshEntityTool {
-  static async execute({ entityRef }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      await context.catalogClient.refreshEntity(entityRef);
-      return JsonToTextResponse({ status: ApiStatus.SUCCESS });
-    } catch (error) {
-      console.error('Error refreshing entity:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to refresh entity: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+    return ToolErrorHandler.executeTool(
+      'refresh_entity',
+      'refreshEntity',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        await ctx.catalogClient.refreshEntity(args.entityRef);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

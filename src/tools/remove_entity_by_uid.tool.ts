@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const paramsSchema = z.object({
   uid: z.string().uuid(),
@@ -16,18 +17,17 @@ const paramsSchema = z.object({
   paramsSchema,
 })
 export class RemoveEntityByUidTool {
-  static async execute({ uid }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      await context.catalogClient.removeEntityByUid(uid);
-      return JsonToTextResponse({ status: ApiStatus.SUCCESS });
-    } catch (error) {
-      console.error('Error removing entity by UID:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to remove entity by UID: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+    return ToolErrorHandler.executeTool(
+      'remove_entity_by_uid',
+      'removeEntityByUid',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        await ctx.catalogClient.removeEntityByUid(args.uid);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

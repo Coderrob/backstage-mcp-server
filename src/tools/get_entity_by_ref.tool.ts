@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { inputSanitizer } from '../auth/input-sanitizer';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
-import { formatEntity, FormattedTextResponse, JsonToTextResponse } from '../utils/responses';
+import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils';
+import { logger } from '../utils';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -19,25 +20,24 @@ const paramsSchema = z.object({
 
 @Tool({
   name: 'get_entity_by_ref',
-  description: 'Get an entity by its UID.',
+  description: 'Get a single entity by its reference (namespace/name or compound ref).',
   paramsSchema,
 })
 export class GetEntityByRefTool {
   static async execute({ entityRef }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      // Sanitize entity reference input
-      const sanitizedEntityRef = inputSanitizer.sanitizeEntityRef(entityRef);
+    return ToolErrorHandler.executeTool(
+      'get_entity_by_ref',
+      'get_entity_by_ref',
+      async ({ entityRef: ref }: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        // Sanitize entity reference input
+        const sanitizedEntityRef = inputSanitizer.sanitizeEntityRef(ref);
 
-      const result = await context.catalogClient.getEntityByRef(sanitizedEntityRef);
-      return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntity);
-    } catch (error) {
-      console.error('Error getting entity by ref:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to get entity by ref: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+        const result = await ctx.catalogClient.getEntityByRef(sanitizedEntityRef);
+        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntity);
+      },
+      { entityRef },
+      context,
+      true // Use JSON:API error format
+    );
   }
 }

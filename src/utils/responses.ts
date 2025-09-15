@@ -21,6 +21,51 @@ interface IApiSuccessResponse<T = unknown> extends IApiResponse {
   data?: T;
 }
 
+// Enhanced error response with JSON:API metadata
+export interface IApiErrorResponseExtended extends IApiResponse {
+  status: ApiStatus.ERROR;
+  data: {
+    message: string;
+    code?: string;
+    details?: string;
+    source?: {
+      tool?: string;
+      operation?: string;
+      parameter?: string;
+    };
+    jsonapi?: {
+      errors?: Array<{
+        id?: string;
+        status?: string;
+        code?: string;
+        title?: string;
+        detail?: string;
+        source?: {
+          pointer?: string;
+          parameter?: string;
+        };
+        meta?: Record<string, unknown>;
+      }>;
+    };
+  };
+}
+
+/**
+ * Error classification for consistent error handling
+ */
+export enum ErrorType {
+  VALIDATION = 'VALIDATION_ERROR',
+  AUTHENTICATION = 'AUTHENTICATION_ERROR',
+  AUTHORIZATION = 'AUTHORIZATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+  CONFLICT = 'CONFLICT',
+  RATE_LIMIT = 'RATE_LIMIT',
+  NETWORK = 'NETWORK_ERROR',
+  BACKSTAGE_API = 'BACKSTAGE_API_ERROR',
+  INTERNAL = 'INTERNAL_ERROR',
+  UNKNOWN = 'UNKNOWN_ERROR',
+}
+
 /**
  * Type guard for error responses
  */
@@ -179,4 +224,133 @@ export function formatLocation(data: IApiSuccessResponse): string {
 🎯 Type: ${type}
 🔗 Target: ${target}
 🏷️ Tags: ${tags.length > 0 ? tags.join(', ') : 'None'}`;
+}
+
+/**
+ * Creates a standardized error response with JSON:API metadata
+ * @param error - The error that occurred
+ * @param errorType - Classification of the error
+ * @param toolName - Name of the tool where the error occurred
+ * @param operation - Operation being performed when error occurred
+ * @param additionalDetails - Additional context about the error
+ * @returns Standardized error response
+ */
+export function createStandardError(
+  error: unknown,
+  errorType: ErrorType,
+  toolName: string,
+  operation: string,
+  additionalDetails?: Record<string, unknown>
+): IApiErrorResponseExtended {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorCode = getErrorCode(errorType);
+
+  const response: IApiErrorResponseExtended = {
+    status: ApiStatus.ERROR,
+    data: {
+      message: errorMessage,
+      code: errorCode,
+      source: {
+        tool: toolName,
+        operation,
+      },
+      jsonapi: {
+        errors: [
+          {
+            status: getHttpStatusCode(errorType),
+            code: errorCode,
+            title: getErrorTitle(errorType),
+            detail: errorMessage,
+            source: {
+              parameter: operation,
+            },
+            meta: {
+              tool: toolName,
+              timestamp: new Date().toISOString(),
+              ...additionalDetails,
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  return response;
+}
+
+/**
+ * Creates a simple error response for backward compatibility
+ * @param message - Error message
+ * @returns Simple error response
+ */
+export function createSimpleError(message: string): IApiErrorResponse {
+  return {
+    status: ApiStatus.ERROR,
+    data: {
+      message,
+    },
+  };
+}
+
+/**
+ * Maps error types to HTTP status codes
+ */
+function getHttpStatusCode(errorType: ErrorType): string {
+  switch (errorType) {
+    case ErrorType.VALIDATION:
+      return '400';
+    case ErrorType.AUTHENTICATION:
+      return '401';
+    case ErrorType.AUTHORIZATION:
+      return '403';
+    case ErrorType.NOT_FOUND:
+      return '404';
+    case ErrorType.CONFLICT:
+      return '409';
+    case ErrorType.RATE_LIMIT:
+      return '429';
+    case ErrorType.NETWORK:
+    case ErrorType.BACKSTAGE_API:
+      return '502';
+    case ErrorType.INTERNAL:
+    case ErrorType.UNKNOWN:
+    default:
+      return '500';
+  }
+}
+
+/**
+ * Maps error types to error codes
+ */
+function getErrorCode(errorType: ErrorType): string {
+  return errorType;
+}
+
+/**
+ * Maps error types to human-readable titles
+ */
+function getErrorTitle(errorType: ErrorType): string {
+  switch (errorType) {
+    case ErrorType.VALIDATION:
+      return 'Validation Error';
+    case ErrorType.AUTHENTICATION:
+      return 'Authentication Failed';
+    case ErrorType.AUTHORIZATION:
+      return 'Access Denied';
+    case ErrorType.NOT_FOUND:
+      return 'Resource Not Found';
+    case ErrorType.CONFLICT:
+      return 'Resource Conflict';
+    case ErrorType.RATE_LIMIT:
+      return 'Rate Limit Exceeded';
+    case ErrorType.NETWORK:
+      return 'Network Error';
+    case ErrorType.BACKSTAGE_API:
+      return 'Backstage API Error';
+    case ErrorType.INTERNAL:
+      return 'Internal Server Error';
+    case ErrorType.UNKNOWN:
+    default:
+      return 'Unknown Error';
+  }
 }

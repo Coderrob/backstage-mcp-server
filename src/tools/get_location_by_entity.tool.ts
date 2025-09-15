@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Tool } from '../decorators/tool.decorator';
 import { ApiStatus, IToolRegistrationContext } from '../types';
 import { JsonToTextResponse } from '../utils/responses';
+import { ToolErrorHandler } from '../utils/tool-error-handler';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -23,19 +24,18 @@ const paramsSchema = z.object({
   paramsSchema,
 })
 export class GetLocationByEntityTool {
-  static async execute({ entityRef }: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
-    try {
-      const ref = typeof entityRef === 'string' ? entityRef : stringifyEntityRef(entityRef);
-      const result = await context.catalogClient.getLocationByEntity(ref);
-      return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
-    } catch (error) {
-      console.error('Error getting location by entity:', error);
-      return JsonToTextResponse({
-        status: ApiStatus.ERROR,
-        data: {
-          message: `Failed to get location by entity: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      });
-    }
+  static async execute(request: z.infer<typeof paramsSchema>, context: IToolRegistrationContext) {
+    return ToolErrorHandler.executeTool(
+      'get_location_by_entity',
+      'getLocationByEntity',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const ref = typeof args.entityRef === 'string' ? args.entityRef : stringifyEntityRef(args.entityRef);
+        const result = await ctx.catalogClient.getLocationByEntity(ref);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

@@ -18,3 +18,5 @@ export {
   MultiContentResponse,
   TextResponse,
 } from './responses';
+export { ToolErrorHandler } from './tool-error-handler';
+export { ErrorType, createStandardError, createSimpleError } from './responses';
