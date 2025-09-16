@@ -1,13 +1,24 @@
-import { z } from 'zod';
-import { GetEntityFacetsRequest } from '@backstage/catalog-client';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { Tool } from '../decorators/tool.decorator';
+import 'reflect-metadata';
 
-const paramsSchema = z.custom<GetEntityFacetsRequest>();
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
+
+const entityFilterSchema = z.object({
+  key: z.string(),
+  values: z.array(z.string()),
+});
+
+const paramsSchema = z.object({
+  filter: z.array(entityFilterSchema).optional(),
+  facets: z.array(z.string()),
+});
 
 @Tool({
-  name: 'get_entity_facets',
+  name: ToolName.GET_ENTITY_FACETS,
   description: 'Get entity facets for a specified field.',
   paramsSchema,
 })
@@ -15,8 +26,17 @@ export class GetEntityFacetsTool {
   static async execute(
     request: z.infer<typeof paramsSchema>,
     context: IToolRegistrationContext
-  ) {
-    const result = await context.catalogClient.getEntityFacets(request);
-    return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+  ): Promise<CallToolResult> {
+    return ToolErrorHandler.executeTool(
+      ToolName.GET_ENTITY_FACETS,
+      'getEntityFacets',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const result = await ctx.catalogClient.getEntityFacets(args);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

@@ -1,28 +1,37 @@
+import 'reflect-metadata';
+
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { Entity } from '@backstage/catalog-model';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { JsonToTextResponse } from '../utils/responses';
-import { Tool } from '../decorators/tool.decorator';
+
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
 
 const paramsSchema = z.object({
-  entity: z.custom<Entity>(),
+  entity: z.any(),
   locationRef: z.string(),
 });
 
 @Tool({
-  name: 'validate_entity',
+  name: ToolName.VALIDATE_ENTITY,
   description: 'Validate an entity structure.',
   paramsSchema,
 })
 export class ValidateEntityTool {
   static async execute(
-    { entity, locationRef }: z.infer<typeof paramsSchema>,
+    request: z.infer<typeof paramsSchema>,
     context: IToolRegistrationContext
-  ) {
-    const result = await context.catalogClient.validateEntity(
-      entity,
-      locationRef
+  ): Promise<CallToolResult> {
+    return ToolErrorHandler.executeTool(
+      ToolName.VALIDATE_ENTITY,
+      'validateEntity',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const result = await ctx.catalogClient.validateEntity(args.entity, args.locationRef);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
     );
-    return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
   }
 }

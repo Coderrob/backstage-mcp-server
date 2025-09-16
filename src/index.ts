@@ -1,6 +1,6 @@
-import { startServer } from './server';
+import { startServer } from './server.js';
 
-(async function () {
+(async function main(): Promise<void> {
   await startServer().catch((err) => {
     console.error('Fatal server startup error:', err);
     process.exit(1);

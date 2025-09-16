@@ -1,13 +1,32 @@
-import { z } from 'zod';
-import { QueryEntitiesRequest } from '@backstage/catalog-client';
-import { JsonToTextResponse } from '../utils/responses';
-import { ApiStatus, IToolRegistrationContext } from '../types';
-import { Tool } from '../decorators/tool.decorator';
+import 'reflect-metadata';
 
-const paramsSchema = z.custom<QueryEntitiesRequest>();
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
+
+const entityFilterSchema = z.object({
+  key: z.string(),
+  values: z.array(z.string()),
+});
+
+const entityOrderSchema = z.object({
+  field: z.string(),
+  order: z.enum(['asc', 'desc']).optional(),
+});
+
+const paramsSchema = z.object({
+  filter: z.array(entityFilterSchema).optional(),
+  fields: z.array(z.string()).optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  order: entityOrderSchema.optional(),
+});
 
 @Tool({
-  name: 'get_entities_by_query',
+  name: ToolName.GET_ENTITIES_BY_QUERY,
   description: 'Get entities by query filters.',
   paramsSchema,
 })
@@ -15,8 +34,17 @@ export class GetEntitiesByQueryTool {
   static async execute(
     request: z.infer<typeof paramsSchema>,
     context: IToolRegistrationContext
-  ) {
-    const result = await context.catalogClient.queryEntities(request);
-    return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+  ): Promise<CallToolResult> {
+    return ToolErrorHandler.executeTool(
+      ToolName.GET_ENTITIES_BY_QUERY,
+      'queryEntities',
+      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
+        const result = await ctx.catalogClient.queryEntities(args);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
+      },
+      request,
+      context,
+      true
+    );
   }
 }

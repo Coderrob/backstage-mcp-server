@@ -4,5 +4,22 @@ end_of_line = lf
 indent_size = 2
 indent_style = space
 insert_final_newline = true
-max_line_length = 80
+max_line_length = 120
 trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[*.yaml]
+indent_style = space
+indent_size = 2
+
+[*.{json,js,ts,tsx,jsx}]
+indent_size = 2
+
+[*.prettierrc]
+indent_size = 2

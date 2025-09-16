@@ -1,9 +1,13 @@
 {
+  "author": "Robert Lindley",
+  "type": "module",
   "dependencies": {
     "@backstage/catalog-client": "^1.9.1",
     "@backstage/catalog-model": "^1.7.3",
     "@modelcontextprotocol/sdk": "^1.10.2",
     "axios": "^1.9.0",
+    "pino": "^9.9.5",
+    "pino-pretty": "^13.1.1",
     "reflect-metadata": "^0.2.2",
     "yarn": "^1.22.22",
     "zod": "^3.22.2"
@@ -11,21 +15,36 @@
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "esbuild": "^0.18.18",
     "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
     "jest": "^29.7.0",
+    "jest-util": "^29.7.0",
     "prettier": "^3.5.3",
+    "rimraf": "^5.0.0",
     "ts-jest": "^29.3.2",
     "typescript": "^5.8.3"
   },
-  "main": "dist/index.js",
-  "name": "mcp-backstage-server",
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "main": "dist/bundle.cjs",
+  "name": "@coderrob/mcp-backstage-server",
+  "packageManager": "yarn@4.4.0",
   "scripts": {
-    "build": "tsc",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "npx prettier . --write",
-    "start": "node dist/index.js",
-    "test": "jest --coverage"
+    "clean": "rimraf dist",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/bundle.cjs --minify --sourcemap --metafile=dist/esbuild-meta.json",
+    "build": "yarn clean && yarn build:bundle",
+    "build:full": "yarn clean && yarn build:types && tsc && yarn build:bundle",
+    "lint": "eslint 'src/**/*.ts' --ext .ts",
+    "lint:fix": "prettier . --write && eslint 'src/**/*.ts' --ext .ts --fix",
+    "start": "node dist/bundle.cjs",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --coverage"
   },
+  "types": "dist/index.d.ts",
   "version": "1.0.0"
 }
