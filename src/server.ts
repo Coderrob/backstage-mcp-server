@@ -2,8 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { join } from 'path';
 
-import { BackstageCatalogApi } from './api/index.js';
-import { AuthConfig } from './auth/index.js';
+import { BackstageCatalogApi } from './api/backstage-catalog-api.js';
+import { AuthConfig } from './auth/auth-manager.js';
 import { IToolRegistrationContext } from './types/index.js';
 import {
   DefaultToolFactory,

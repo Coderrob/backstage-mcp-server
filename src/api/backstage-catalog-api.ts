@@ -18,18 +18,15 @@ import {
 import { CompoundEntityRef, Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import axios, { AxiosInstance, isAxiosError } from 'axios';
 
-import { AuthConfig, AuthManager, securityAuditor } from '../auth/index.js';
-import { CacheManager } from '../cache/index.js';
+import { AuthConfig, AuthManager } from '../auth/auth-manager.js';
+import { securityAuditor } from '../auth/security-auditor.js';
+import { CacheManager } from '../cache/cache-manager.js';
 import { IBackstageCatalogApi, JsonApiDocument, PaginationParams, SecurityEventType } from '../types/index.js';
-import {
-  EntityRef,
-  isNonEmptyString,
-  isNumber,
-  isString,
-  JsonApiFormatter,
-  logger,
-  PaginationHelper,
-} from '../utils/index.js';
+import { isNonEmptyString, isNumber, isString } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
+import { EntityRef } from '../utils/formatting/entity-ref.js';
+import { JsonApiFormatter } from '../utils/formatting/jsonapi-formatter.js';
+import { PaginationHelper } from '../utils/formatting/pagination-helper.js';
 
 interface BackstageCatalogApiOptions {
   baseUrl: string;

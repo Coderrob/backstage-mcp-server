@@ -6,7 +6,9 @@ import { z } from 'zod';
 
 import { Tool } from '../decorators/index.js';
 import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
+import { isString } from '../utils/core/guards.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),

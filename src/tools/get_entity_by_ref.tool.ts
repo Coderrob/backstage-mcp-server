@@ -3,10 +3,11 @@ import 'reflect-metadata';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { inputSanitizer } from '../auth/index.js';
+import { inputSanitizer } from '../auth/input-sanitizer.js';
 import { Tool } from '../decorators/index.js';
 import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils/index.js';
+import { formatEntity, FormattedTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),

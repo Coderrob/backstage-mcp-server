@@ -3,17 +3,13 @@ import 'reflect-metadata';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { BackstageCatalogApi } from '../api/index.js';
-import { inputSanitizer } from '../auth/index.js';
+import { BackstageCatalogApi } from '../api/backstage-catalog-api.js';
+import { inputSanitizer } from '../auth/input-sanitizer.js';
 import { Tool } from '../decorators/index.js';
 import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import {
-  formatEntityList,
-  FormattedTextResponse,
-  JsonToTextResponse,
-  logger,
-  ToolErrorHandler,
-} from '../utils/index.js';
+import { logger } from '../utils/core/logger.js';
+import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const entityFilterSchema = z.object({
   key: z.string(),

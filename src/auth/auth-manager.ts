@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 
-import { isNonEmptyString, isNumber, logger } from '../utils/index.js';
+import { isNonEmptyString, isNumber } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
 
 export interface AuthConfig {
   type: 'bearer' | 'oauth' | 'api-key' | 'service-account';

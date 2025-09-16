@@ -5,7 +5,8 @@ import { z } from 'zod';
 
 import { Tool } from '../decorators/index.js';
 import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import { formatLocation, FormattedTextResponse, ToolErrorHandler } from '../utils/index.js';
+import { formatLocation, FormattedTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const paramsSchema = z.object({
   locationRef: z.string(),

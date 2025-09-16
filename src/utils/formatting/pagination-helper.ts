@@ -1,26 +1,7 @@
+import { PaginatedResponse,PaginationMeta, PaginationParams } from '../../types/index.js';
 import { isNumber } from '../core/guards.js';
 
 /* eslint-disable import/no-unused-modules */
-export interface PaginationParams {
-  limit?: number;
-  offset?: number;
-  page?: number; // Alternative to offset
-}
-
-export interface PaginationMeta {
-  total: number;
-  limit: number;
-  offset: number;
-  currentPage: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  pagination: PaginationMeta;
-}
 
 export class PaginationHelper {
   private static readonly DEFAULT_LIMIT = 50;

@@ -1,5 +1,6 @@
 import { CacheConfig, CacheEntry } from '../types/index.js';
-import { isNumber, logger } from '../utils/index.js';
+import { isNumber } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
 
 export class CacheManager {
   private cache = new Map<string, CacheEntry>();

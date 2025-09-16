@@ -5,7 +5,8 @@ import { z } from 'zod';
 
 import { Tool } from '../decorators/index.js';
 import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import { JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const paramsSchema = z.object({
   uid: z.string().uuid(),
