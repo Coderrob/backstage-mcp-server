@@ -55,7 +55,7 @@ describe('EntityRef', () => {
     });
 
     it('should throw for invalid kind', () => {
-      expect(() => EntityRef.parse('invalid:default/name')).toThrow('Invalid kind');
+      expect(() => EntityRef.parse('invalid:default/name')).toThrow('Unknown entity kind');
     });
 
     it('should throw for empty namespace in full format', () => {
@@ -87,7 +87,7 @@ describe('EntityRef', () => {
 
     it('should throw for ref with invalid kind', () => {
       const ref = { kind: 'invalid', namespace: 'default', name: 'name' };
-      expect(() => EntityRef.toString(ref)).toThrow('Invalid kind');
+      expect(() => EntityRef.toString(ref)).toThrow('Unknown entity kind');
     });
 
     it('should throw for ref with empty namespace', () => {
