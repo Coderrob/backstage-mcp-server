@@ -1,7 +1,8 @@
 import { pathToFileURL } from 'url';
 
-import { ITool, IToolFactory } from '../../types';
-import { isFunction, logger } from '../core';
+import { ITool, IToolFactory } from '../../types/index.js';
+import { isFunction } from '../core/guards.js';
+import { logger } from '../core/logger.js';
 
 export class DefaultToolFactory implements IToolFactory {
   async loadTool(filePath: string): Promise<ITool | undefined> {

@@ -17,8 +17,8 @@ import {
 } from '@backstage/catalog-client';
 import { CompoundEntityRef, Entity } from '@backstage/catalog-model';
 
-import { JsonApiDocument } from './json-api';
-import { PaginationParams } from './paging';
+import { JsonApiDocument } from './json-api.js';
+import { PaginationParams } from './paging.js';
 
 export enum ApiStatus {
   SUCCESS = 'success',

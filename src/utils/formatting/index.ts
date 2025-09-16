@@ -1,3 +1,4 @@
-export * from './jsonapi-formatter';
-export * from './pagination-helper';
-export * from './responses';
+export * from './entity-ref.js';
+export * from './jsonapi-formatter.js';
+export * from './pagination-helper.js';
+export * from './responses.js';

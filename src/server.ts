@@ -1,11 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
-import { BackstageCatalogApi } from './api';
-import { AuthConfig } from './auth/auth-manager';
-import { IToolRegistrationContext } from './types';
+import { BackstageCatalogApi } from './api/index.js';
+import { AuthConfig } from './auth/index.js';
+import { IToolRegistrationContext } from './types/index.js';
 import {
   DefaultToolFactory,
   DefaultToolRegistrar,
@@ -15,14 +14,13 @@ import {
   logger,
   ReflectToolMetadataProvider,
   ToolLoader,
-} from './utils';
+} from './utils/index.js';
 
 export async function startServer(): Promise<void> {
   logger.info('Starting Backstage MCP Server');
 
-  // ESM doesn't provide a __dirname variable - synthesize one from import.meta.url
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
+  // Get the current working directory for configuration
+  const configDir = process.cwd();
 
   const baseUrl = process.env.BACKSTAGE_BASE_URL;
   if (!isString(baseUrl) || baseUrl.length === 0) {
@@ -48,7 +46,6 @@ export async function startServer(): Promise<void> {
 
   logger.debug('Loading and registering tools');
   const toolLoader = new ToolLoader(
-    join(__dirname, 'tools'),
     new DefaultToolFactory(),
     new DefaultToolRegistrar(context),
     new DefaultToolValidator(),
@@ -59,7 +56,7 @@ export async function startServer(): Promise<void> {
 
   if (process.env.NODE_ENV !== 'production') {
     logger.info('Exporting tools manifest for development');
-    await toolLoader.exportManifest(join(__dirname, '..', 'tools-manifest.json'));
+    await toolLoader.exportManifest(join(configDir, '..', 'tools-manifest.json'));
   }
 
   logger.debug('Setting up transport and connecting server');

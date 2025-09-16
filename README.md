@@ -69,7 +69,15 @@ The server requires environment variables for Backstage API access:
 ### Required Environment Variables
 
 - `BACKSTAGE_BASE_URL` - Base URL of your Backstage instance (e.g., `https://backstage.example.com`)
-- `BACKSTAGE_TOKEN` - Authentication token for API access (optional, depending on your Backstage setup)
+
+### Authentication Configuration
+
+Choose one of the following authentication methods:
+
+- `BACKSTAGE_TOKEN` - Bearer token for API access
+- `BACKSTAGE_CLIENT_ID`, `BACKSTAGE_CLIENT_SECRET`, `BACKSTAGE_TOKEN_URL` - OAuth credentials
+- `BACKSTAGE_API_KEY` - API key authentication
+- `BACKSTAGE_SERVICE_ACCOUNT_KEY` - Service account key
 
 ### Example Configuration
 

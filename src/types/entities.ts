@@ -1,3 +1,29 @@
+import { ComponentEntity } from '@backstage/catalog-model';
+
+export enum EntityKind {
+  API = 'api',
+  Component = 'component',
+  Domain = 'domain',
+  Group = 'group',
+  Location = 'location',
+  Resource = 'resource',
+  System = 'system',
+  User = 'user',
+  Template = 'template',
+}
+
+export const VALID_ENTITY_KINDS: ReadonlySet<EntityKind> = new Set<EntityKind>([
+  EntityKind.API,
+  EntityKind.Component,
+  EntityKind.Domain,
+  EntityKind.Group,
+  EntityKind.Location,
+  EntityKind.Resource,
+  EntityKind.System,
+  EntityKind.Template,
+  EntityKind.User,
+]);
+
 /**
  * Backstage entity interface
  */
@@ -28,16 +54,5 @@ export interface IEntityMetadata {
  */
 export interface IEntityRelation {
   type: string;
-  targetRef: IEntityRef;
-  [key: string]: unknown;
-}
-
-/**
- * Entity reference interface
- */
-export interface IEntityRef {
-  kind?: string;
-  namespace?: string;
-  name?: string;
-  [key: string]: unknown;
+  targetRef: ComponentEntity;
 }

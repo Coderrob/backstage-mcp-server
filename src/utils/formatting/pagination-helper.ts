@@ -1,4 +1,4 @@
-import { isNumber } from '../core/guards';
+import { isNumber } from '../core/guards.js';
 
 /* eslint-disable import/no-unused-modules */
 export interface PaginationParams {

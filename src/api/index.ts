@@ -1,1 +1,1 @@
-export { BackstageCatalogApi } from './backstage-catalog-api';
+export { BackstageCatalogApi } from './backstage-catalog-api.js';

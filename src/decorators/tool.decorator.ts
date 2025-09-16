@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { IToolMetadata, ToolClass } from '../types';
+import { IToolMetadata, ToolClass } from '../types/index.js';
 
 const toolMetadataMap = new Map<ToolClass, IToolMetadata>();
 

@@ -1,8 +1,14 @@
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-import type { ITool, IToolMetadata, IToolRegistrar } from './types';
-import { DefaultToolFactory, DefaultToolValidator, logger, ReflectToolMetadataProvider, ToolLoader } from './utils';
+import type { ITool, IToolMetadata, IToolRegistrar } from './types/index.js';
+import {
+  DefaultToolFactory,
+  DefaultToolValidator,
+  logger,
+  ReflectToolMetadataProvider,
+  ToolLoader,
+} from './utils/index.js';
 
 class MockToolRegistrar implements IToolRegistrar {
   register(_toolClass: ITool, _metadata: IToolMetadata): void {
@@ -16,7 +22,6 @@ async function generateManifest(): Promise<void> {
   const __dirname = dirname(__filename);
 
   const toolLoader = new ToolLoader(
-    join(__dirname, 'tools'),
     new DefaultToolFactory(),
     new MockToolRegistrar(),
     new DefaultToolValidator(),

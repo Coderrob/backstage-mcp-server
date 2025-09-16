@@ -1,1 +1,1 @@
-export { CacheManager } from './cache-manager';
+export { CacheManager } from './cache-manager.js';

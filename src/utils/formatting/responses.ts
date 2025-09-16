@@ -1,9 +1,10 @@
 /* eslint-disable import/no-unused-modules */
 
+import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { ApiStatus, IApiResponse, ResponseMessage } from '../../types';
-import { isBigInt } from '../core';
+import { ApiStatus, IApiResponse, ResponseMessage } from '../../types/index.js';
+import { isBigInt } from '../core/guards.js';
 
 type ContentItem = {
   type: 'text';
@@ -34,20 +35,18 @@ export interface IApiErrorResponseExtended extends IApiResponse {
       operation?: string;
       parameter?: string;
     };
-    jsonapi?: {
-      errors?: Array<{
-        id?: string;
-        status?: string;
-        code?: string;
-        title?: string;
-        detail?: string;
-        source?: {
-          pointer?: string;
-          parameter?: string;
-        };
-        meta?: Record<string, unknown>;
-      }>;
-    };
+    errors?: Array<{
+      id?: string;
+      status?: string;
+      code?: string;
+      title?: string;
+      detail?: string;
+      source?: {
+        pointer?: string;
+        parameter?: string;
+      };
+      meta?: Record<string, unknown>;
+    }>;
   };
 }
 
@@ -131,7 +130,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
   if (isErrorResponse(data)) {
     content.push({
       type: 'text',
-      text: `❌ Error: ${data.data?.message || 'Unknown error occurred'}`,
+      text: `Error: ${data.data?.message || 'Unknown error occurred'}`,
     });
   } else if (formatter) {
     content.push({
@@ -161,7 +160,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
  */
 export function formatEntityList(data: IApiSuccessResponse): string {
   if (data.data === undefined || data.data === null || !Array.isArray(data.data)) {
-    return '✅ Success: No entities found';
+    return 'No entities found';
   }
 
   const entities = data.data as unknown[];
@@ -183,27 +182,25 @@ export function formatEntityList(data: IApiSuccessResponse): string {
     .map(([kind, count]) => `${kind}: ${count}`)
     .join(', ');
 
-  return `✅ Found ${count} entities (${kindSummary})`;
+  return `Found ${count} entities (${kindSummary})`;
 }
 
 /**
  * Formatter for single entity responses
  */
-export function formatEntity(data: IApiSuccessResponse): string {
+export function formatEntity<T extends Entity>(data: IApiSuccessResponse<T | undefined>): string {
   if (data.data === undefined || data.data === null) {
     return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.ENTITY_NOT_FOUND}`;
   }
 
-  const entity = data.data as Record<string, unknown>;
-  const kind = String(entity.kind ?? 'Unknown');
-  const namespace = String(entity.namespace ?? 'default');
-  const name = String(entity.name ?? 'unnamed');
-  const metadata = (entity.metadata as Record<string, unknown> | undefined) ?? undefined;
+  const { kind, metadata } = data.data;
+  const namespace = metadata.namespace ?? DEFAULT_NAMESPACE;
+  const name = metadata.name;
 
-  return `✅ Found ${kind} entity: ${namespace}/${name}
-📝 Title: ${metadata?.title ?? 'No title'}
-📄 Description: ${metadata?.description ?? 'No description'}
-🏷️ Tags: ${(metadata?.tags as string[] | undefined)?.join(', ') ?? 'None'}`;
+  return `Found ${kind} entity: ${namespace}/${name}
+  Title: ${metadata.title ?? 'No title'}
+  Description: ${metadata.description ?? 'No description'}
+  Tags: ${(metadata?.tags as string[] | undefined)?.join(', ') ?? 'None'}`;
 }
 
 /**
@@ -255,24 +252,22 @@ export function createStandardError(
         tool: toolName,
         operation,
       },
-      jsonapi: {
-        errors: [
-          {
-            status: getHttpStatusCode(errorType),
-            code: errorCode,
-            title: getErrorTitle(errorType),
-            detail: errorMessage,
-            source: {
-              parameter: operation,
-            },
-            meta: {
-              tool: toolName,
-              timestamp: new Date().toISOString(),
-              ...additionalDetails,
-            },
+      errors: [
+        {
+          status: getHttpStatusCode(errorType),
+          code: errorCode,
+          title: getErrorTitle(errorType),
+          detail: errorMessage,
+          source: {
+            parameter: operation,
           },
-        ],
-      },
+          meta: {
+            tool: toolName,
+            timestamp: new Date().toISOString(),
+            ...additionalDetails,
+          },
+        },
+      ],
     },
   };
 

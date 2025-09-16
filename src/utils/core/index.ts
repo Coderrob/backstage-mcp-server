@@ -1,3 +1,4 @@
-export * from './guards';
-export * from './logger';
-export * from './mapping';
+export * from './assertions.js';
+export * from './guards.js';
+export * from './logger.js';
+export * from './mapping.js';

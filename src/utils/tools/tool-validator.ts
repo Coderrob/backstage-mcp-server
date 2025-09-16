@@ -1,5 +1,5 @@
-import { IToolMetadata, IToolValidator } from '../../types';
-import { validateToolMetadata } from './validate-tool-metadata';
+import { IToolMetadata, IToolValidator } from '../../types/index.js';
+import { validateToolMetadata } from './validate-tool-metadata.js';
 
 export class DefaultToolValidator implements IToolValidator {
   validate(metadata: IToolMetadata, file: string): void {

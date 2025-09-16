@@ -1,7 +1,7 @@
 import { Bindings, Logger, LoggerOptions, pino, stdTimeFunctions } from 'pino';
 
-import { ILogger } from '../../types';
-import { isString } from './guards';
+import { ILogger } from '../../types/index.js';
+import { isString } from './guards.js';
 
 // Ensure Node.js globals are available
 declare const process: {

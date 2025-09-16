@@ -3,10 +3,10 @@ import 'reflect-metadata';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { inputSanitizer } from '../auth';
-import { Tool } from '../decorators';
-import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
-import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils';
+import { inputSanitizer } from '../auth/index.js';
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { formatEntity, FormattedTextResponse, ToolErrorHandler } from '../utils/index.js';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),
@@ -34,7 +34,6 @@ export class GetEntityByRefTool {
       async ({ entityRef: ref }: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         // Sanitize entity reference input
         const sanitizedEntityRef = inputSanitizer.sanitizeEntityRef(ref);
-
         const result = await ctx.catalogClient.getEntityByRef(sanitizedEntityRef);
         return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntity);
       },

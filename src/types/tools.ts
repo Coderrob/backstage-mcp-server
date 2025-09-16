@@ -2,7 +2,7 @@ import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { IBackstageCatalogApi } from './apis';
+import { IBackstageCatalogApi } from './apis.js';
 
 /**
  * RawToolMetadata represents metadata as it appears in a file/manifest
@@ -33,29 +33,15 @@ export interface IToolRegistrationContext {
 
 export type ToolRegistration = (context: IToolRegistrationContext) => RegisteredTool;
 
-// IToolMetadata is exported from src/types/tool-metadata.ts
-
 export interface ITool {
   execute(args: IToolExecutionArgs, context: IToolExecutionContext): Promise<CallToolResult>;
 }
 
-export interface IToolMetadataProvider {
-  getMetadata(toolClass: ToolClass): IToolMetadata | undefined;
-}
-
-export interface IToolValidator {
-  validate(metadata: IToolMetadata, file: string): void;
-}
-
-export interface IToolRegistrar {
-  register(toolClass: ToolClass, metadata: IToolMetadata): void;
-}
-
-export interface IToolFactory {
-  loadTool(filePath: string): Promise<ITool | undefined>;
-}
-
-export type ToolClass = ITool;
+// ToolClass represents a tool class with a static execute method
+export type ToolClass = {
+  new (): unknown;
+  execute(args: IToolExecutionArgs, context: IToolExecutionContext): Promise<CallToolResult>;
+};
 
 /**
  * Arguments passed to tool execution
@@ -68,6 +54,35 @@ export interface IToolExecutionArgs {
  * Context provided during tool execution
  */
 export interface IToolExecutionContext {
+  server: McpServer;
   catalogClient: IBackstageCatalogApi;
   [key: string]: unknown;
+}
+
+/**
+ * Factory for creating tool instances
+ */
+export interface IToolFactory {
+  loadTool(filePath: string): Promise<ITool | undefined>;
+}
+
+/**
+ * Registrar for registering tools with the MCP server
+ */
+export interface IToolRegistrar {
+  register(toolClass: ITool, metadata: IToolMetadata): void;
+}
+
+/**
+ * Validator for tool metadata
+ */
+export interface IToolValidator {
+  validate(metadata: IToolMetadata, file: string): void;
+}
+
+/**
+ * Provider for tool metadata
+ */
+export interface IToolMetadataProvider {
+  getMetadata(toolClass: ToolClass | object): IToolMetadata | undefined;
 }

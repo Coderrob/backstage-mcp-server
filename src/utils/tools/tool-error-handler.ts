@@ -3,9 +3,9 @@
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { isObject } from 'util';
 
-import { IToolRegistrationContext } from '../../types';
-import { logger } from '../core';
-import { createSimpleError, createStandardError, ErrorType } from '../formatting';
+import { IToolRegistrationContext } from '../../types/index.js';
+import { logger } from '../core/logger.js';
+import { createSimpleError, createStandardError, ErrorType } from '../formatting/index.js';
 
 /**
  * Tool execution wrapper that provides standardized error handling

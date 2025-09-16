@@ -1,5 +1,15 @@
 [
   {
+    "name": "add_location",
+    "description": "Create a new location in the catalog.",
+    "params": ["type", "target"]
+  },
+  {
+    "name": "get_entities",
+    "description": "Get all entities in the catalog. Supports pagination and JSON:API formatting for enhanced LLM context.",
+    "params": ["filter", "fields", "limit", "offset", "format"]
+  },
+  {
     "name": "get_entities_by_query",
     "description": "Get entities by query filters.",
     "params": ["filter", "fields", "limit", "offset", "order"]
@@ -12,6 +22,11 @@
   {
     "name": "get_entity_ancestors",
     "description": "Get the ancestry tree for an entity.",
+    "params": ["entityRef"]
+  },
+  {
+    "name": "get_entity_by_ref",
+    "description": "Get a single entity by its reference (namespace/name or compound ref).",
     "params": ["entityRef"]
   },
   {

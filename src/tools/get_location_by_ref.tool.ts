@@ -3,9 +3,9 @@ import 'reflect-metadata';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators';
-import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
-import { formatLocation, FormattedTextResponse, ToolErrorHandler } from '../utils';
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { formatLocation, FormattedTextResponse, ToolErrorHandler } from '../utils/index.js';
 
 const paramsSchema = z.object({
   locationRef: z.string(),

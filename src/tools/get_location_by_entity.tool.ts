@@ -4,9 +4,9 @@ import { stringifyEntityRef } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators';
-import { ApiStatus, IToolRegistrationContext, ToolName } from '../types';
-import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils';
+import { Tool } from '../decorators/index.js';
+import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { isString, JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
 
 const compoundEntityRefSchema = z.object({
   kind: z.string(),

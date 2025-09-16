@@ -1,5 +1,6 @@
-import { ITool, IToolMetadata, IToolRegistrar, IToolRegistrationContext } from '../../types';
-import { logger, toZodRawShape } from '../core';
+import { ITool, IToolMetadata, IToolRegistrar, IToolRegistrationContext } from '../../types/index.js';
+import { logger } from '../core/logger.js';
+import { toZodRawShape } from '../core/mapping.js';
 
 export class DefaultToolRegistrar implements IToolRegistrar {
   constructor(private readonly context: IToolRegistrationContext) {}

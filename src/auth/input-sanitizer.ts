@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { isObject, isString } from '../utils';
+import { isObject, isString } from '../utils/index.js';
 
 export class InputSanitizer {
   private readonly maxStringLength = 10000;

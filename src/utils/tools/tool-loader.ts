@@ -1,9 +1,16 @@
-import { readdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { writeFile } from 'fs/promises';
 import { z } from 'zod';
 
-import { IToolFactory, IToolMetadata, IToolMetadataProvider, IToolRegistrar, IToolValidator } from '../../types';
-import { logger } from '../core';
+import * as allTools from '../../tools/index.js';
+import {
+  IToolFactory,
+  IToolMetadata,
+  IToolMetadataProvider,
+  IToolRegistrar,
+  IToolValidator,
+  ToolClass,
+} from '../../types/index.js';
+import { logger } from '../core/logger.js';
 
 interface ToolManifestEntry {
   name: string;
@@ -15,7 +22,6 @@ export class ToolLoader {
   protected readonly manifest: ToolManifestEntry[] = [];
 
   constructor(
-    private readonly directory: string,
     private readonly factory: IToolFactory,
     private readonly registrar: IToolRegistrar,
     private readonly validator: IToolValidator,
@@ -25,43 +31,43 @@ export class ToolLoader {
   async registerAll(): Promise<void> {
     logger.debug('Starting tool registration process');
 
-    const files = await this.findToolFiles();
-    logger.info(`Found ${files.length} tool files to process`);
+    // Get all tool classes from the static imports
+    const toolClasses = Object.values(allTools).filter(
+      (tool) => typeof tool === 'function' && tool.prototype !== undefined && 'execute' in tool
+    ) as ToolClass[];
 
-    for (const file of files) {
-      const toolPath = join(this.directory, file);
-      logger.debug(`Loading tool from ${toolPath}`);
+    logger.info(`Found ${toolClasses.length} tool classes to process`);
 
-      const toolClass = await this.factory.loadTool(toolPath);
-      if (toolClass === undefined || toolClass === null) {
-        this.warnInvalid(file);
-        continue;
-      }
+    for (const toolClass of toolClasses) {
+      logger.debug(`Registering tool class ${toolClass.name}`);
 
       const metadata = this.metadataProvider.getMetadata(toolClass);
       if (metadata === undefined || metadata === null) {
-        this.warnInvalid(file);
+        logger.warn(`Invalid tool metadata for ${toolClass.name}`);
         continue;
       }
 
-      this.validator.validate(metadata, file);
+      // Validate metadata (pass empty string since we don't have a file path)
+      try {
+        this.validator.validate(metadata, '');
+      } catch (error) {
+        logger.warn(`Tool validation failed for ${toolClass.name}: ${error}`);
+        continue;
+      }
+
       this.registrar.register(toolClass, metadata);
       this.addToManifest(metadata);
-      logger.debug(`Successfully registered tool: ${metadata.name}`);
+
+      logger.debug(`Successfully registered tool ${metadata.name}`);
     }
 
-    logger.info(`Tool registration completed. Registered ${this.manifest.length} tools`);
+    logger.info(`Registered ${this.manifest.length} tools successfully`);
   }
 
   async exportManifest(filePath: string): Promise<void> {
     logger.debug(`Exporting tools manifest to ${filePath}`);
     await writeFile(filePath, JSON.stringify(this.manifest, null, 2), 'utf-8');
     logger.info(`Tools manifest exported to ${filePath} with ${this.manifest.length} tools`);
-  }
-
-  protected async findToolFiles(): Promise<string[]> {
-    const files = await readdir(this.directory);
-    return files.filter((file) => file.endsWith('.tool.ts') || file.endsWith('.tool.js'));
   }
 
   protected addToManifest({ name, description, paramsSchema }: IToolMetadata): void {

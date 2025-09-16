@@ -18,10 +18,18 @@ import {
 import { CompoundEntityRef, Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import axios, { AxiosInstance, isAxiosError } from 'axios';
 
-import { AuthConfig, AuthManager, securityAuditor } from '../auth';
-import { CacheManager } from '../cache';
-import { IBackstageCatalogApi, JsonApiDocument, PaginationParams, SecurityEventType } from '../types';
-import { isNonEmptyString, isNumber, isString, JsonApiFormatter, logger, PaginationHelper } from '../utils';
+import { AuthConfig, AuthManager, securityAuditor } from '../auth/index.js';
+import { CacheManager } from '../cache/index.js';
+import { IBackstageCatalogApi, JsonApiDocument, PaginationParams, SecurityEventType } from '../types/index.js';
+import {
+  EntityRef,
+  isNonEmptyString,
+  isNumber,
+  isString,
+  JsonApiFormatter,
+  logger,
+  PaginationHelper,
+} from '../utils/index.js';
 
 interface BackstageCatalogApiOptions {
   baseUrl: string;
@@ -32,18 +40,14 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   private readonly client: AxiosInstance;
   private readonly authManager: AuthManager;
   private readonly cacheManager: CacheManager;
-  private readonly paginationHelper: PaginationHelper;
-  private readonly jsonApiFormatter: JsonApiFormatter;
 
   constructor({ baseUrl, auth }: BackstageCatalogApiOptions) {
     logger.debug('Initializing BackstageCatalogApi', { baseUrl, authType: auth.type });
     this.authManager = new AuthManager(auth);
     this.cacheManager = new CacheManager();
-    this.paginationHelper = new PaginationHelper();
-    this.jsonApiFormatter = new JsonApiFormatter();
 
     this.client = axios.create({
-      baseURL: `${baseUrl.replace(/\/$/, '')}/v1`,
+      baseURL: `${baseUrl.replace(/\/$/, '')}/api/catalog`,
       timeout: 30000, // 30 second timeout
     });
     logger.debug('Axios client created with base URL', { baseUrl: this.client.defaults.baseURL });
@@ -204,7 +208,7 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   ): Promise<GetEntityAncestorsResponse> {
     const { entityRef } = request;
     const { data } = await this.client.get<GetEntityAncestorsResponse>(
-      `/entities/by-ref/${encodeURIComponent(entityRef)}/ancestry`
+      `/entities/by-name/${encodeURIComponent(entityRef)}/ancestry`
     );
     return data;
   }
@@ -227,7 +231,13 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
 
     try {
       logger.debug('Fetching entity from API', { entityRef: refString });
-      const { data } = await this.client.get<Entity>(`/entities/by-ref/${encodeURIComponent(refString)}`);
+
+      // Parse the entity reference using the EntityRef class
+      const entityRef = EntityRef.parse(refString);
+
+      const { data } = await this.client.get<Entity>(
+        `/entities/by-name/${encodeURIComponent(entityRef.kind)}/${encodeURIComponent(entityRef.namespace)}/${encodeURIComponent(entityRef.name)}`
+      );
 
       // Cache the result for 5 minutes
       this.cacheManager.set(cacheKey, data, 5 * 60 * 1000);
