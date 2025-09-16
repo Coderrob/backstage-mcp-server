@@ -1,4 +1,4 @@
-import { CacheConfig, CacheEntry } from '../types/index.js';
+import { CacheConfig, CacheEntry } from '../types/cache.js';
 import { isNumber } from '../utils/core/guards.js';
 import { logger } from '../utils/core/logger.js';
 

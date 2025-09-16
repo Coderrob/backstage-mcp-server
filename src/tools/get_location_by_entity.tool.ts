@@ -4,8 +4,10 @@ import { stringifyEntityRef } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/index.js';
-import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
+import { Tool } from '../decorators/tool.decorator.js';
+import { ApiStatus } from '../types/apis.js';
+import { ToolName } from '../types/constants.js';
+import { IToolRegistrationContext } from '../types/tools.js';
 import { isString } from '../utils/core/guards.js';
 import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';

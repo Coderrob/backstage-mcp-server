@@ -1,4 +1,4 @@
-import { VALID_ENTITY_KINDS } from '../../types/index.js';
+import { VALID_ENTITY_KINDS } from '../../types/entities.js';
 import { assertKind, assertNonEmptyString } from './assertions.js';
 
 describe('assertNonEmptyString', () => {

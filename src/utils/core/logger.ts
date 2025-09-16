@@ -1,6 +1,6 @@
 import { Bindings, Logger, LoggerOptions, pino, stdTimeFunctions } from 'pino';
 
-import { ILogger } from '../../types/index.js';
+import { ILogger } from '../../types/logger.js';
 import { isString } from './guards.js';
 
 // Ensure Node.js globals are available

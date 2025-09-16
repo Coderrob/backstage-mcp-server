@@ -4,17 +4,14 @@ import { join } from 'path';
 
 import { BackstageCatalogApi } from './api/backstage-catalog-api.js';
 import { AuthConfig } from './auth/auth-manager.js';
-import { IToolRegistrationContext } from './types/index.js';
-import {
-  DefaultToolFactory,
-  DefaultToolRegistrar,
-  DefaultToolValidator,
-  isNonEmptyString,
-  isString,
-  logger,
-  ReflectToolMetadataProvider,
-  ToolLoader,
-} from './utils/index.js';
+import { IToolRegistrationContext } from './types/tools.js';
+import { isNonEmptyString, isString } from './utils/core/guards.js';
+import { logger } from './utils/core/logger.js';
+import { DefaultToolFactory } from './utils/tools/tool-factory.js';
+import { ToolLoader } from './utils/tools/tool-loader.js';
+import { ReflectToolMetadataProvider } from './utils/tools/tool-metadata.js';
+import { DefaultToolRegistrar } from './utils/tools/tool-registrar.js';
+import { DefaultToolValidator } from './utils/tools/tool-validator.js';
 
 export async function startServer(): Promise<void> {
   logger.info('Starting Backstage MCP Server');

@@ -1,4 +1,4 @@
-import { PaginatedResponse,PaginationMeta, PaginationParams } from '../../types/index.js';
+import { PaginatedResponse, PaginationMeta, PaginationParams } from '../../types/paging.js';
 import { isNumber } from '../core/guards.js';
 
 /* eslint-disable import/no-unused-modules */

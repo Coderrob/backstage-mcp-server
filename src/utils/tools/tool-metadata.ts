@@ -1,5 +1,5 @@
 import { toolMetadataMap } from '../../decorators/tool.decorator.js';
-import { IToolMetadata, IToolMetadataProvider, ToolClass } from '../../types/index.js';
+import { IToolMetadata, IToolMetadataProvider, ToolClass } from '../../types/tools.js';
 import { isFunction, isObject } from '../core/guards.js';
 
 export class ReflectToolMetadataProvider implements IToolMetadataProvider {

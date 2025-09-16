@@ -2,14 +2,7 @@ import { writeFile } from 'fs/promises';
 import { z } from 'zod';
 
 import * as allTools from '../../tools/index.js';
-import {
-  IToolFactory,
-  IToolMetadata,
-  IToolMetadataProvider,
-  IToolRegistrar,
-  IToolValidator,
-  ToolClass,
-} from '../../types/index.js';
+import { IToolFactory, IToolMetadata, IToolMetadataProvider, IToolRegistrar, IToolValidator, ToolClass } from '../../types/tools.js';
 import { logger } from '../core/logger.js';
 
 interface ToolManifestEntry {

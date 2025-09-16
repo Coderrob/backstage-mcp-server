@@ -1,4 +1,4 @@
-import { ITool, IToolMetadata, IToolRegistrar, IToolRegistrationContext } from '../../types/index.js';
+import { ITool, IToolMetadata, IToolRegistrar, IToolRegistrationContext } from '../../types/tools.js';
 import { logger } from '../core/logger.js';
 import { toZodRawShape } from '../core/mapping.js';
 

@@ -3,7 +3,8 @@
 import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { ApiStatus, IApiResponse, ResponseMessage } from '../../types/index.js';
+import { ApiStatus, IApiResponse } from '../../types/apis.js';
+import { ResponseMessage } from '../../types/constants.js';
 import { isBigInt } from '../core/guards.js';
 
 type ContentItem = {

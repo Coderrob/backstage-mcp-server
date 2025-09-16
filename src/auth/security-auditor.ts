@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ISecurityEvent, SecurityEventType } from '../types/index.js';
+import { ISecurityEvent, SecurityEventType } from '../types/events.js';
 
 const SecurityEventSchema = z.object({
   id: z.string(),

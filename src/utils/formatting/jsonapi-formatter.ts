@@ -2,8 +2,9 @@
 // JSON:API specification implementation for richer LLM context
 // https://jsonapi.org/
 
-import { DefaultValue, EntityField, JsonApiDocument, JsonApiError, JsonApiResource } from '../../types/index.js';
-import { isNonEmptyString, isObject, isString, isStringOrNumber } from '../core/index.js';
+import { DefaultValue, EntityField } from '../../types/constants.js';
+import { JsonApiDocument, JsonApiError, JsonApiResource } from '../../types/json-api.js';
+import { isNonEmptyString, isObject, isString, isStringOrNumber } from '../core/guards.js';
 
 export class JsonApiFormatter {
   private static readonly JSON_API_VERSION = '1.0';

@@ -1,4 +1,4 @@
-import { EntityKind, VALID_ENTITY_KINDS } from '../../types/index.js';
+import { EntityKind, VALID_ENTITY_KINDS } from '../../types/entities.js';
 import { isString } from './guards.js';
 
 export function assertNonEmptyString(label: string, value: string): string {

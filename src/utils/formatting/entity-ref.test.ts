@@ -1,6 +1,6 @@
 import { CompoundEntityRef, DEFAULT_NAMESPACE } from '@backstage/catalog-model';
 
-import { EntityKind } from '../../types/index.js';
+import { EntityKind } from '../../types/entities.js';
 import { EntityRef } from './entity-ref';
 
 describe('EntityRef', () => {

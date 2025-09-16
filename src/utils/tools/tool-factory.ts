@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'url';
 
-import { ITool, IToolFactory } from '../../types/index.js';
+import { ITool, IToolFactory } from '../../types/tools.js';
 import { isFunction } from '../core/guards.js';
 import { logger } from '../core/logger.js';
 

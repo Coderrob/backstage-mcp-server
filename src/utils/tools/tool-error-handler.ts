@@ -1,11 +1,11 @@
 /* eslint-disable import/no-unused-modules */
 
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { isObject } from 'util';
+import { isObject } from '../core/guards.js';
 
-import { IToolRegistrationContext } from '../../types/index.js';
+import { IToolRegistrationContext } from '../../types/tools.js';
 import { logger } from '../core/logger.js';
-import { createSimpleError, createStandardError, ErrorType } from '../formatting/index.js';
+import { createSimpleError, createStandardError, ErrorType } from '../formatting/responses.js';
 
 /**
  * Tool execution wrapper that provides standardized error handling
