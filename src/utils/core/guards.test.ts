@@ -1,6 +1,13 @@
-import { isBigInt, isFunction, isNonEmptyString, isNumber, isObject, isString, isStringOrNumber } from './guards';
+import { jest } from '@jest/globals';
 
-describe('guards utility functions', () => {
+import { isBigInt, isFunction, isNonEmptyString, isNumber, isObject, isString, isStringOrNumber } from './guards.js';
+
+describe('guards', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+  });
+
   describe('isString', () => {
     it.each([
       ['hello', true],

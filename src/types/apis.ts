@@ -27,6 +27,7 @@ export enum ApiStatus {
 
 export interface IApiResponse {
   status: ApiStatus;
+  errors?: (Error | Record<string, unknown>)[];
 }
 
 export interface IApiDataResponse<T> extends IApiResponse {

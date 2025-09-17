@@ -1,5 +1,6 @@
-import { CacheConfig, CacheEntry } from '../types/index.js';
-import { isNumber, logger } from '../utils/index.js';
+import { CacheConfig, CacheEntry } from '../types/cache.js';
+import { isDefined, isNullOrUndefined, isNumber } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
 
 export class CacheManager {
   private cache = new Map<string, CacheEntry>();
@@ -27,7 +28,7 @@ export class CacheManager {
    */
   get<T>(key: string): T | undefined {
     const entry = this.cache.get(key);
-    if (entry === undefined || entry === null) {
+    if (isNullOrUndefined(entry)) {
       logger.debug(`Cache miss for key: ${key}`);
       return undefined;
     }
@@ -132,7 +133,7 @@ export class CacheManager {
       }
     }
 
-    if (oldestKey !== undefined && oldestKey !== null) {
+    if (isDefined(oldestKey)) {
       this.cache.delete(oldestKey);
     }
   }

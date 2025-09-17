@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-import { isObject, isString } from '../utils/index.js';
+import { isObject, isString } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
+import { ValidationError } from '../utils/errors/custom-errors.js';
 
 export class InputSanitizer {
   private readonly maxStringLength = 10000;
@@ -8,43 +10,95 @@ export class InputSanitizer {
   private readonly allowedCharacters = /^[a-zA-Z0-9\s\-_.@/]+$/;
 
   /**
-   * Sanitizes a string input
+   * Sanitizes a string input by validating length and removing dangerous characters.
+   * @param input - The string to sanitize
+   * @param fieldName - The name of the field being sanitized (for error messages)
+   * @returns The sanitized string
+   * @throws ValidationError if the input is invalid or too long
    */
   sanitizeString(input: string, fieldName: string): string {
-    if (!isString(input)) {
-      throw new Error(`Invalid input type for ${fieldName}: expected string, got ${typeof input}`);
-    }
+    this.validateStringInput(input, fieldName);
+    this.validateStringLength(input, fieldName);
 
-    if (input.length > this.maxStringLength) {
-      throw new Error(`Input too long for ${fieldName}: ${input.length} characters (max: ${this.maxStringLength})`);
-    }
-
-    // Remove null bytes and other dangerous characters
-    const sanitized = [...input]
-      .filter((char) => {
-        const code = char.charCodeAt(0);
-        return code >= 32 && code <= 126; // Only printable ASCII
-      })
-      .join('');
-
-    // Check for potentially dangerous patterns
-    if (sanitized.includes('<script') || sanitized.includes('javascript:')) {
-      throw new Error(`Potentially dangerous content detected in ${fieldName}`);
-    }
+    const sanitized = this.removeDangerousCharacters(input);
+    this.checkForDangerousPatterns(sanitized, fieldName);
 
     return sanitized.trim();
   }
 
   /**
-   * Sanitizes an array input
+   * Validates that the input is a string.
+   * @param input - The input to validate
+   * @param fieldName - The field name for error messages
+   * @throws ValidationError if the input is not a string
+   * @private
+   */
+  private validateStringInput(input: unknown, fieldName: string): asserts input is string {
+    if (!isString(input)) {
+      throw new ValidationError(`Invalid input type for ${fieldName}: expected string, got ${typeof input}`);
+    }
+  }
+
+  /**
+   * Validates that the string length is within acceptable limits.
+   * @param input - The string to validate
+   * @param fieldName - The field name for error messages
+   * @throws ValidationError if the string is too long
+   * @private
+   */
+  private validateStringLength(input: string, fieldName: string): void {
+    if (input.length > this.maxStringLength) {
+      throw new ValidationError(
+        `Input too long for ${fieldName}: ${input.length} characters (max: ${this.maxStringLength})`
+      );
+    }
+  }
+
+  /**
+   * Removes dangerous characters from a string.
+   * @param input - The string to clean
+   * @returns The cleaned string with only printable ASCII characters
+   * @private
+   */
+  private removeDangerousCharacters(input: string): string {
+    return [...input]
+      .filter((char) => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126; // Only printable ASCII
+      })
+      .join('');
+  }
+
+  /**
+   * Checks for potentially dangerous patterns in the sanitized string.
+   * @param sanitized - The sanitized string to check
+   * @param fieldName - The field name for error messages
+   * @throws ValidationError if dangerous patterns are detected
+   * @private
+   */
+  private checkForDangerousPatterns(sanitized: string, fieldName: string): void {
+    if (sanitized.includes('<script') || sanitized.includes('javascript:')) {
+      throw new ValidationError(`Potentially dangerous content detected in ${fieldName}`);
+    }
+  }
+
+  /**
+   * Sanitizes an array input by validating length and optionally sanitizing each item.
+   * @param input - The array to sanitize
+   * @param fieldName - The name of the field being sanitized (for error messages)
+   * @param itemSanitizer - Optional function to sanitize each array item
+   * @returns The sanitized array
+   * @throws ValidationError if the input is not an array or too large
    */
   sanitizeArray<T>(input: T[], fieldName: string, itemSanitizer?: (item: T) => T): T[] {
     if (!Array.isArray(input)) {
-      throw new Error(`Invalid input type for ${fieldName}: expected array, got ${typeof input}`);
+      throw new ValidationError(`Invalid input type for ${fieldName}: expected array, got ${typeof input}`);
     }
 
     if (input.length > this.maxArrayLength) {
-      throw new Error(`Array too large for ${fieldName}: ${input.length} items (max: ${this.maxArrayLength})`);
+      throw new ValidationError(
+        `Array too large for ${fieldName}: ${input.length} items (max: ${this.maxArrayLength})`
+      );
     }
 
     if (itemSanitizer) {
@@ -55,7 +109,10 @@ export class InputSanitizer {
   }
 
   /**
-   * Sanitizes entity reference input
+   * Sanitizes entity reference input, supporting both string and object formats.
+   * @param entityRef - The entity reference to sanitize (string or object format)
+   * @returns The sanitized entity reference in the same format as input
+   * @throws ValidationError if the entity reference format is invalid
    */
   sanitizeEntityRef(
     entityRef: string | { kind: string; namespace: string; name: string }
@@ -72,11 +129,14 @@ export class InputSanitizer {
       };
     }
 
-    throw new Error('Invalid entity reference format');
+    throw new ValidationError('Invalid entity reference format');
   }
 
   /**
-   * Validates and sanitizes filter input
+   * Validates and sanitizes filter input for entity queries.
+   * @param filter - Array of filter objects with key-value pairs
+   * @returns Array of sanitized filter objects
+   * @throws ValidationError if the filter format is invalid
    */
   sanitizeFilter(filter: Array<{ key: string; values: string[] }>): Array<{ key: string; values: string[] }> {
     return this.sanitizeArray(filter, 'filter', (item) => ({
@@ -86,21 +146,34 @@ export class InputSanitizer {
   }
 
   /**
-   * General input validation using Zod schemas
+   * General input validation using Zod schemas.
+   * @param data - The data to validate
+   * @param schema - The Zod schema to validate against
+   * @param fieldName - The name of the field being validated (for error messages)
+   * @returns The validated and parsed data
+   * @throws ValidationError if the data fails validation
    */
   validateWithSchema<T>(data: unknown, schema: z.ZodSchema<T>, fieldName: string): T {
     try {
       return schema.parse(data);
     } catch (error) {
+      logger.error('Input validation failed', {
+        fieldName,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (error instanceof z.ZodError) {
-        throw new Error(`Validation failed for ${fieldName}: ${error.errors.map((e) => e.message).join(', ')}`);
+        throw new ValidationError(
+          `Validation failed for ${fieldName}: ${error.errors.map((e) => e.message).join(', ')}`
+        );
       }
-      throw new Error(`Invalid input for ${fieldName}`);
+      throw new ValidationError(`Invalid input for ${fieldName}`);
     }
   }
 
   /**
-   * Checks for SQL injection patterns (basic)
+   * Checks for SQL injection patterns in input strings.
+   * @param input - The string to check for injection patterns
+   * @throws ValidationError if dangerous patterns are detected
    */
   checkForInjection(input: string): void {
     const dangerousPatterns = [
@@ -111,13 +184,16 @@ export class InputSanitizer {
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(input)) {
-        throw new Error('Potentially dangerous input pattern detected');
+        throw new ValidationError('Potentially dangerous input pattern detected');
       }
     }
   }
 
   /**
-   * Sanitizes URL input
+   * Sanitizes URL input by validating format and protocol.
+   * @param url - The URL string to sanitize
+   * @returns The sanitized and validated URL
+   * @throws ValidationError if the URL is invalid or uses an unsupported protocol
    */
   sanitizeUrl(url: string): string {
     const sanitized = this.sanitizeString(url, 'url');
@@ -126,11 +202,12 @@ export class InputSanitizer {
       const parsedUrl = new URL(sanitized);
       // Only allow http and https protocols
       if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-        throw new Error('Invalid URL protocol');
+        throw new ValidationError('Invalid URL protocol');
       }
       return parsedUrl.toString();
     } catch {
-      throw new Error('Invalid URL format');
+      logger.error('URL validation failed', { url });
+      throw new ValidationError('Invalid URL format');
     }
   }
 }

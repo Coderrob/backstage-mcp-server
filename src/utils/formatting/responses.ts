@@ -3,8 +3,9 @@
 import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import { ApiStatus, IApiResponse, ResponseMessage } from '../../types/index.js';
-import { isBigInt } from '../core/guards.js';
+import { ApiStatus, IApiResponse } from '../../types/apis.js';
+import { ResponseMessage } from '../../types/constants.js';
+import { isBigInt, isDefined, isNullOrUndefined } from '../core/guards.js';
 
 type ContentItem = {
   type: 'text';
@@ -35,19 +36,20 @@ export interface IApiErrorResponseExtended extends IApiResponse {
       operation?: string;
       parameter?: string;
     };
-    errors?: Array<{
-      id?: string;
-      status?: string;
-      code?: string;
-      title?: string;
-      detail?: string;
-      source?: {
-        pointer?: string;
-        parameter?: string;
-      };
-      meta?: Record<string, unknown>;
-    }>;
   };
+  meta?: Record<string, unknown>;
+  errors?: {
+    id?: string;
+    status?: string;
+    code?: string;
+    title?: string;
+    detail?: string;
+    source?: {
+      pointer?: string;
+      parameter?: string;
+    };
+    meta?: Record<string, unknown>;
+  }[];
 }
 
 /**
@@ -110,7 +112,7 @@ export function FormattedTextResponse<T extends IApiResponse>(
   } else {
     // Default formatter for success responses
     const successData = data as IApiSuccessResponse;
-    const hasSuccessData = successData.data !== undefined && successData.data !== null;
+    const hasSuccessData = isDefined(successData.data);
     text = `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`;
   }
 
@@ -139,7 +141,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
     });
   } else {
     const successData = data as IApiSuccessResponse;
-    const hasSuccessData = successData.data !== undefined && successData.data !== null;
+    const hasSuccessData = isDefined(successData.data);
     content.push({
       type: 'text',
       text: `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`,
@@ -159,11 +161,11 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
  * Formatter for entity list responses
  */
 export function formatEntityList(data: IApiSuccessResponse): string {
-  if (data.data === undefined || data.data === null || !Array.isArray(data.data)) {
+  if (isNullOrUndefined(data.data) || !Array.isArray(data.data)) {
     return 'No entities found';
   }
 
-  const entities = data.data as unknown[];
+  const entities = data.data as Entity[];
   const count = entities.length;
 
   if (count === 0) {
@@ -173,7 +175,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
   // Group by kind
   const byKind: Record<string, number> = {};
   entities.forEach((entity) => {
-    const entityObj = entity as Record<string, unknown>;
+    const entityObj = entity;
     const kind = String(entityObj.kind ?? 'unknown');
     byKind[kind] = (byKind[kind] || 0) + 1;
   });
@@ -189,7 +191,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
  * Formatter for single entity responses
  */
 export function formatEntity<T extends Entity>(data: IApiSuccessResponse<T | undefined>): string {
-  if (data.data === undefined || data.data === null) {
+  if (isNullOrUndefined(data.data)) {
     return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.ENTITY_NOT_FOUND}`;
   }
 
@@ -207,14 +209,14 @@ export function formatEntity<T extends Entity>(data: IApiSuccessResponse<T | und
  * Formatter for location responses
  */
 export function formatLocation(data: IApiSuccessResponse): string {
-  if (data.data === undefined || data.data === null) {
+  if (isNullOrUndefined(data.data)) {
     return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.LOCATION_NOT_FOUND}`;
   }
 
   const location = data.data as Record<string, unknown>;
-  const id = location.id !== undefined && location.id !== null ? String(location.id) : 'unknown';
-  const type = location.type !== undefined && location.type !== null ? String(location.type) : 'unknown';
-  const target = location.target !== undefined && location.target !== null ? String(location.target) : 'unknown';
+  const id = isDefined(location.id) ? String(location.id) : 'unknown';
+  const type = isDefined(location.type) ? String(location.type) : 'unknown';
+  const target = isDefined(location.target) ? String(location.target) : 'unknown';
   const tags = Array.isArray(location.tags as unknown) ? (location.tags as string[]) : [];
 
   return `Location found:
@@ -252,40 +254,35 @@ export function createStandardError(
         tool: toolName,
         operation,
       },
-      errors: [
-        {
-          status: getHttpStatusCode(errorType),
-          code: errorCode,
-          title: getErrorTitle(errorType),
-          detail: errorMessage,
-          source: {
-            parameter: operation,
-          },
-          meta: {
-            tool: toolName,
-            timestamp: new Date().toISOString(),
-            ...additionalDetails,
-          },
-        },
-      ],
     },
+    errors: [
+      {
+        status: getHttpStatusCode(errorType),
+        code: errorCode,
+        title: getErrorTitle(errorType),
+        detail: errorMessage,
+        source: {
+          parameter: operation,
+        },
+        meta: {
+          tool: toolName,
+          timestamp: new Date().toISOString(),
+          ...additionalDetails,
+        },
+      },
+    ],
   };
 
   return response;
 }
 
 /**
- * Creates a simple error response for backward compatibility
+ * Creates a simple error response object
  * @param message - Error message
- * @returns Simple error response
+ * @returns Simple error response object
  */
 export function createSimpleError(message: string): IApiErrorResponse {
-  return {
-    status: ApiStatus.ERROR,
-    data: {
-      message,
-    },
-  };
+  return { status: ApiStatus.ERROR, data: { message } };
 }
 
 /**

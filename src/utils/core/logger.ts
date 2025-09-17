@@ -1,6 +1,6 @@
 import { Bindings, Logger, LoggerOptions, pino, stdTimeFunctions } from 'pino';
 
-import { ILogger } from '../../types/index.js';
+import { ILogger } from '../../types/logger.js';
 import { isString } from './guards.js';
 
 // Ensure Node.js globals are available
@@ -12,6 +12,11 @@ declare const process: {
 class PinoLogger implements ILogger {
   private logger: Logger;
 
+  /**
+   * Creates a new PinoLogger instance with optional configuration.
+   * Automatically detects Jest environment for pretty printing.
+   * @param options - Optional Pino logger configuration options
+   */
   constructor(options: LoggerOptions = {}) {
     // Detect if we're running in Jest for pretty printing
     const isJest =
@@ -42,32 +47,62 @@ class PinoLogger implements ILogger {
     });
   }
 
+  /**
+   * Logs a debug message.
+   * @param message - The message to log
+   * @param args - Additional arguments to include in the log
+   */
   debug(message: string, ...args: unknown[]): void {
     // pino's log methods accept any[]; narrow with a cast. Disable rule for this line.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.logger.debug(message, ...(args as any[]));
   }
 
+  /**
+   * Logs an info message.
+   * @param message - The message to log
+   * @param args - Additional arguments to include in the log
+   */
   info(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.logger.info(message, ...(args as any[]));
   }
 
+  /**
+   * Logs a warning message.
+   * @param message - The message to log
+   * @param args - Additional arguments to include in the log
+   */
   warn(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.logger.warn(message, ...(args as any[]));
   }
 
+  /**
+   * Logs an error message.
+   * @param message - The message to log
+   * @param args - Additional arguments to include in the log
+   */
   error(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.logger.error(message, ...(args as any[]));
   }
 
+  /**
+   * Logs a fatal error message.
+   * @param message - The message to log
+   * @param args - Additional arguments to include in the log
+   */
   fatal(message: string, ...args: unknown[]): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.logger.fatal(message, ...(args as any[]));
   }
 
+  /**
+   * Creates a child logger with additional bindings.
+   * @param bindings - Additional context to include in all log messages from the child logger
+   * @returns A new logger instance with the additional bindings
+   */
   child(bindings: Bindings): ILogger {
     const childLogger = this.logger.child(bindings);
     const wrapper: ILogger = {

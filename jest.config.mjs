@@ -12,6 +12,12 @@ export default {
   },
   transformIgnorePatterns: ['node_modules/(?!(@modelcontextprotocol)/)'],
   testPathIgnorePatterns: ['<rootDir>/dist/'],
-  collectCoverageFrom: ['src/**/*.{ts,js}', '!src/**/*.spec.ts', '!src/**/*.test.ts', '!src/**/__fixtures__/**/*'],
+  collectCoverageFrom: [
+    'src/**/*.{ts,js}',
+    '!src/**/*.spec.ts',
+    '!src/**/*.test.ts',
+    '!src/types/**/*',
+    '!src/**/__fixtures__/**/*',
+  ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 };

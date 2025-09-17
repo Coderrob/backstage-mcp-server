@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ISecurityEvent, SecurityEventType } from '../types/index.js';
+import { ISecurityEvent, ISecurityEventFilter, ISecurityEventSummary, SecurityEventType } from '../types/events.js';
 
 const SecurityEventSchema = z.object({
   id: z.string(),
@@ -20,6 +20,11 @@ export class SecurityAuditor {
   private events: ISecurityEvent[] = [];
   private readonly maxEvents = 10000; // Keep last 10k events in memory
 
+  /**
+   * Logs a security event with automatic ID generation and timestamp.
+   * Validates the event data and maintains the event history limit.
+   * @param event - The security event data (without id and timestamp)
+   */
   logEvent(event: Omit<ISecurityEvent, 'id' | 'timestamp'>): void {
     const fullEvent: ISecurityEvent = {
       ...event,
@@ -48,10 +53,21 @@ export class SecurityAuditor {
     this.persistEvent(fullEvent);
   }
 
+  /**
+   * Generates a unique event ID for security events.
+   * @returns A unique event identifier
+   * @private
+   */
   private generateEventId(): string {
     return `sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  /**
+   * Persists a security event to external systems.
+   * Currently a placeholder - in production would send to SIEM, database, etc.
+   * @param _event - The security event to persist
+   * @private
+   */
   private persistEvent(_event: ISecurityEvent): void {
     // In a real implementation, this would:
     // - Send to SIEM system
@@ -60,7 +76,16 @@ export class SecurityAuditor {
     // For now, we'll just keep in memory
   }
 
-  getEvents(filter?: { type?: SecurityEventType; userId?: string; since?: Date; limit?: number }): ISecurityEvent[] {
+  /**
+   * Retrieves security events with optional filtering.
+   * @param filter - Optional filter criteria for event retrieval
+   * @param filter.type - Filter by security event type
+   * @param filter.userId - Filter by user ID
+   * @param filter.since - Filter events since this date
+   * @param filter.limit - Limit the number of returned events
+   * @returns Array of filtered security events
+   */
+  getEvents(filter?: ISecurityEventFilter): ISecurityEvent[] {
     let filtered = this.events;
 
     if (filter && filter.type !== undefined) {
@@ -84,13 +109,11 @@ export class SecurityAuditor {
     return filtered;
   }
 
-  getSecuritySummary(): {
-    totalEvents: number;
-    authSuccessCount: number;
-    authFailureCount: number;
-    rateLimitCount: number;
-    recentEvents: ISecurityEvent[];
-  } {
+  /**
+   * Generates a security summary with event counts and recent activity.
+   * @returns Object containing security metrics and recent events
+   */
+  getSecuritySummary(): ISecurityEventSummary {
     const recentEvents = this.events.slice(-100); // Last 100 events
 
     return {

@@ -1,9 +1,15 @@
 import { CompoundEntityRef, DEFAULT_NAMESPACE } from '@backstage/catalog-model';
+import { jest } from '@jest/globals';
 
-import { EntityKind } from '../../types/index.js';
-import { EntityRef } from './entity-ref';
+import { EntityKind } from '../../types/entities.js';
+import { EntityRef } from './entity-ref.js';
 
 describe('EntityRef', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+  });
+
   describe('parse', () => {
     it('should parse full format kind:namespace/name', () => {
       const result = EntityRef.parse('component:default/my-component');

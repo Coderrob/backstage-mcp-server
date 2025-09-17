@@ -3,8 +3,7 @@
     "esbenp.prettier-vscode",
     "editorconfig.editorconfig",
     "dbaeumer.vscode-eslint",
-    "DavidAnson.vscode-markdownlint",
-    "arcanis.vscode-zipfs"
+    "DavidAnson.vscode-markdownlint"
   ],
   "unwantedRecommendations": []
 }

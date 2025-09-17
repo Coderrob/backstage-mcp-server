@@ -2,8 +2,9 @@
 // JSON:API specification implementation for richer LLM context
 // https://jsonapi.org/
 
-import { DefaultValue, EntityField, JsonApiDocument, JsonApiError, JsonApiResource } from '../../types/index.js';
-import { isNonEmptyString, isObject, isString, isStringOrNumber } from '../core/index.js';
+import { DefaultValue, EntityField } from '../../types/constants.js';
+import { JsonApiDocument, JsonApiError, JsonApiResource } from '../../types/json-api.js';
+import { isDefined, isNonEmptyArray, isNonEmptyString, isObject, isString, isStringOrNumber } from '../core/guards.js';
 
 export class JsonApiFormatter {
   private static readonly JSON_API_VERSION = '1.0';
@@ -46,8 +47,7 @@ export class JsonApiFormatter {
       const tags = Array.isArray(rawTags) ? (rawTags as unknown[]) : [];
       const annotations = isObject(rawAnnotations) ? rawAnnotations : {};
       const labels = isObject(rawLabels) ? rawLabels : {};
-      const spec =
-        rawSpec !== undefined && rawSpec !== null && isObject(rawSpec) ? (rawSpec as Record<string, unknown>) : {};
+      const spec = isDefined(rawSpec) && isObject(rawSpec) ? (rawSpec as Record<string, unknown>) : {};
 
       const title = rawTitle;
       const description = rawDescription;
@@ -64,7 +64,7 @@ export class JsonApiFormatter {
 
     // Add relationships if they exist
     const relations = Array.isArray(entity.relations) ? (entity.relations as unknown[]) : [];
-    if (relations.length > 0) {
+    if (isNonEmptyArray(relations)) {
       resource.relationships = {};
       relations.forEach((relation: unknown) => {
         const rel = relation as Record<string, unknown> | undefined;
@@ -128,14 +128,13 @@ export class JsonApiFormatter {
       const baseUrl = '/api/catalog/entities';
       const params = new URLSearchParams();
 
-      if (pagination.limit !== undefined && pagination.limit !== null) params.set('limit', String(pagination.limit));
-      if (pagination.offset !== undefined && pagination.offset !== null)
-        params.set('offset', String(pagination.offset));
+      if (isDefined(pagination.limit)) params.set('limit', String(pagination.limit));
+      if (isDefined(pagination.offset)) params.set('offset', String(pagination.offset));
 
       document.links.self = `${baseUrl}?${params.toString()}`;
 
       // Add pagination links
-      if (pagination.offset !== undefined && pagination.limit !== undefined && pagination.total !== undefined) {
+      if (isDefined(pagination.offset) && isDefined(pagination.limit) && isDefined(pagination.total)) {
         const currentPage = Math.floor(pagination.offset / pagination.limit);
         const totalPages = Math.ceil(pagination.total / pagination.limit);
 

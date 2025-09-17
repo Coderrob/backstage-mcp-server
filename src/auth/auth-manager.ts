@@ -1,24 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 
-import { isNonEmptyString, isNumber, logger } from '../utils/index.js';
+import { AuthConfig, TokenInfo } from '../types/auth.js';
+import { isNonEmptyString, isNullOrUndefined, isNumber } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
+import { AuthenticationError, ConfigurationError, RateLimitError } from '../utils/errors/custom-errors.js';
 
-export interface AuthConfig {
-  type: 'bearer' | 'oauth' | 'api-key' | 'service-account';
-  token?: string;
-  clientId?: string;
-  clientSecret?: string;
-  tokenUrl?: string;
-  apiKey?: string;
-  serviceAccountKey?: string;
-}
-
-export interface TokenInfo {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: number;
-  tokenType: string;
-}
-
+/**
+ * Manages authentication tokens and handles token refresh logic.
+ * Supports multiple authentication methods and automatic token renewal.
+ */
 export class AuthManager {
   private config: AuthConfig;
   private tokenInfo?: TokenInfo;
@@ -30,32 +20,56 @@ export class AuthManager {
     this.rateLimiter = new RateLimiter();
   }
 
+  /**
+   * Gets the authorization header value for authenticated requests.
+   * Ensures a valid token is available before returning the header.
+   * @returns Promise resolving to authorization header string
+   * @throws AuthenticationError if no valid token is available
+   */
   async getAuthorizationHeader(): Promise<string> {
     logger.debug('Retrieving authorization header');
     await this.ensureValidToken();
     if (!this.tokenInfo) {
       logger.error('No valid authentication token available');
-      throw new Error('No valid authentication token available');
+      throw new AuthenticationError('No valid authentication token available');
     }
     logger.debug('Authorization header retrieved successfully');
     return `${this.tokenInfo.tokenType} ${this.tokenInfo.accessToken}`;
   }
 
+  /**
+   * Ensures a valid authentication token is available.
+   * Refreshes the token if the current one is expired or missing.
+   * @returns Promise that resolves when a valid token is available
+   * @private
+   */
   private async ensureValidToken(): Promise<void> {
     if (!this.isTokenValid()) {
       await this.refreshToken();
     }
   }
 
+  /**
+   * Checks if the current token is still valid.
+   * Considers token expiry with a 5-minute refresh buffer.
+   * @returns True if token is valid, false otherwise
+   * @private
+   */
   private isTokenValid(): boolean {
-    if (this.tokenInfo === undefined || this.tokenInfo === null) return false;
-    if (this.tokenInfo.expiresAt === undefined || this.tokenInfo.expiresAt === null) return true; // Assume valid if no expiry
+    if (isNullOrUndefined(this.tokenInfo)) return false;
+    if (isNullOrUndefined(this.tokenInfo.expiresAt)) return true;
 
     // Refresh 5 minutes before expiry
     const refreshThreshold = Date.now() + 5 * 60 * 1000;
     return (this.tokenInfo.expiresAt as number) > refreshThreshold;
   }
 
+  /**
+   * Refreshes the authentication token.
+   * Obtains a new token using the appropriate method based on configuration.
+   * @returns Promise that resolves when the token is refreshed
+   * @private
+   */
   private async refreshToken(): Promise<void> {
     logger.debug('Starting token refresh');
     if (this.refreshPromise) {
@@ -76,6 +90,12 @@ export class AuthManager {
     }
   }
 
+  /**
+   * Performs the actual token refresh operation.
+   * Delegates to the appropriate handler based on the authentication method.
+   * @returns Promise resolving to the new TokenInfo
+   * @private
+   */
   private async performTokenRefresh(): Promise<TokenInfo> {
     switch (this.config.type) {
       case 'bearer':
@@ -87,13 +107,18 @@ export class AuthManager {
       case 'service-account':
         return this.handleServiceAccount();
       default:
-        throw new Error(`Unsupported authentication type: ${this.config.type}`);
+        throw new ConfigurationError(`Unsupported authentication type: ${this.config.type}`);
     }
   }
 
+  /**
+   * Handles token refresh for Bearer token authentication.
+   * @returns Promise resolving to new TokenInfo with updated access token
+   * @private
+   */
   private async handleBearerToken(): Promise<TokenInfo> {
     if (!isNonEmptyString(this.config.token)) {
-      throw new Error('Bearer token not configured');
+      throw new ConfigurationError('Bearer token not configured');
     }
     return {
       accessToken: this.config.token,
@@ -101,32 +126,60 @@ export class AuthManager {
     };
   }
 
+  /**
+   * Handles token refresh for OAuth2 authentication.
+   * Uses the refresh token to obtain a new access token.
+   * @returns Promise resolving to new TokenInfo with updated access and refresh tokens
+   * @private
+   */
   private async handleOAuthRefresh(): Promise<TokenInfo> {
-    if (
-      !isNonEmptyString(this.config.clientId) ||
-      !isNonEmptyString(this.config.clientSecret) ||
-      !isNonEmptyString(this.config.tokenUrl)
-    ) {
-      throw new Error('OAuth configuration incomplete');
-    }
+    this.validateOAuthConfig();
+    this.validateRefreshToken();
 
-    if (!isNonEmptyString(this.tokenInfo?.refreshToken)) {
-      throw new Error('No refresh token available for OAuth');
-    }
-
-    const response = await axios.post(this.config.tokenUrl, {
+    const response = await axios.post(this.config.tokenUrl!, {
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      refresh_token: this.tokenInfo.refreshToken,
+      refresh_token: this.tokenInfo?.refreshToken,
     });
 
     return this.parseOAuthResponse(response);
   }
 
+  /**
+   * Validates that OAuth configuration is complete.
+   * @throws ConfigurationError if OAuth configuration is incomplete
+   * @private
+   */
+  private validateOAuthConfig(): void {
+    if (
+      !isNonEmptyString(this.config.clientId) ||
+      !isNonEmptyString(this.config.clientSecret) ||
+      !isNonEmptyString(this.config.tokenUrl)
+    ) {
+      throw new ConfigurationError('OAuth configuration incomplete');
+    }
+  }
+
+  /**
+   * Validates that a refresh token is available.
+   * @throws ConfigurationError if no refresh token is available
+   * @private
+   */
+  private validateRefreshToken(): void {
+    if (!isNonEmptyString(this.tokenInfo?.refreshToken)) {
+      throw new ConfigurationError('No refresh token available for OAuth');
+    }
+  }
+
+  /**
+   * Handles token provision for API Key authentication.
+   * @returns Promise resolving to new TokenInfo with API key as access token
+   * @private
+   */
   private async handleApiKey(): Promise<TokenInfo> {
     if (!isNonEmptyString(this.config.apiKey)) {
-      throw new Error('API key not configured');
+      throw new ConfigurationError('API key not configured');
     }
     return {
       accessToken: this.config.apiKey,
@@ -134,9 +187,14 @@ export class AuthManager {
     };
   }
 
+  /**
+   * Handles token provision for Service Account authentication.
+   * @returns Promise resolving to new TokenInfo with service account key as access token
+   * @private
+   */
   private async handleServiceAccount(): Promise<TokenInfo> {
     if (!isNonEmptyString(this.config.serviceAccountKey)) {
-      throw new Error('Service account key not configured');
+      throw new ConfigurationError('Service account key not configured');
     }
 
     // For service accounts, we might need to implement JWT signing
@@ -147,6 +205,13 @@ export class AuthManager {
     };
   }
 
+  /**
+   * Parses the OAuth2 token response from the server.
+   * Extracts and returns TokenInfo including access token, refresh token, and expiry.
+   * @param response - The Axios response object containing the token response
+   * @returns Parsed TokenInfo object
+   * @private
+   */
   private parseOAuthResponse(response: AxiosResponse): TokenInfo {
     const data = response.data as {
       expires_in?: number;
@@ -165,21 +230,40 @@ export class AuthManager {
     };
   }
 
+  /**
+   * Authenticates the client by ensuring a valid token is available.
+   * @returns Promise that resolves when authentication is successful
+   */
   async authenticate(): Promise<void> {
     await this.ensureValidToken();
   }
 
-  // Rate limiting functionality
+  /**
+   * Checks and enforces rate limits for requests.
+   * Throws a RateLimitError if the rate limit is exceeded.
+   * @returns Promise that resolves when the rate limit check is passed
+   * @throws RateLimitError if the rate limit is exceeded
+   */
   async checkRateLimit(): Promise<void> {
     return this.rateLimiter.checkLimit();
   }
 }
 
+/**
+ * Simple rate limiter to prevent excessive API requests.
+ * Tracks request timestamps and enforces a maximum number of requests per time window.
+ */
 class RateLimiter {
   private requests: number[] = [];
   private readonly maxRequests = 100; // requests per window
   private readonly windowMs = 60 * 1000; // 1 minute window
 
+  /**
+   * Checks if the current request is within the rate limit.
+   * Removes expired requests and checks if the limit has been exceeded.
+   * @returns Promise that resolves if the request is allowed
+   * @throws RateLimitError if the rate limit is exceeded
+   */
   async checkLimit(): Promise<void> {
     const now = Date.now();
     // Remove old requests outside the window
@@ -188,7 +272,10 @@ class RateLimiter {
     if (this.requests.length >= this.maxRequests) {
       const oldestRequest = Math.min(...this.requests);
       const waitTime = this.windowMs - (now - oldestRequest);
-      throw new Error(`Rate limit exceeded. Try again in ${Math.ceil(waitTime / 1000)} seconds`);
+      throw new RateLimitError(
+        `Rate limit exceeded. Try again in ${Math.ceil(waitTime / 1000)} seconds`,
+        Math.ceil(waitTime / 1000)
+      );
     }
 
     this.requests.push(now);

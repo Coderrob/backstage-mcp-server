@@ -15,21 +15,22 @@ import {
   QueryEntitiesResponse,
   ValidateEntityResponse,
 } from '@backstage/catalog-client';
-import { CompoundEntityRef, Entity, stringifyEntityRef } from '@backstage/catalog-model';
-import axios, { AxiosInstance, isAxiosError } from 'axios';
+import { CompoundEntityRef, Entity } from '@backstage/catalog-model';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from 'axios';
 
-import { AuthConfig, AuthManager, securityAuditor } from '../auth/index.js';
-import { CacheManager } from '../cache/index.js';
-import { IBackstageCatalogApi, JsonApiDocument, PaginationParams, SecurityEventType } from '../types/index.js';
-import {
-  EntityRef,
-  isNonEmptyString,
-  isNumber,
-  isString,
-  JsonApiFormatter,
-  logger,
-  PaginationHelper,
-} from '../utils/index.js';
+import { AuthManager } from '../auth/auth-manager.js';
+import { securityAuditor } from '../auth/security-auditor.js';
+import { CacheManager } from '../cache/cache-manager.js';
+import { IBackstageCatalogApi } from '../types/apis.js';
+import { AuthConfig } from '../types/auth.js';
+import { SecurityEventType } from '../types/events.js';
+import { JsonApiDocument } from '../types/json-api.js';
+import { PaginationParams } from '../types/paging.js';
+import { isDefined, isNonEmptyString, isNumber, isString } from '../utils/core/guards.js';
+import { logger } from '../utils/core/logger.js';
+import { EntityRef } from '../utils/formatting/entity-ref.js';
+import { JsonApiFormatter } from '../utils/formatting/jsonapi-formatter.js';
+import { PaginationHelper } from '../utils/formatting/pagination-helper.js';
 
 interface BackstageCatalogApiOptions {
   baseUrl: string;
@@ -53,107 +54,104 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
     logger.debug('Axios client created with base URL', { baseUrl: this.client.defaults.baseURL });
 
     // Add request interceptor for authentication
-    this.client.interceptors.request.use(async (config) => {
-      try {
-        // Check rate limit before making request
-        await this.authManager.checkRateLimit();
+    this.client.interceptors.request.use(
+      async (config) => this.handleRequestAuth(config),
+      (error) => this.handleRequestError(error)
+    );
+  }
 
-        // Add authorization header if provided
-        const authHeader = await this.authManager.getAuthorizationHeader();
-        if (isNonEmptyString(authHeader)) {
-          config.headers.Authorization = authHeader;
-        }
+  /**
+   * Handles authentication for outgoing requests.
+   * @param config - The axios request configuration
+   * @returns The modified configuration with authentication headers
+   * @private
+   */
+  private async handleRequestAuth(config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> {
+    // Check rate limit before making request
+    await this.authManager.checkRateLimit();
 
-        // Log security event with explicit fallbacks
-        const resource = isNonEmptyString(config.url) ? String(config.url) : 'unknown';
-        const action = isNonEmptyString(config.method) ? String(config.method).toUpperCase() : 'UNKNOWN';
+    // Add authorization header if provided
+    const authHeader = await this.authManager.getAuthorizationHeader();
+    if (isNonEmptyString(authHeader)) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = authHeader;
+    }
 
+    // Log security event
+    this.logAuthSuccess(config);
+
+    return config;
+  }
+
+  /**
+   * Logs a successful authentication event.
+   * @param config - The request configuration
+   * @private
+   */
+  private logAuthSuccess(config: InternalAxiosRequestConfig): void {
+    const resource = config.url || 'unknown';
+    const action = config.method?.toUpperCase() || 'UNKNOWN';
+    securityAuditor.logEvent({
+      type: SecurityEventType.AUTH_SUCCESS,
+      resource,
+      action,
+      success: true,
+    });
+  }
+
+  /**
+   * Handles errors in request authentication.
+   * @param error - The error that occurred
+   * @returns A rejected promise with the error
+   * @private
+   */
+  private handleRequestError(error: unknown): Promise<never> {
+    // Log security events for certain error types. Narrow to axios errors first
+    if (isAxiosError(error)) {
+      const resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : 'unknown';
+      const action = isNonEmptyString(error.config?.method) ? String(error.config!.method).toUpperCase() : 'UNKNOWN';
+
+      if (error.response?.status === 401) {
         securityAuditor.logEvent({
-          type: SecurityEventType.AUTH_SUCCESS,
-          resource,
-          action,
-          success: true,
-        });
-
-        return config;
-      } catch (error) {
-        // Log authentication failure
-        // Attempt to extract info from axios error if available
-        let resource: string = 'unknown';
-        let action = 'UNKNOWN';
-        if (isAxiosError(error)) {
-          resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : resource;
-          action = isNonEmptyString(error.config?.method) ? String(error.config!.method).toUpperCase() : action;
-        } else {
-          resource = isNonEmptyString(config.url) ? String(config.url) : resource;
-          action = isNonEmptyString(config.method) ? String(config.method).toUpperCase() : action;
-        }
-
-        securityAuditor.logEvent({
-          type: SecurityEventType.AUTH_FAILURE,
+          type: SecurityEventType.UNAUTHORIZED_ACCESS,
           resource,
           action,
           success: false,
-          errorMessage: error instanceof Error ? error.message : 'Unknown auth error',
+          errorMessage: 'Unauthorized access',
         });
-        throw error;
+      } else if (error.response?.status === 429) {
+        securityAuditor.logEvent({
+          type: SecurityEventType.RATE_LIMIT_EXCEEDED,
+          resource,
+          action,
+          success: false,
+          errorMessage: 'Rate limit exceeded',
+        });
       }
-    });
-
-    // Add response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        // Log security events for certain error types. Narrow to axios errors first
-        if (isAxiosError(error)) {
-          const resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : 'unknown';
-          const action = isNonEmptyString(error.config?.method)
-            ? String(error.config!.method).toUpperCase()
-            : 'UNKNOWN';
-
-          if (error.response?.status === 401) {
-            securityAuditor.logEvent({
-              type: SecurityEventType.UNAUTHORIZED_ACCESS,
-              resource,
-              action,
-              success: false,
-              errorMessage: 'Unauthorized access',
-            });
-          } else if (error.response?.status === 429) {
-            securityAuditor.logEvent({
-              type: SecurityEventType.RATE_LIMIT_EXCEEDED,
-              resource,
-              action,
-              success: false,
-              errorMessage: 'Rate limit exceeded',
-            });
-          }
-        } else {
-          // Fallback for non-axios errors that may still have a response shape
-          const maybe = error as unknown as { response?: { status?: number } } | undefined;
-          const maybeResponse = maybe && maybe.response ? maybe.response : undefined;
-          if (isNumber(maybeResponse?.status) && maybeResponse.status === 401) {
-            securityAuditor.logEvent({
-              type: SecurityEventType.UNAUTHORIZED_ACCESS,
-              resource: 'unknown',
-              action: 'UNKNOWN',
-              success: false,
-              errorMessage: 'Unauthorized access',
-            });
-          } else if (isNumber(maybeResponse?.status) && maybeResponse.status === 429) {
-            securityAuditor.logEvent({
-              type: SecurityEventType.RATE_LIMIT_EXCEEDED,
-              resource: 'unknown',
-              action: 'UNKNOWN',
-              success: false,
-              errorMessage: 'Rate limit exceeded',
-            });
-          }
-        }
-
-        return Promise.reject(error);
+    } else {
+      // Fallback for non-axios errors that may still have a response shape
+      const maybe = error as unknown as { response?: { status?: number } } | undefined;
+      const maybeResponse = maybe && maybe.response ? maybe.response : undefined;
+      if (isNumber(maybeResponse?.status) && maybeResponse.status === 401) {
+        securityAuditor.logEvent({
+          type: SecurityEventType.UNAUTHORIZED_ACCESS,
+          resource: 'unknown',
+          action: 'UNKNOWN',
+          success: false,
+          errorMessage: 'Unauthorized access',
+        });
+      } else if (isNumber(maybeResponse?.status) && maybeResponse.status === 429) {
+        securityAuditor.logEvent({
+          type: SecurityEventType.RATE_LIMIT_EXCEEDED,
+          resource: 'unknown',
+          action: 'UNKNOWN',
+          success: false,
+          errorMessage: 'Rate limit exceeded',
+        });
       }
-    );
+    }
+
+    return Promise.reject(error);
   }
 
   async getEntities(
@@ -169,7 +167,7 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
 
     // Check cache first
     const cached = this.cacheManager.get<GetEntitiesResponse>(cacheKey);
-    if (cached !== undefined && cached !== null) {
+    if (isDefined(cached)) {
       logger.debug('Entities returned from cache');
       return cached;
     }
@@ -224,7 +222,7 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
 
     // Check cache first
     const cached = this.cacheManager.get<Entity>(cacheKey);
-    if (cached !== undefined && cached !== null) {
+    if (isDefined(cached)) {
       logger.debug('Entity returned from cache', { entityRef: refString });
       return cached;
     }
@@ -278,6 +276,10 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
       const { data } = await this.client.get<Location>(`/locations/${encodeURIComponent(id)}`);
       return data;
     } catch (error) {
+      logger.error('Error fetching location by ID', {
+        locationId: id,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (isAxiosError(error) && error.response?.status === 404) return undefined;
       throw error;
     }
@@ -288,6 +290,10 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
       const { data } = await this.client.get<Location>(`/locations/by-ref/${encodeURIComponent(locationRef)}`);
       return data;
     } catch (error) {
+      logger.error('Error fetching location by ref', {
+        locationRef,
+        error: error instanceof Error ? error.message : String(error),
+      });
       if (isAxiosError(error) && error.response?.status === 404) return undefined;
       throw error;
     }
@@ -335,6 +341,6 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   }
 
   private formatCompoundEntityRef(entityRef: CompoundEntityRef): string {
-    return stringifyEntityRef(entityRef);
+    return EntityRef.toString(entityRef);
   }
 }

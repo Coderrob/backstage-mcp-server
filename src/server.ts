@@ -2,72 +2,85 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { join } from 'path';
 
-import { BackstageCatalogApi } from './api/index.js';
-import { AuthConfig } from './auth/index.js';
-import { IToolRegistrationContext } from './types/index.js';
-import {
-  DefaultToolFactory,
-  DefaultToolRegistrar,
-  DefaultToolValidator,
-  isNonEmptyString,
-  isString,
-  logger,
-  ReflectToolMetadataProvider,
-  ToolLoader,
-} from './utils/index.js';
+import { BackstageCatalogApi } from './api/backstage-catalog-api.js';
+import { AuthConfig } from './types/auth.js';
+import { IToolRegistrationContext } from './types/tools.js';
+import { isNonEmptyString } from './utils/core/guards.js';
+import { logger } from './utils/core/logger.js';
+import { ConfigurationError } from './utils/errors/custom-errors.js';
+import { withErrorHandling } from './utils/errors/error-handler.js';
+import { registerBuiltInHealthChecks } from './utils/health/built-in-checks.js';
+import { DefaultToolFactory } from './utils/tools/tool-factory.js';
+import { ToolLoader } from './utils/tools/tool-loader.js';
+import { ReflectToolMetadataProvider } from './utils/tools/tool-metadata.js';
+import { DefaultToolRegistrar } from './utils/tools/tool-registrar.js';
+import { DefaultToolValidator } from './utils/tools/tool-validator.js';
 
+/**
+ * Starts the Backstage MCP Server with all necessary components.
+ * Initializes health checks, authentication, MCP server, and tool registration.
+ * @returns Promise that resolves when server is fully started
+ * @throws ConfigurationError if required environment variables are missing
+ */
 export async function startServer(): Promise<void> {
-  logger.info('Starting Backstage MCP Server');
+  await withErrorHandling('server-startup', async () => {
+    logger.info('Starting Backstage MCP Server');
 
-  // Get the current working directory for configuration
-  const configDir = process.cwd();
+    registerBuiltInHealthChecks();
 
-  const baseUrl = process.env.BACKSTAGE_BASE_URL;
-  if (!isString(baseUrl) || baseUrl.length === 0) {
-    logger.error('BACKSTAGE_BASE_URL environment variable is required');
-    throw new Error('BACKSTAGE_BASE_URL environment variable is required');
-  }
+    const configDir = process.cwd();
 
-  logger.debug('Building authentication configuration');
-  // Build authentication configuration from environment variables
-  const authConfig = buildAuthConfig();
+    const baseUrl = process.env.BACKSTAGE_BASE_URL;
+    if (!isNonEmptyString(baseUrl)) {
+      logger.error('BACKSTAGE_BASE_URL environment variable is required');
+      throw new ConfigurationError('BACKSTAGE_BASE_URL environment variable is required');
+    }
 
-  logger.debug('Creating MCP server instance');
-  const server = new McpServer({
-    name: 'Backstage MCP Server',
-    version: '1.0.0',
+    logger.debug('Building authentication configuration');
+    const authConfig = buildAuthConfig();
+
+    logger.debug('Creating MCP server instance');
+    const server = new McpServer({
+      name: 'Backstage MCP Server',
+      version: '1.0.0',
+    });
+
+    logger.debug('Initializing Backstage catalog client');
+    const context: IToolRegistrationContext = {
+      server,
+      catalogClient: new BackstageCatalogApi({ baseUrl, auth: authConfig }),
+    };
+
+    logger.debug('Loading and registering tools');
+    const toolLoader = new ToolLoader(
+      new DefaultToolFactory(),
+      new DefaultToolRegistrar(context),
+      new DefaultToolValidator(),
+      new ReflectToolMetadataProvider()
+    );
+
+    await toolLoader.registerAll();
+
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('Exporting tools manifest for development');
+      await toolLoader.exportManifest(join(configDir, '..', 'tools-manifest.json'));
+    }
+
+    logger.debug('Setting up transport and connecting server');
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+
+    logger.info('Backstage MCP Server started successfully');
   });
-
-  logger.debug('Initializing Backstage catalog client');
-  const context: IToolRegistrationContext = {
-    server,
-    catalogClient: new BackstageCatalogApi({ baseUrl, auth: authConfig }),
-  };
-
-  logger.debug('Loading and registering tools');
-  const toolLoader = new ToolLoader(
-    new DefaultToolFactory(),
-    new DefaultToolRegistrar(context),
-    new DefaultToolValidator(),
-    new ReflectToolMetadataProvider()
-  );
-
-  await toolLoader.registerAll();
-
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info('Exporting tools manifest for development');
-    await toolLoader.exportManifest(join(configDir, '..', 'tools-manifest.json'));
-  }
-
-  logger.debug('Setting up transport and connecting server');
-  // Create transport and connect
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-
-  logger.info('Backstage MCP Server started successfully');
 }
 
-function buildAuthConfig(): AuthConfig {
+/**
+ * Builds authentication configuration from environment variables.
+ * Supports multiple authentication methods: bearer token, OAuth, API key, and service account.
+ * @returns Authentication configuration object
+ * @throws ConfigurationError if no valid authentication configuration is found
+ */
+export function buildAuthConfig(): AuthConfig {
   const token = process.env.BACKSTAGE_TOKEN;
   const clientId = process.env.BACKSTAGE_CLIENT_ID;
   const clientSecret = process.env.BACKSTAGE_CLIENT_SECRET;
@@ -75,7 +88,6 @@ function buildAuthConfig(): AuthConfig {
   const apiKey = process.env.BACKSTAGE_API_KEY;
   const serviceAccountKey = process.env.BACKSTAGE_SERVICE_ACCOUNT_KEY;
 
-  // Determine authentication type based on available environment variables
   if (isNonEmptyString(token)) {
     return { type: 'bearer', token };
   }
@@ -94,7 +106,7 @@ function buildAuthConfig(): AuthConfig {
     return { type: 'service-account', serviceAccountKey };
   }
 
-  throw new Error(
+  throw new ConfigurationError(
     'No valid authentication configuration found. Please set one of:\n' +
       '- BACKSTAGE_TOKEN (for bearer token auth)\n' +
       '- BACKSTAGE_CLIENT_ID, BACKSTAGE_CLIENT_SECRET, BACKSTAGE_TOKEN_URL (for OAuth)\n' +

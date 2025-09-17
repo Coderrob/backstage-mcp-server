@@ -1,6 +1,6 @@
 import { CompoundEntityRef, DEFAULT_NAMESPACE } from '@backstage/catalog-model';
 
-import { EntityKind } from '../../types/index.js';
+import { EntityKind } from '../../types/entities.js';
 import { assertKind, assertNonEmptyString } from '../core/assertions.js';
 import { isObject } from '../core/guards.js';
 

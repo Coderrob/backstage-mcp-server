@@ -3,9 +3,12 @@ import 'reflect-metadata';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import { Tool } from '../decorators/index.js';
-import { ApiStatus, IToolRegistrationContext, ToolName } from '../types/index.js';
-import { JsonToTextResponse, ToolErrorHandler } from '../utils/index.js';
+import { Tool } from '../decorators/tool.decorator.js';
+import { ApiStatus } from '../types/apis.js';
+import { ToolName } from '../types/constants.js';
+import { IToolRegistrationContext } from '../types/tools.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
+import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const paramsSchema = z.object({
   entity: z.any(),

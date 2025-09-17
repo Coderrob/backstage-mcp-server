@@ -20,3 +20,18 @@ export interface ISecurityEvent {
   details?: Record<string, unknown>;
   errorMessage?: string;
 }
+
+export interface ISecurityEventFilter {
+  type?: SecurityEventType;
+  userId?: string;
+  since?: Date;
+  limit?: number;
+}
+
+export interface ISecurityEventSummary {
+  totalEvents: number;
+  authSuccessCount: number;
+  authFailureCount: number;
+  rateLimitCount: number;
+  recentEvents: ISecurityEvent[];
+}

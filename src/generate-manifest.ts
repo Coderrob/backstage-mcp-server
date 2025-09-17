@@ -1,14 +1,12 @@
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-import type { ITool, IToolMetadata, IToolRegistrar } from './types/index.js';
-import {
-  DefaultToolFactory,
-  DefaultToolValidator,
-  logger,
-  ReflectToolMetadataProvider,
-  ToolLoader,
-} from './utils/index.js';
+import type { ITool, IToolMetadata, IToolRegistrar } from './types/tools.js';
+import { logger } from './utils/core/logger.js';
+import { DefaultToolFactory } from './utils/tools/tool-factory.js';
+import { ToolLoader } from './utils/tools/tool-loader.js';
+import { ReflectToolMetadataProvider } from './utils/tools/tool-metadata.js';
+import { DefaultToolValidator } from './utils/tools/tool-validator.js';
 
 class MockToolRegistrar implements IToolRegistrar {
   register(_toolClass: ITool, _metadata: IToolMetadata): void {
