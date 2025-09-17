@@ -23,7 +23,7 @@ const paramsSchema = z.object({
   fields: z.array(z.string()).optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
-  format: z.enum(['standard', 'jsonapi']).optional().default('standard'),
+  format: z.enum(['standard', 'jsonapi']).optional().default('jsonapi'),
 });
 
 @Tool({
@@ -52,9 +52,8 @@ export class GetEntitiesTool {
             : undefined,
           limit: req.limit,
           offset: req.offset,
+          format: req.format,
         };
-
-        const result = await ctx.catalogClient.getEntities(sanitizedRequest);
 
         if (req.format === 'jsonapi') {
           const jsonApiResult = await (ctx.catalogClient as BackstageCatalogApi).getEntitiesJsonApi(sanitizedRequest);
@@ -64,10 +63,17 @@ export class GetEntitiesTool {
             status: ApiStatus.SUCCESS,
             data: jsonApiResult,
           });
+        } else if (req.format === 'standard') {
+          // Use the old formatted text response for 'standard' format
+          const result = await ctx.catalogClient.getEntities(sanitizedRequest);
+          logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
+          return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result.items }, formatEntityList);
+        } else {
+          // Default to JSON format for better LLM access
+          const result = await ctx.catalogClient.getEntities(sanitizedRequest);
+          logger.debug('Returning JSON formatted entities', { count: result.items?.length || 0 });
+          return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
         }
-
-        logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
-        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result.items }, formatEntityList);
       },
       request,
       context,

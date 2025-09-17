@@ -8,7 +8,7 @@ import { Tool } from '../decorators/tool.decorator.js';
 import { ApiStatus } from '../types/apis.js';
 import { ToolName } from '../types/constants.js';
 import { IToolRegistrationContext } from '../types/tools.js';
-import { formatEntity, FormattedTextResponse } from '../utils/formatting/responses.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const compoundEntityRefSchema = z.object({
@@ -38,7 +38,7 @@ export class GetEntityByRefTool {
         // Sanitize entity reference input
         const sanitizedEntityRef = inputSanitizer.sanitizeEntityRef(ref);
         const result = await ctx.catalogClient.getEntityByRef(sanitizedEntityRef);
-        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntity);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },
       { entityRef },
       context,

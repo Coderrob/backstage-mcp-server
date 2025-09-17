@@ -1,6 +1,9 @@
+import { GetEntitiesResponse } from '@backstage/catalog-client';
 import { jest } from '@jest/globals';
 
+import { inputSanitizer } from '../auth/input-sanitizer.js';
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { JsonApiDocument } from '../types/json-api.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetEntitiesTool } from './get_entities.tool.js';
 
@@ -13,7 +16,19 @@ jest.mock('../auth/input-sanitizer.js', () => ({
   },
 }));
 
-import { inputSanitizer } from '../auth/input-sanitizer.js';
+// Define types that match the tool's parameter schema
+interface EntityFilter {
+  key: string;
+  values: string[];
+}
+
+interface ToolGetEntitiesRequest {
+  filter?: EntityFilter[];
+  fields?: string[];
+  limit?: number;
+  offset?: number;
+  format: 'standard' | 'jsonapi'; // Required, not optional
+}
 
 describe('GetEntitiesTool', () => {
   afterEach(() => {
@@ -49,7 +64,7 @@ describe('GetEntitiesTool', () => {
 
   describe('execute', () => {
     it('should call the catalog client getEntities method with standard format', async () => {
-      const request = {
+      const request: ToolGetEntitiesRequest = {
         filter: [{ key: 'kind', values: ['Component'] }],
         fields: ['metadata.name', 'spec.type'],
         limit: 10,
@@ -57,7 +72,7 @@ describe('GetEntitiesTool', () => {
         format: 'standard' as const,
       };
 
-      const entitiesResult = {
+      const entitiesResult: GetEntitiesResponse = {
         items: [
           {
             apiVersion: 'backstage.io/v1alpha1',
@@ -79,6 +94,7 @@ describe('GetEntitiesTool', () => {
         fields: request.fields,
         limit: request.limit,
         offset: request.offset,
+        format: request.format,
       });
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
@@ -90,13 +106,13 @@ describe('GetEntitiesTool', () => {
     });
 
     it('should call the catalog client getEntitiesJsonApi method with jsonapi format', async () => {
-      const request = {
+      const request: ToolGetEntitiesRequest = {
         filter: [{ key: 'kind', values: ['Component'] }],
         limit: 5,
         format: 'jsonapi' as const,
       };
 
-      const jsonApiResult = {
+      const jsonApiResult: JsonApiDocument = {
         data: [
           {
             type: 'component',
@@ -118,7 +134,7 @@ describe('GetEntitiesTool', () => {
         filter: request.filter,
         fields: undefined,
         limit: request.limit,
-        offset: undefined,
+        format: request.format,
       });
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
@@ -129,7 +145,7 @@ describe('GetEntitiesTool', () => {
     });
 
     it('should handle errors from the catalog client', async () => {
-      const request = {
+      const request: ToolGetEntitiesRequest = {
         filter: [{ key: 'kind', values: ['InvalidKind'] }],
         format: 'standard' as const,
       };
@@ -147,25 +163,27 @@ describe('GetEntitiesTool', () => {
       expect(errorData.data.message).toBe('Failed to get_entities: Failed to get entities');
     });
 
-    it('should default to standard format when format is not specified', async () => {
-      const request = {
+    it('should default to json format when format is not specified', async () => {
+      const request: ToolGetEntitiesRequest = {
         limit: 10,
-        format: 'standard' as const,
+        format: 'jsonapi', // Default format
       };
 
-      const entitiesResult = {
-        items: [],
+      const jsonApiResult: JsonApiDocument = {
+        data: [],
+        meta: { total: 0 },
       };
 
-      mockCatalogClient.getEntities.mockResolvedValue(entitiesResult);
+      mockCatalogClient.getEntitiesJsonApi.mockResolvedValue(jsonApiResult);
 
       const result = await GetEntitiesTool.execute(request, mockContext);
 
-      expect(mockCatalogClient.getEntities).toHaveBeenCalled();
-      expect(mockCatalogClient.getEntitiesJsonApi).not.toHaveBeenCalled();
+      expect(mockCatalogClient.getEntitiesJsonApi).toHaveBeenCalled();
+      expect(mockCatalogClient.getEntities).not.toHaveBeenCalled();
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('No entities found');
+      expect(result.content[0].text).toContain('"status": "success"');
+      expect(result.content[0].text).toContain('"data":');
     });
   });
 });

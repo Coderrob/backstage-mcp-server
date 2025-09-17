@@ -58,9 +58,10 @@ describe('GetEntityByRefTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseText = result.content[0].text;
-      expect(responseText).toContain('Found Component entity: default/my-component');
-      expect(responseText).toContain('Title: No title');
-      expect(responseText).toContain('Description: No description');
+      expect(responseText).toContain('"status": "success"');
+      expect(responseText).toContain('"kind": "Component"');
+      expect(responseText).toContain('"name": "my-component"');
+      expect(responseText).toContain('"namespace": "default"');
     });
 
     it('should call the catalog client getEntityByRef method with compound entityRef', async () => {
@@ -96,9 +97,10 @@ describe('GetEntityByRefTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseText = result.content[0].text;
-      expect(responseText).toContain('Found Component entity: default/my-component');
-      expect(responseText).toContain('Title: No title');
-      expect(responseText).toContain('Description: No description');
+      expect(responseText).toContain('"status": "success"');
+      expect(responseText).toContain('"kind": "Component"');
+      expect(responseText).toContain('"name": "my-component"');
+      expect(responseText).toContain('"namespace": "default"');
     });
 
     it('should handle errors from the catalog client', async () => {
