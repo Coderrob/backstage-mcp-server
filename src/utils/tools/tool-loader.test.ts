@@ -1,28 +1,7 @@
 import { jest } from '@jest/globals';
+import * as os from 'os';
+import * as path from 'path';
 import { z } from 'zod';
-
-// Mock logger
-const mockLogger = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-};
-jest.mock('../core/logger.js', () => ({
-  logger: mockLogger,
-}));
-
-// Mock allTools - set up before importing ToolLoader
-const MockToolA = jest.fn();
-MockToolA.prototype = { execute: jest.fn() };
-const MockToolB = jest.fn();
-MockToolB.prototype = { execute: jest.fn() };
-const NotATool = jest.fn();
-
-jest.doMock('../../tools/index.js', () => ({
-  ToolA: MockToolA,
-  ToolB: MockToolB,
-  NotATool: NotATool,
-}));
 
 import {
   ITool,
@@ -33,7 +12,38 @@ import {
   IToolValidator,
   ToolClass,
 } from '../../types/tools.js';
-import { ToolLoader } from './tool-loader.js';
+
+// Mock logger
+const mockLogger = {
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+};
+
+// Mock fs/promises
+jest.unstable_mockModule('fs/promises', () => ({
+  writeFile: jest.fn(),
+}));
+
+// Mock logger
+jest.unstable_mockModule('../core/logger.js', () => ({
+  logger: mockLogger,
+}));
+
+// Mock allTools - set up before importing ToolLoader
+class MockToolA {
+  static execute = jest.fn();
+}
+class MockToolB {
+  static execute = jest.fn();
+}
+const NotATool = jest.fn();
+
+jest.unstable_mockModule('../../tools/index.js', () => ({
+  ToolA: MockToolA,
+  ToolB: MockToolB,
+  NotATool: NotATool,
+}));
 
 type MockToolFactory = {
   loadTool: jest.MockedFunction<(filePath: string) => Promise<ITool | undefined>>;
@@ -51,10 +61,29 @@ type MockToolMetadataProvider = {
   getMetadata: jest.MockedFunction<(toolClass: ToolClass | object) => IToolMetadata | undefined>;
 };
 
-type ToolLoaderWithPrivate = ToolLoader & {
+type ToolLoaderWithPrivate = typeof ToolLoader & {
   manifest: { name: string; description: string; params: string[] }[];
   addToManifest(metadata: IToolMetadata): void;
 };
+
+let ToolLoader: typeof import('./tool-loader.js').ToolLoader;
+
+beforeAll(async () => {
+  const executeA = jest.fn();
+  const executeB = jest.fn();
+  await jest.unstable_mockModule('../../tools/index.js', () => ({
+    ToolA: class {
+      static execute = executeA;
+    },
+    ToolB: class {
+      static execute = executeB;
+    },
+    NotATool: jest.fn(),
+  }));
+
+  const toolLoaderModule = await import('./tool-loader.js');
+  ToolLoader = toolLoaderModule.ToolLoader;
+});
 
 describe('ToolLoader', () => {
   afterEach(() => {
@@ -66,7 +95,7 @@ describe('ToolLoader', () => {
   let mockRegistrar: MockToolRegistrar;
   let mockValidator: MockToolValidator;
   let mockMetadataProvider: MockToolMetadataProvider;
-  let loader: ToolLoader;
+  let loader: InstanceType<typeof ToolLoader>;
 
   beforeEach(() => {
     mockFactory = {
@@ -113,9 +142,9 @@ describe('ToolLoader', () => {
 
       await loader.registerAll();
 
-      expect(mockMetadataProvider.getMetadata).toHaveBeenCalledTimes(13); // 13 real tools
-      expect(mockValidator.validate).toHaveBeenCalledTimes(2); // Only 2 have valid metadata
-      expect(mockRegistrar.register).toHaveBeenCalledTimes(2); // Only 2 are registered
+      expect(mockMetadataProvider.getMetadata).toHaveBeenCalledTimes(2); // 2 mock tools
+      expect(mockValidator.validate).toHaveBeenCalledTimes(2); // Both have valid metadata
+      expect(mockRegistrar.register).toHaveBeenCalledTimes(2); // Both are registered
       // Note: We can't predict which specific tool classes will be passed, so we just check the metadata
       expect(mockRegistrar.register).toHaveBeenCalledWith(expect.any(Function), metadataA);
       expect(mockRegistrar.register).toHaveBeenCalledWith(expect.any(Function), metadataB);
@@ -179,13 +208,12 @@ describe('ToolLoader', () => {
 
   describe('exportManifest', () => {
     it('should export manifest to file', async () => {
-      const filePath = '/path/to/manifest.json';
+      const filePath = path.join(os.tmpdir(), 'test-manifest.json');
       const manifestData = [{ name: 'tool1', description: 'desc', params: ['param1'] }];
 
       // Access private manifest
       (loader as unknown as ToolLoaderWithPrivate).manifest = manifestData;
 
-      // Should not throw
       await expect(loader.exportManifest(filePath)).resolves.not.toThrow();
     });
   });

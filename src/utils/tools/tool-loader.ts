@@ -10,7 +10,7 @@ import {
   IToolValidator,
   ToolClass,
 } from '../../types/tools.js';
-import { isDefined } from '../core/guards.js';
+import { isDefined, isFunction, isNullOrUndefined } from '../core/guards.js';
 import { logger } from '../core/logger.js';
 
 /**
@@ -45,7 +45,8 @@ export class ToolLoader {
     logger.debug('Starting tool registration process');
 
     const toolClasses = Object.values(allTools).filter(
-      (tool) => typeof tool === 'function' && tool.prototype !== undefined && 'execute' in tool
+      // add a guard on is a execute function
+      (tool) => isFunction(tool) && tool.prototype !== undefined && 'execute' in tool
     ) as ToolClass[];
 
     logger.info(`Found ${toolClasses.length} tool classes to process`);
@@ -54,7 +55,7 @@ export class ToolLoader {
       logger.debug(`Registering tool class ${toolClass.name}`);
 
       const metadata = this.metadataProvider.getMetadata(toolClass);
-      if (metadata === null || metadata === undefined) {
+      if (isNullOrUndefined(metadata)) {
         logger.warn(`Invalid tool metadata for ${toolClass.name}`);
         continue;
       }

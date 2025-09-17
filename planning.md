@@ -1,73 +1,255 @@
-# Repository Audit Planning
+# Unit Test Planning and Implementation
 
-## Inventory Summary
+This document outlines the comprehensive unit testing plan for the backstage-mcp-server repository, following the established testing standards and expectations.
 
-- **Circular Dependencies**: 16 detected, primarily involving `utils/index.ts` -> `utils/tools/index.ts` -> `utils/tools/tool-loader.ts` -> `tools/index.ts` -> various tool files -> back to `api/index.ts` or `auth/index.ts`.
-- **Duplicates**: To be analyzed - check for duplicate class/interface/function definitions.
-- **Unintuitive Structure**: Multiple `index.ts` files acting as barrels; need to assess if justified or redundant.
-- **Redundant Exports**: Likely in barrel files; consolidate or remove.
-- **One Class Per File**: Most files appear to follow this, but verify.
-- **Green CI**: Assume current state; will verify after changes.
+## Overview
 
-## Priorities
+- **Testing Framework**: Jest with TypeScript
+- **Coverage Requirements**: 95% statements, branches, functions, lines
+- **Test Location**: Side-by-side with source files (e.g., `Bar.ts` → `Bar.test.ts`)
+- **Mock Strategy**: Readonly mocks, cleared in afterEach
+- **Structure**: One describe per unit, nested for methods
 
-- P0: Resolve circular dependencies.
-- P0: Identify and resolve conflicting duplicates.
-- P1: Type/interface duplication.
-- P2: Simplify barrels and exports.
-- P3: Enforce one-class-per-file and naming.
+## Test Implementation Plan
 
-## Work Items
+### 1. Core Utilities (`src/utils/core/`)
 
-1. **Break Circular Dependencies**
-   - Rationale: Cycles prevent clean module boundaries and can cause issues in bundling/testing.
-   - Plan: Use dependency inversion; move shared abstractions to dedicated modules. Remove unnecessary imports in barrels.
-   - Acceptance Criteria: `npx madge --circular src/` returns no cycles.
-   - Blast Radius: High - affects imports across utils, tools, api, auth.
-   - Test Plan: Run madge after each change; ensure typecheck and tests pass.
-   - Rollback Plan: Revert commits if cycles reintroduce.
+#### assertions.ts
 
-2. **Identify Duplicates**
-   - Rationale: Duplicates lead to maintenance issues.
-   - Plan: Search for duplicate symbols using grep and tooling.
-   - Acceptance Criteria: No duplicate definitions.
-   - Blast Radius: Medium.
-   - Test Plan: Manual review and tooling checks.
-   - Rollback Plan: N/A.
+**Functions**: `isValidEntityKind`, `isValidEntityNamespace`, `isValidEntityName`
 
-3. **Refactor Barrels**
-   - Rationale: Single source of truth; remove redundant re-exports.
-   - Plan: Analyze each index.ts; keep only necessary ones.
-   - Acceptance Criteria: Minimal, justified barrels.
-   - Blast Radius: Medium.
-   - Test Plan: Ensure imports still work.
-   - Rollback Plan: Revert if imports break.
+**Dependencies**:
 
-4. **Enforce Conventions**
-   - Rationale: Clean code standards.
-   - Plan: Rename files to match classes; apply SOLID/DRY.
-   - Acceptance Criteria: One class per file, clear structure.
-   - Blast Radius: Low-Medium.
-   - Test Plan: Lint and tests.
-   - Rollback Plan: Revert.
+- `VALID_ENTITY_KINDS` from entities.ts
+- `isString`, `isNonEmptyString` from guards.ts
 
-## Risks & Mitigations
+**Positive Cases**:
 
-- Breaking imports: Test thoroughly; use codemods for mass rewrites.
-- Performance impact: Monitor bundle size.
-- Team disruption: Communicate changes.
+- Valid entity kinds return true
+- Valid namespaces/names return true
 
-## Decision Log
+**Negative Cases**:
 
-- Initial analysis: 16 circulars found.
-- Tooling installed: madge, dependency-cruiser, etc.
+- Invalid kinds return false
+- Empty/invalid strings return false
 
-## Next Actions
+**Test Structure**:
 
-- Analyze duplicates.
-- Start breaking cycles by examining utils/index.ts and tools/index.ts.
-- Consolidated duplicate interfaces in pagination-helper.ts.
-- Changed all tool imports to specific paths to break cycles.
-- Changed imports in auth, cache, api to specific paths.
-- Removed redundant barrels: cache/index.ts, auth/index.ts, api/index.ts.
-- Updated server.ts imports.
+- Table-driven tests for each function
+- Mock guards if needed
+
+#### guards.ts
+
+**Functions**: `isString`, `isNumber`, `isObject`, `isFunction`, `isNonEmptyString`, `isStringOrNumber`, `isBigInt`
+
+**Dependencies**: None (pure functions)
+
+**Positive/Negative Cases**: Standard type checks
+
+**Test Structure**: Table-driven with various inputs
+
+#### logger.ts
+
+**Functions**: Logger instance creation
+
+**Dependencies**: Pino library
+
+**Test Structure**: Mock pino, verify calls
+
+#### mapping.ts
+
+**Functions**: `mapEntityToJsonApi`, `mapJsonApiToEntity`
+
+**Dependencies**: Type definitions
+
+**Test Structure**: Input/output mapping tests
+
+### 2. Formatting Utilities (`src/utils/formatting/`)
+
+#### entity-ref.ts
+
+**Class**: `EntityRef`
+
+**Methods**: `parse`, `stringify`, `isValid`
+
+**Dependencies**: Guards, constants
+
+#### jsonapi-formatter.ts
+
+**Class**: `JsonApiFormatter`
+
+**Methods**: `entityToResource`, `resourceToEntity`, etc.
+
+**Dependencies**: Type definitions
+
+#### pagination-helper.ts
+
+**Class**: `PaginationHelper`
+
+**Methods**: `normalizeParams`, `buildMeta`, `applyPagination`
+
+**Dependencies**: Guards
+
+#### responses.ts
+
+**Functions**: `FormattedTextResponse`, `JsonToTextResponse`, `createSimpleError`, etc.
+
+**Dependencies**: Type definitions
+
+### 3. Tool Utilities (`src/utils/tools/`)
+
+#### tool-error-handler.ts
+
+**Class**: `ToolErrorHandler`
+
+**Methods**: `handleError`, `createErrorResponse`
+
+**Dependencies**: Formatting functions
+
+#### tool-factory.ts
+
+**Class**: `DefaultToolFactory`
+
+**Methods**: `create`
+
+**Dependencies**: File system, module loading
+
+#### tool-loader.ts
+
+**Class**: `ToolLoader`
+
+**Methods**: `registerAll`, `addToManifest`
+
+**Dependencies**: Tool classes, file system
+
+#### tool-metadata.ts
+
+**Classes**: `ReflectToolMetadataProvider`
+
+**Methods**: `getMetadata`
+
+**Dependencies**: Reflection API
+
+#### tool-registrar.ts
+
+**Class**: `DefaultToolRegistrar`
+
+**Methods**: `register`
+
+**Dependencies**: Server context
+
+#### tool-validator.ts
+
+**Class**: `DefaultToolValidator`
+
+**Methods**: `validate`
+
+**Dependencies**: Metadata schema
+
+#### validate-tool-metadata.ts
+
+**Function**: `validateToolMetadata`
+
+**Dependencies**: Zod schemas
+
+### 4. API Layer (`src/api/`)
+
+#### backstage-catalog-api.ts
+
+**Class**: `BackstageCatalogApi`
+
+**Methods**: All catalog operations (getEntities, addLocation, etc.)
+
+**Dependencies**: Axios, auth, cache, formatting
+
+### 5. Auth Layer (`src/auth/`)
+
+#### auth-manager.ts
+
+**Class**: `AuthManager`
+
+**Methods**: `authenticate`, `getToken`, `refreshToken`
+
+**Dependencies**: Axios, environment
+
+#### input-sanitizer.ts
+
+**Class**: `InputSanitizer`
+
+**Methods**: `sanitizeString`, `sanitizeObject`
+
+**Dependencies**: Guards
+
+#### security-auditor.ts
+
+**Class**: `SecurityAuditor`
+
+**Methods**: `auditRequest`, `logEvent`
+
+**Dependencies**: Logger
+
+### 6. Cache Layer (`src/cache/`)
+
+#### cache-manager.ts
+
+**Class**: `CacheManager`
+
+**Methods**: `get`, `set`, `clear`, `cleanup`
+
+**Dependencies**: Timers, logger
+
+### 7. Decorators (`src/decorators/`)
+
+#### tool.decorator.ts
+
+**Decorator**: `Tool`
+
+**Dependencies**: Metadata reflection
+
+### 8. Tools (`src/tools/`)
+
+Each tool class has an `execute` method with specific logic.
+
+**Common Dependencies**: API client, input sanitizer, response formatters
+
+**Test Structure**: Mock API, test success/error responses
+
+### 9. Main Files
+
+#### server.ts
+
+**Function**: `startServer`
+
+**Dependencies**: Environment, all components
+
+#### generate-manifest.ts
+
+**Function**: Main export
+
+**Dependencies**: Tool loading components
+
+## Implementation Instructions
+
+1. Create test files side-by-side with source files
+2. Use the canonical skeleton from standards
+3. Mock all external dependencies
+4. Cover positive and negative paths
+5. Use table-driven tests where appropriate
+6. Assert call counts and parameters
+7. Ensure 95%+ coverage
+
+## Memory Leak Prevention
+
+- Clear all mocks in afterEach
+- Use jest.resetModules() for module isolation
+- Avoid global state
+- Run tests with --detectLeaks flag
+
+## Coverage Verification
+
+Run `npm test -- --coverage` and verify:
+
+- Statements: ≥95%
+- Branches: ≥95%
+- Functions: ≥95%
+- Lines: ≥95%
