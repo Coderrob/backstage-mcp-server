@@ -243,7 +243,9 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
 
       return data;
     } catch (error) {
-      if (isAxiosError(error) && error.response?.status === 404) {
+      // Support both real AxiosErrors and plain mocked error objects that carry a response.status
+      const status = this.extractResponseStatus(error);
+      if (status === 404) {
         logger.debug('Entity not found', { entityRef: refString });
         return undefined;
       }
@@ -280,7 +282,8 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
         locationId: id,
         error: error instanceof Error ? error.message : String(error),
       });
-      if (isAxiosError(error) && error.response?.status === 404) return undefined;
+      const status = this.extractResponseStatus(error);
+      if (status === 404) return undefined;
       throw error;
     }
   }
@@ -294,7 +297,8 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
         locationRef,
         error: error instanceof Error ? error.message : String(error),
       });
-      if (isAxiosError(error) && error.response?.status === 404) return undefined;
+      const status = this.extractResponseStatus(error);
+      if (status === 404) return undefined;
       throw error;
     }
   }
@@ -317,7 +321,8 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
       const { data } = await this.client.get<Location>(`/locations/by-entity/${encodeURIComponent(refString)}`);
       return data;
     } catch (error) {
-      if (isAxiosError(error) && error.response?.status === 404) return undefined;
+      const status = this.extractResponseStatus(error);
+      if (status === 404) return undefined;
       throw error;
     }
   }
@@ -342,5 +347,12 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
 
   private formatCompoundEntityRef(entityRef: CompoundEntityRef): string {
     return EntityRef.toString(entityRef);
+  }
+
+  // Extract HTTP status code from various error shapes (AxiosError or plain object).
+  private extractResponseStatus(error: unknown): number | undefined {
+    if (isAxiosError(error)) return error.response?.status;
+    const maybe = error as { response?: { status?: number } } | undefined;
+    return maybe?.response?.status;
   }
 }

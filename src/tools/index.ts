@@ -1,4 +1,3 @@
-/* eslint-disable import/no-unused-modules */
 export { AddLocationTool } from './add_location.tool.js';
 export { GetEntitiesTool } from './get_entities.tool.js';
 export { GetEntitiesByQueryTool } from './get_entities_by_query.tool.js';

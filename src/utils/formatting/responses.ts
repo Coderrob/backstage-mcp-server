@@ -1,5 +1,3 @@
-/* eslint-disable import/no-unused-modules */
-
 import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 

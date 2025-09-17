@@ -9,14 +9,13 @@ jest.mock('../utils/core/logger.js', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CacheManagerWithPrivate = {
   cleanup(): void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   get<T>(key: string): T | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   set<T>(key: string, value: T, ttl?: number): void;
   delete(key: string): boolean;
   clear(): void;

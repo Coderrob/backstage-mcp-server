@@ -1,8 +1,6 @@
 import { PaginatedResponse, PaginationMeta, PaginationParams } from '../../types/paging.js';
 import { isNumber } from '../core/guards.js';
 
-/* eslint-disable import/no-unused-modules */
-
 export class PaginationHelper {
   private static readonly DEFAULT_LIMIT = 50;
   private static readonly MAX_LIMIT = 1000;

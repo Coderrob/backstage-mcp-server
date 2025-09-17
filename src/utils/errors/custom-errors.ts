@@ -1,5 +1,3 @@
-/* eslint-disable import/no-unused-modules */
-
 /**
  * Base error class for MCP Server with standardized error handling
  */

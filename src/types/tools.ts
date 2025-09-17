@@ -11,7 +11,7 @@ import { IBackstageCatalogApi } from './apis.js';
 export const rawToolMetadataSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  paramsSchema: z.record(z.any()).optional(),
+  paramsSchema: z.record(z.string(), z.any()).optional(),
 });
 
 export type RawToolMetadata = z.infer<typeof rawToolMetadataSchema>;
