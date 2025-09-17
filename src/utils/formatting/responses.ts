@@ -36,19 +36,20 @@ export interface IApiErrorResponseExtended extends IApiResponse {
       operation?: string;
       parameter?: string;
     };
-    errors?: Array<{
-      id?: string;
-      status?: string;
-      code?: string;
-      title?: string;
-      detail?: string;
-      source?: {
-        pointer?: string;
-        parameter?: string;
-      };
-      meta?: Record<string, unknown>;
-    }>;
   };
+  meta?: Record<string, unknown>;
+  errors?: {
+    id?: string;
+    status?: string;
+    code?: string;
+    title?: string;
+    detail?: string;
+    source?: {
+      pointer?: string;
+      parameter?: string;
+    };
+    meta?: Record<string, unknown>;
+  }[];
 }
 
 /**
@@ -164,7 +165,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
     return 'No entities found';
   }
 
-  const entities = data.data as unknown[];
+  const entities = data.data as Entity[];
   const count = entities.length;
 
   if (count === 0) {
@@ -174,7 +175,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
   // Group by kind
   const byKind: Record<string, number> = {};
   entities.forEach((entity) => {
-    const entityObj = entity as Record<string, unknown>;
+    const entityObj = entity;
     const kind = String(entityObj.kind ?? 'unknown');
     byKind[kind] = (byKind[kind] || 0) + 1;
   });
@@ -253,40 +254,35 @@ export function createStandardError(
         tool: toolName,
         operation,
       },
-      errors: [
-        {
-          status: getHttpStatusCode(errorType),
-          code: errorCode,
-          title: getErrorTitle(errorType),
-          detail: errorMessage,
-          source: {
-            parameter: operation,
-          },
-          meta: {
-            tool: toolName,
-            timestamp: new Date().toISOString(),
-            ...additionalDetails,
-          },
-        },
-      ],
     },
+    errors: [
+      {
+        status: getHttpStatusCode(errorType),
+        code: errorCode,
+        title: getErrorTitle(errorType),
+        detail: errorMessage,
+        source: {
+          parameter: operation,
+        },
+        meta: {
+          tool: toolName,
+          timestamp: new Date().toISOString(),
+          ...additionalDetails,
+        },
+      },
+    ],
   };
 
   return response;
 }
 
 /**
- * Creates a simple error response for backward compatibility
+ * Creates a simple error response object
  * @param message - Error message
- * @returns Simple error response
+ * @returns Simple error response object
  */
 export function createSimpleError(message: string): IApiErrorResponse {
-  return {
-    status: ApiStatus.ERROR,
-    data: {
-      message,
-    },
-  };
+  return { status: ApiStatus.ERROR, data: { message } };
 }
 
 /**

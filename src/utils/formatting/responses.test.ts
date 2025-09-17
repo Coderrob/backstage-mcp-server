@@ -240,25 +240,25 @@ describe('responses', () => {
       expect(result.data.code).toBe('VALIDATION_ERROR');
       expect(result.data.source?.tool).toBe('test-tool');
       expect(result.data.source?.operation).toBe('test-op');
-      expect(result.data.errors).toHaveLength(1);
-      expect(result.data.errors?.[0].status).toBe('400');
-      expect(result.data.errors?.[0].title).toBe('Validation Error');
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors?.[0].status).toBe('400');
+      expect(result.errors?.[0].title).toBe('Validation Error');
     });
 
     it('should create standard error with string error', () => {
       const result = createStandardError('String error', ErrorType.NOT_FOUND, 'tool', 'op', { extra: 'data' });
       expect(result.data.message).toBe('String error');
       expect(result.data.code).toBe('NOT_FOUND');
-      expect(result.data.errors?.[0].status).toBe('404');
-      expect(result.data.errors?.[0].meta?.extra).toBe('data');
+      expect(result.errors?.[0].status).toBe('404');
+      expect(result.errors?.[0].meta?.extra).toBe('data');
     });
 
     it('should handle all error types', () => {
       Object.values(ErrorType).forEach((type) => {
         const result = createStandardError('error', type, 'tool', 'op');
         expect(result.data.code).toBe(type);
-        expect(result.data.errors?.[0].status).toBeDefined();
-        expect(result.data.errors?.[0].title).toBeDefined();
+        expect(result.errors?.[0].status).toBeDefined();
+        expect(result.errors?.[0].title).toBeDefined();
       });
     });
   });
