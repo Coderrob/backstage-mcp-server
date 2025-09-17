@@ -1,0 +1,171 @@
+import { jest } from '@jest/globals';
+
+import { IBackstageCatalogApi } from '../types/apis.js';
+import { IToolRegistrationContext } from '../types/tools.js';
+import { GetEntitiesTool } from './get_entities.tool.js';
+
+// Mock the inputSanitizer
+jest.mock('../auth/input-sanitizer.js', () => ({
+  inputSanitizer: {
+    sanitizeFilter: jest.fn(),
+    sanitizeArray: jest.fn(),
+    sanitizeString: jest.fn(),
+  },
+}));
+
+import { inputSanitizer } from '../auth/input-sanitizer.js';
+
+describe('GetEntitiesTool', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  let mockCatalogClient: jest.Mocked<IBackstageCatalogApi>;
+  let mockContext: IToolRegistrationContext;
+  let sanitizeFilterSpy: jest.SpiedFunction<typeof inputSanitizer.sanitizeFilter>;
+  let sanitizeArraySpy: jest.SpiedFunction<typeof inputSanitizer.sanitizeArray>;
+  let sanitizeStringSpy: jest.SpiedFunction<typeof inputSanitizer.sanitizeString>;
+
+  beforeEach(() => {
+    mockCatalogClient = {
+      getEntities: jest.fn(),
+      getEntitiesJsonApi: jest.fn(),
+    } as unknown as jest.Mocked<IBackstageCatalogApi>;
+
+    mockContext = {
+      catalogClient: mockCatalogClient,
+    } as unknown as jest.Mocked<IToolRegistrationContext>;
+
+    // Spy on the sanitizer methods
+    sanitizeFilterSpy = jest.spyOn(inputSanitizer, 'sanitizeFilter');
+    sanitizeArraySpy = jest.spyOn(inputSanitizer, 'sanitizeArray');
+    sanitizeStringSpy = jest.spyOn(inputSanitizer, 'sanitizeString');
+
+    // Mock the sanitizer methods to return input unchanged
+    sanitizeFilterSpy.mockImplementation((filter) => filter);
+    sanitizeArraySpy.mockImplementation((arr, _fieldName, sanitizer) => arr.map(sanitizer!));
+    sanitizeStringSpy.mockImplementation((str) => str);
+  });
+
+  describe('execute', () => {
+    it('should call the catalog client getEntities method with standard format', async () => {
+      const request = {
+        filter: [{ key: 'kind', values: ['Component'] }],
+        fields: ['metadata.name', 'spec.type'],
+        limit: 10,
+        offset: 0,
+        format: 'standard' as const,
+      };
+
+      const entitiesResult = {
+        items: [
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: { name: 'comp1', namespace: 'default' },
+            spec: { type: 'service' },
+          },
+        ],
+      };
+
+      mockCatalogClient.getEntities.mockResolvedValue(entitiesResult);
+
+      const result = await GetEntitiesTool.execute(request, mockContext);
+
+      expect(sanitizeFilterSpy).toHaveBeenCalledWith(request.filter);
+      expect(sanitizeArraySpy).toHaveBeenCalledWith(request.fields, 'fields', expect.any(Function));
+      expect(mockCatalogClient.getEntities).toHaveBeenCalledWith({
+        filter: request.filter,
+        fields: request.fields,
+        limit: request.limit,
+        offset: request.offset,
+      });
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+
+      // FormattedTextResponse returns formatted text, not JSON
+      const responseText = result.content[0].text;
+      expect(responseText).toContain('Found 1 entities');
+      expect(responseText).toContain('Component: 1');
+    });
+
+    it('should call the catalog client getEntitiesJsonApi method with jsonapi format', async () => {
+      const request = {
+        filter: [{ key: 'kind', values: ['Component'] }],
+        limit: 5,
+        format: 'jsonapi' as const,
+      };
+
+      const jsonApiResult = {
+        data: [
+          {
+            type: 'component',
+            id: 'component:default/comp1',
+            attributes: {
+              name: 'comp1',
+              namespace: 'default',
+            },
+          },
+        ],
+        meta: { total: 1 },
+      };
+
+      mockCatalogClient.getEntitiesJsonApi.mockResolvedValue(jsonApiResult);
+
+      const result = await GetEntitiesTool.execute(request, mockContext);
+
+      expect(mockCatalogClient.getEntitiesJsonApi).toHaveBeenCalledWith({
+        filter: request.filter,
+        fields: undefined,
+        limit: request.limit,
+        offset: undefined,
+      });
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+
+      const responseData = JSON.parse(result.content[0].text as string);
+      expect(responseData.status).toBe('success');
+      expect(responseData.data).toEqual(jsonApiResult);
+    });
+
+    it('should handle errors from the catalog client', async () => {
+      const request = {
+        filter: [{ key: 'kind', values: ['InvalidKind'] }],
+        format: 'standard' as const,
+      };
+
+      const error = new Error('Failed to get entities');
+      mockCatalogClient.getEntities.mockRejectedValue(error);
+
+      const result = await GetEntitiesTool.execute(request, mockContext);
+
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+
+      const errorData = JSON.parse(result.content[0].text as string);
+      expect(errorData.status).toBe('error');
+      expect(errorData.data.message).toBe('Failed to get_entities: Failed to get entities');
+    });
+
+    it('should default to standard format when format is not specified', async () => {
+      const request = {
+        limit: 10,
+        format: 'standard' as const,
+      };
+
+      const entitiesResult = {
+        items: [],
+      };
+
+      mockCatalogClient.getEntities.mockResolvedValue(entitiesResult);
+
+      const result = await GetEntitiesTool.execute(request, mockContext);
+
+      expect(mockCatalogClient.getEntities).toHaveBeenCalled();
+      expect(mockCatalogClient.getEntitiesJsonApi).not.toHaveBeenCalled();
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+      expect(result.content[0].text).toContain('No entities found');
+    });
+  });
+});

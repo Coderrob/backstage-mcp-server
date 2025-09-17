@@ -5,7 +5,7 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { ApiStatus, IApiResponse } from '../../types/apis.js';
 import { ResponseMessage } from '../../types/constants.js';
-import { isBigInt } from '../core/guards.js';
+import { isBigInt, isDefined, isNullOrUndefined } from '../core/guards.js';
 
 type ContentItem = {
   type: 'text';
@@ -111,7 +111,7 @@ export function FormattedTextResponse<T extends IApiResponse>(
   } else {
     // Default formatter for success responses
     const successData = data as IApiSuccessResponse;
-    const hasSuccessData = successData.data !== undefined && successData.data !== null;
+    const hasSuccessData = isDefined(successData.data);
     text = `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`;
   }
 
@@ -140,7 +140,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
     });
   } else {
     const successData = data as IApiSuccessResponse;
-    const hasSuccessData = successData.data !== undefined && successData.data !== null;
+    const hasSuccessData = isDefined(successData.data);
     content.push({
       type: 'text',
       text: `${ResponseMessage.SUCCESS_PREFIX}${hasSuccessData ? `: ${JSON.stringify(successData.data, null, 2)}` : ''}`,
@@ -160,7 +160,7 @@ export function MultiContentResponse<T extends IApiResponse>(data: T, formatter?
  * Formatter for entity list responses
  */
 export function formatEntityList(data: IApiSuccessResponse): string {
-  if (data.data === undefined || data.data === null || !Array.isArray(data.data)) {
+  if (isNullOrUndefined(data.data) || !Array.isArray(data.data)) {
     return 'No entities found';
   }
 
@@ -190,7 +190,7 @@ export function formatEntityList(data: IApiSuccessResponse): string {
  * Formatter for single entity responses
  */
 export function formatEntity<T extends Entity>(data: IApiSuccessResponse<T | undefined>): string {
-  if (data.data === undefined || data.data === null) {
+  if (isNullOrUndefined(data.data)) {
     return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.ENTITY_NOT_FOUND}`;
   }
 
@@ -208,14 +208,14 @@ export function formatEntity<T extends Entity>(data: IApiSuccessResponse<T | und
  * Formatter for location responses
  */
 export function formatLocation(data: IApiSuccessResponse): string {
-  if (data.data === undefined || data.data === null) {
+  if (isNullOrUndefined(data.data)) {
     return `${ResponseMessage.SUCCESS_PREFIX}: ${ResponseMessage.LOCATION_NOT_FOUND}`;
   }
 
   const location = data.data as Record<string, unknown>;
-  const id = location.id !== undefined && location.id !== null ? String(location.id) : 'unknown';
-  const type = location.type !== undefined && location.type !== null ? String(location.type) : 'unknown';
-  const target = location.target !== undefined && location.target !== null ? String(location.target) : 'unknown';
+  const id = isDefined(location.id) ? String(location.id) : 'unknown';
+  const type = isDefined(location.type) ? String(location.type) : 'unknown';
+  const target = isDefined(location.target) ? String(location.target) : 'unknown';
   const tags = Array.isArray(location.tags as unknown) ? (location.tags as string[]) : [];
 
   return `Location found:

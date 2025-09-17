@@ -67,7 +67,7 @@ export class GetEntitiesTool {
         }
 
         logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
-        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatEntityList);
+        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result.items }, formatEntityList);
       },
       request,
       context,

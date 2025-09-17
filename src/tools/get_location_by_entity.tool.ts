@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 
-import { stringifyEntityRef } from '@backstage/catalog-model';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
@@ -9,17 +8,12 @@ import { ApiStatus } from '../types/apis.js';
 import { ToolName } from '../types/constants.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { isString } from '../utils/core/guards.js';
+import { EntityRef } from '../utils/formatting/entity-ref.js';
 import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
-const compoundEntityRefSchema = z.object({
-  kind: z.string(),
-  namespace: z.string(),
-  name: z.string(),
-});
-
 const paramsSchema = z.object({
-  entityRef: z.union([z.string(), compoundEntityRefSchema]),
+  entityRef: z.string(),
 });
 
 @Tool({
@@ -36,7 +30,7 @@ export class GetLocationByEntityTool {
       ToolName.GET_LOCATION_BY_ENTITY,
       'getLocationByEntity',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        const ref = isString(args.entityRef) ? args.entityRef : stringifyEntityRef(args.entityRef);
+        const ref = isString(args.entityRef) ? args.entityRef : EntityRef.toString(args.entityRef);
         const result = await ctx.catalogClient.getLocationByEntity(ref);
         return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },

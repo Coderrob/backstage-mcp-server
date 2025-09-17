@@ -1,9 +1,9 @@
 /* eslint-disable import/no-unused-modules */
 
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { isObject } from '../core/guards.js';
 
 import { IToolRegistrationContext } from '../../types/tools.js';
+import { isObject } from '../core/guards.js';
 import { logger } from '../core/logger.js';
 import { createSimpleError, createStandardError, ErrorType } from '../formatting/responses.js';
 
@@ -33,46 +33,101 @@ export class ToolErrorHandler {
       logger.debug(`Tool execution successful: ${toolName}`, { operation });
       return result;
     } catch (error) {
-      logger.error(`Tool execution failed: ${toolName}`, {
-        operation,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-
-      // Determine error type based on error characteristics
-      const errorType = this.classifyError(error);
-
-      if (useJsonApi) {
-        const errorResponse = createStandardError(error, errorType, toolName, operation, {
-          args: this.sanitizeArgs(args),
-        });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(errorResponse, null, 2),
-            },
-          ],
-        };
-      } else {
-        // Backward compatibility - simple error format
-        const errorResponse = createSimpleError(
-          `Failed to ${operation}: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(errorResponse, null, 2),
-            },
-          ],
-        };
-      }
+      return this.handleToolError(error, toolName, operation, args, useJsonApi);
     }
   }
 
   /**
-   * Classifies an error to determine the appropriate error type
+   * Handles errors that occur during tool execution.
+   * @param error - The error that occurred
+   * @param toolName - Name of the tool that failed
+   * @param operation - Operation being performed
+   * @param args - Arguments passed to the tool
+   * @param useJsonApi - Whether to use JSON:API error format
+   * @returns MCP tool result with error information
+   * @private
+   */
+  private static handleToolError<TArgs>(
+    error: unknown,
+    toolName: string,
+    operation: string,
+    args: TArgs,
+    useJsonApi: boolean
+  ): CallToolResult {
+    logger.error(`Tool execution failed: ${toolName}`, {
+      operation,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    const errorType = this.classifyError(error);
+
+    if (useJsonApi) {
+      return this.createJsonApiErrorResponse(error, errorType, toolName, operation, args);
+    }
+
+    return this.createSimpleErrorResponse(error, operation);
+  }
+
+  /**
+   * Creates a JSON:API formatted error response.
+   * @param error - The error that occurred
+   * @param errorType - The classified error type
+   * @param toolName - Name of the tool that failed
+   * @param operation - Operation being performed
+   * @param args - Arguments passed to the tool
+   * @returns MCP tool result with JSON:API error format
+   * @private
+   */
+  private static createJsonApiErrorResponse<TArgs>(
+    error: unknown,
+    errorType: ErrorType,
+    toolName: string,
+    operation: string,
+    args: TArgs
+  ): CallToolResult {
+    const errorResponse = createStandardError(error, errorType, toolName, operation, {
+      args: this.sanitizeArgs(args),
+    });
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(errorResponse, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Creates a simple error response for backward compatibility.
+   * @param error - The error that occurred
+   * @param operation - Operation being performed
+   * @returns MCP tool result with simple error format
+   * @private
+   */
+  private static createSimpleErrorResponse(error: unknown, operation: string): CallToolResult {
+    const errorResponse = createSimpleError(
+      `Failed to ${operation}: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(errorResponse, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Classifies an error to determine the appropriate error type.
+   * Analyzes error messages to categorize errors for proper handling and reporting.
+   * @param error - The error object to classify
+   * @returns The appropriate ErrorType for the given error
+   * @private
    */
   private static classifyError(error: unknown): ErrorType {
     if (!(error instanceof Error)) {
@@ -119,7 +174,11 @@ export class ToolErrorHandler {
   }
 
   /**
-   * Sanitizes arguments for logging (removes sensitive data)
+   * Sanitizes arguments for logging by removing sensitive data.
+   * Currently returns arguments as-is, but can be extended to filter sensitive fields.
+   * @param args - The arguments to sanitize
+   * @returns Sanitized arguments safe for logging
+   * @private
    */
   private static sanitizeArgs(args: unknown): unknown {
     if (!isObject(args)) {

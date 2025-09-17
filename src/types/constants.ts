@@ -49,6 +49,15 @@ export enum ResponseMessage {
 }
 
 /**
+ * HTTP status codes used throughout the application
+ * Provides named constants for common HTTP status codes
+ */
+export enum HttpStatusCode {
+  OK = 200,
+  SERVICE_UNAVAILABLE = 503,
+}
+
+/**
  * Common default values
  */
 export enum DefaultValue {

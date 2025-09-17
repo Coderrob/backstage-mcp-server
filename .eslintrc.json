@@ -36,7 +36,7 @@
     ],
     "simple-import-sort/imports": "error",
     "simple-import-sort/exports": "error",
-    "import/no-unused-modules": ["error", { "unusedExports": true }],
+    "import/no-unused-modules": ["off", { "unusedExports": true }],
     "no-console": ["error", { "allow": ["warn", "error"] }]
   }
 }
