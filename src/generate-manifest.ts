@@ -14,7 +14,7 @@ class MockToolRegistrar implements IToolRegistrar {
   }
 }
 
-async function generateManifest(): Promise<void> {
+export async function generateManifest(): Promise<void> {
   // ESM doesn't provide a __dirname variable - synthesize one from import.meta.url
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);

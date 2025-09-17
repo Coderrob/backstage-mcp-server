@@ -1,6 +1,13 @@
-import { jest } from '@jest/globals';
-
-import { isBigInt, isFunction, isNonEmptyString, isNumber, isObject, isString, isStringOrNumber } from './guards.js';
+import {
+  isBigInt,
+  isError,
+  isFunction,
+  isNonEmptyString,
+  isNumber,
+  isObject,
+  isString,
+  isStringOrNumber,
+} from './guards';
 
 describe('guards', () => {
   afterEach(() => {
@@ -109,6 +116,24 @@ describe('guards', () => {
       [(): void => {}, false],
     ])('should return %s for %p', (input, expected) => {
       expect(isStringOrNumber(input)).toBe(expected);
+    });
+  });
+
+  describe('isError', () => {
+    it.each([
+      [new Error('test'), true],
+      [new TypeError('test'), true],
+      [new ReferenceError('test'), true],
+      [new RangeError('test'), true],
+      ['error', false],
+      [123, false],
+      [{}, false],
+      [null, false],
+      [undefined, false],
+      [[], false],
+      [(): void => {}, false],
+    ])('should return %s for %p', (input, expected) => {
+      expect(isError(input)).toBe(expected);
     });
   });
 });

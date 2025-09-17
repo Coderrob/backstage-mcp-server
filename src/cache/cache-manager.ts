@@ -156,6 +156,13 @@ export class CacheManager {
     this.cleanupTimer = setInterval(() => {
       this.cleanup();
     }, this.config.cleanupInterval);
+
+    // Prevent the cleanup timer from keeping the Node.js event loop alive
+    // during tests or graceful shutdowns.
+    if (this.cleanupTimer) {
+      const t = this.cleanupTimer as NodeJS.Timeout & { unref?: () => void };
+      if (typeof t.unref === 'function') t.unref();
+    }
   }
 
   /**

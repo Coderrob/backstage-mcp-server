@@ -10,7 +10,7 @@ import { healthChecker } from '../health-checks.js';
  * @param status - The health status
  * @returns The corresponding HTTP status code
  */
-function getStatusCodeForHealth(status: HealthStatus): number {
+export function getStatusCodeForHealth(status: HealthStatus): number {
   switch (status) {
     case HealthStatus.HEALTHY:
       return HttpStatusCode.OK;
@@ -28,7 +28,7 @@ function getStatusCodeForHealth(status: HealthStatus): number {
  * @param req - Express request object
  * @param res - Express response object
  */
-export async function healthCheckMiddleware(req: Request, res: Response): Promise<void> {
+export async function healthCheckMiddleware(_req: Request, res: Response): Promise<void> {
   try {
     const result = await healthChecker.runAllChecks();
     const statusCode = getStatusCodeForHealth(result.status);

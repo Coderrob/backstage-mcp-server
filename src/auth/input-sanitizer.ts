@@ -163,7 +163,7 @@ export class InputSanitizer {
       });
       if (error instanceof z.ZodError) {
         throw new ValidationError(
-          `Validation failed for ${fieldName}: ${error.errors.map((e) => e.message).join(', ')}`
+          `Validation failed for ${fieldName}: ${error.issues.map((e) => e.message).join(', ')}`
         );
       }
       throw new ValidationError(`Invalid input for ${fieldName}`);
@@ -213,5 +213,5 @@ export class InputSanitizer {
 }
 
 // Global input sanitizer instance
-/* eslint-disable-next-line import/no-unused-modules */
+
 export const inputSanitizer = new InputSanitizer();

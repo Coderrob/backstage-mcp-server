@@ -5,14 +5,21 @@ import { ISecurityEvent, ISecurityEventFilter, ISecurityEventSummary, SecurityEv
 const SecurityEventSchema = z.object({
   id: z.string(),
   timestamp: z.date(),
-  type: z.nativeEnum(SecurityEventType),
+  type: z.enum([
+    SecurityEventType.AUTH_SUCCESS,
+    SecurityEventType.AUTH_FAILURE,
+    SecurityEventType.TOKEN_REFRESH,
+    SecurityEventType.RATE_LIMIT_EXCEEDED,
+    SecurityEventType.INVALID_REQUEST,
+    SecurityEventType.UNAUTHORIZED_ACCESS,
+  ]),
   userId: z.string().optional(),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   resource: z.string(),
   action: z.string(),
   success: z.boolean(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
   errorMessage: z.string().optional(),
 });
 

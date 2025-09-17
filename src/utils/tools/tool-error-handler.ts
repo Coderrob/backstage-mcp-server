@@ -1,5 +1,3 @@
-/* eslint-disable import/no-unused-modules */
-
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { IToolRegistrationContext } from '../../types/tools.js';

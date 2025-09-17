@@ -139,13 +139,13 @@ describe('InputSanitizer', () => {
 
     it('should throw error for invalid data', () => {
       expect(() => sanitizer.validateWithSchema('input', z.number(), 'test')).toThrow(
-        'Validation failed for test: Expected number, received string'
+        'Validation failed for test: Invalid input: expected number, received string'
       );
     });
 
     it('should throw error for ZodError', () => {
       expect(() => sanitizer.validateWithSchema('input', z.number(), 'test')).toThrow(
-        'Validation failed for test: Expected number, received string'
+        'Validation failed for test: Invalid input: expected number, received string'
       );
     });
   });

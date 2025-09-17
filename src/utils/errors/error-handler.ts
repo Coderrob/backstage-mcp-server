@@ -1,5 +1,3 @@
-/* eslint-disable import/no-unused-modules */
-
 import { NextFunction, Request, Response } from 'express';
 
 import { logger } from '../core/logger.js';
@@ -68,13 +66,7 @@ export const errorMetrics = ErrorMetrics.getInstance();
 /**
  * Express error handling middleware
  */
-export function errorHandler(
-  error: Error,
-  req: Request,
-  res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  next: NextFunction
-): void {
+export function errorHandler(error: Error, req: Request, res: Response, _next: NextFunction): void {
   // Record error in metrics
   errorMetrics.recordError(error);
 
@@ -122,7 +114,7 @@ export function errorHandler(
 /**
  * Sanitizes request body for logging (removes sensitive data)
  */
-function sanitizeRequestBody(body: unknown): unknown {
+export function sanitizeRequestBody(body: unknown): unknown {
   if (!body || typeof body !== 'object') {
     return body;
   }

@@ -1,4 +1,3 @@
-/* eslint-disable import/no-unused-modules */
 // JSON:API specification implementation for richer LLM context
 // https://jsonapi.org/
 
