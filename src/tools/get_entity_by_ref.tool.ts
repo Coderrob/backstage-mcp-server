@@ -49,14 +49,13 @@ export class GetEntityByRefTool {
       ToolName.GET_ENTITY_BY_REF,
       'get_entity_by_ref',
       async ({ entityRef: ref }: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        // Sanitize entity reference input
         const sanitizedEntityRef = inputSanitizer.sanitizeEntityRef(ref);
         const result = await ctx.catalogClient.getEntityByRef(sanitizedEntityRef);
         return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },
       { entityRef },
       context,
-      true // Use JSON:API error format
+      true
     );
   }
 }

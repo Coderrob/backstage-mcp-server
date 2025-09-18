@@ -21,7 +21,7 @@ import { Tool } from '../decorators/tool.decorator.js';
 import { ApiStatus } from '../types/apis.js';
 import { ToolName } from '../types/constants.js';
 import { IToolRegistrationContext } from '../types/tools.js';
-import { formatLocation, FormattedTextResponse } from '../utils/formatting/responses.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const paramsSchema = z.object({
@@ -43,7 +43,7 @@ export class GetLocationByRefTool {
       'getLocationByRef',
       async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
         const result = await ctx.catalogClient.getLocationByRef(args.locationRef);
-        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result }, formatLocation);
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },
       request,
       context,
