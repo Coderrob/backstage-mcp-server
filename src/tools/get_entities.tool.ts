@@ -24,7 +24,7 @@ import { ApiStatus } from '../types/apis.js';
 import { ToolName } from '../types/constants.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { logger } from '../utils/core/logger.js';
-import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/formatting/responses.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const entityFilterSchema = z.object({
@@ -77,17 +77,12 @@ export class GetEntitiesTool {
             status: ApiStatus.SUCCESS,
             data: jsonApiResult,
           });
-        } else if (req.format === 'standard') {
-          // Use the old formatted text response for 'standard' format
-          const result = await ctx.catalogClient.getEntities(sanitizedRequest);
-          logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
-          return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result.items }, formatEntityList);
-        } else {
-          // Default to JSON format for better LLM access
-          const result = await ctx.catalogClient.getEntities(sanitizedRequest);
-          logger.debug('Returning JSON formatted entities', { count: result.items?.length || 0 });
-          return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
         }
+
+        // Default to JSON format for better LLM access
+        const result = await ctx.catalogClient.getEntities(sanitizedRequest);
+        logger.debug('Returning JSON formatted entities', { count: result.items?.length || 0 });
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },
       request,
       context,

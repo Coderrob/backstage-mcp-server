@@ -200,8 +200,8 @@ src/
 └── index.ts       # Main server entry point
 
 scripts/
-├── validate-build-enhanced.sh    # Build validation with operational transparency
-├── dependency-manager-enhanced.sh # Dependency analysis with cross-platform support
+├── validate-build.sh    # Build validation with operational transparency
+├── dependency-manager.sh # Dependency analysis with cross-platform support
 ├── deps-crossplatform.sh         # Cross-platform dependency operations
 ├── monitor.sh                    # System monitoring and health checks
 └── deps.sh                       # Legacy dependency scripts

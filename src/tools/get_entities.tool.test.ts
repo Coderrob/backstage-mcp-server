@@ -115,8 +115,21 @@ describe('GetEntitiesTool', () => {
 
       // FormattedTextResponse returns formatted text, not JSON
       const responseText = result.content[0].text;
-      expect(responseText).toContain('Found 1 entities');
-      expect(responseText).toContain('Component: 1');
+      const expectedResponseText = {
+        status: 'success',
+        data: {
+          items: [
+            {
+              apiVersion: 'backstage.io/v1alpha1',
+              kind: 'Component',
+              metadata: { name: 'comp1', namespace: 'default' },
+              spec: { type: 'service' },
+            },
+          ],
+        },
+      };
+
+      expect(responseText).toEqual(JSON.stringify(expectedResponseText, null, 2));
     });
 
     it('should call the catalog client getEntitiesJsonApi method with jsonapi format', async () => {
