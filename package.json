@@ -61,6 +61,7 @@
     "LICENSE",
     "CHANGELOG.md"
   ],
+  "license": "GPL-3.0",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "name": "@coderrob/backstage-mcp-server",
