@@ -29,7 +29,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
 
 // External dependencies (should not be bundled)
-const external = [
+const externalDeps = [
   ...Object.keys(pkg.dependencies || {}),
   ...Object.keys(pkg.peerDependencies || {}),
   'node:fs',
@@ -47,7 +47,20 @@ const external = [
   'crypto',
   'os',
   'child_process',
+  // tslib is shipped as ES and can confuse the commonjs plugin during parsing;
+  // exclude it from bundling to allow the runtime to resolve it.
+  'tslib',
+  'tslib/*',
 ];
+
+// Treat any import that resolves into node_modules as external as well. This
+// keeps Rollup from trying to statically analyze and bundle third-party
+// packages which can cause CJS/ESM interop issues during build.
+const external = (id) => {
+  if (!id) return false;
+  if (id.includes('node_modules')) return true;
+  return externalDeps.some((ext) => id === ext || id.startsWith(ext + '/'));
+};
 
 // Warning filter to suppress external dependency warnings
 const onwarn = (warning, warn) => {
@@ -57,7 +70,7 @@ const onwarn = (warning, warn) => {
   }
 
   // Suppress unresolved dependency warnings for external modules
-  if (warning.code === 'UNRESOLVED_IMPORT' && external.some((ext) => warning.source?.startsWith(ext))) {
+  if (warning.code === 'UNRESOLVED_IMPORT' && external(String(warning.source))) {
     return;
   }
 
@@ -78,7 +91,14 @@ const commonPlugins = [
     preferBuiltins: true,
     exportConditions: ['node'],
   }),
-  commonjs(),
+  commonjs({
+    exclude: /node_modules/,
+  }),
+  // Avoid running the CommonJS plugin over node_modules which can cause it to
+  // attempt to parse ESM files shipped by dependencies and surface internal
+  // rollup/runtime errors. We only need CommonJS transformation for our own
+  // generated artifacts if any.
+  // Note: keep this conservative; if you rely on CJS-only deps, adjust as needed.
   typescript({
     tsconfig: './tsconfig.json',
     declaration: false, // We'll generate declarations separately
@@ -143,7 +163,8 @@ export default [
     onwarn,
     external: (id) => {
       // External dependencies should not be included in declaration files
-      return external.some((ext) => id.startsWith(ext) || id.includes('node_modules'));
+      // Use the same external resolution function so behavior is consistent.
+      return external(String(id)) || String(id).includes('node_modules');
     },
   },
 ];
