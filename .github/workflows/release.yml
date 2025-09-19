@@ -19,6 +19,12 @@ jobs:
           cache: "yarn"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Yarn 4
+        run: corepack prepare yarn@4 --activate
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
