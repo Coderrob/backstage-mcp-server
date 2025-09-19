@@ -221,7 +221,7 @@ describe('AuthManager', () => {
           expiresAt: Date.now() - 1000, // Expired 1 second ago
         };
 
-        const mockResponse: AxiosResponse = {
+        const mockResponse: Partial<AxiosResponse> = {
           data: {
             access_token: 'new-access-token',
             refresh_token: 'new-refresh-token',
