@@ -1,3 +1,17 @@
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import { jest } from '@jest/globals';
 
 import { HealthStatus } from '../../types/health.js'; // Assuming types are defined here
@@ -33,7 +47,7 @@ describe('HealthChecker', () => {
     it('should register a health check', () => {
       const mockCheck = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -48,7 +62,7 @@ describe('HealthChecker', () => {
     it('should return healthy status when all checks pass', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -56,7 +70,7 @@ describe('HealthChecker', () => {
         });
       const mockCheck2 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -74,7 +88,7 @@ describe('HealthChecker', () => {
     it('should return degraded status when one check is degraded', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -82,7 +96,7 @@ describe('HealthChecker', () => {
         });
       const mockCheck2 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.DEGRADED,
           message: 'degraded',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -98,7 +112,7 @@ describe('HealthChecker', () => {
     it('should return unhealthy status when one check fails', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',

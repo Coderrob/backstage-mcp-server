@@ -1,0 +1,26 @@
+# Source files
+src/
+tsconfig*.json
+rollup.config.js
+jest.config.mjs
+eslint.config.js
+
+# Development files
+*.test.ts
+*.spec.ts
+__mocks__/
+coverage/
+.vscode/
+
+# Documentation (except main files)
+planning.md
+TODO.md
+
+# Build artifacts not needed in package
+*.tsbuildinfo
+*.log
+node_modules/
+
+# Git
+.git/
+.gitignore

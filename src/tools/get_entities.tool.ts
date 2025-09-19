@@ -1,3 +1,17 @@
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import 'reflect-metadata';
 
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -10,7 +24,7 @@ import { ApiStatus } from '../types/apis.js';
 import { ToolName } from '../types/constants.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { logger } from '../utils/core/logger.js';
-import { formatEntityList, FormattedTextResponse, JsonToTextResponse } from '../utils/formatting/responses.js';
+import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const entityFilterSchema = z.object({
@@ -23,7 +37,7 @@ const paramsSchema = z.object({
   fields: z.array(z.string()).optional(),
   limit: z.number().optional(),
   offset: z.number().optional(),
-  format: z.enum(['standard', 'jsonapi']).optional().default('standard'),
+  format: z.enum(['standard', 'jsonapi']).optional().default('jsonapi'),
 });
 
 @Tool({
@@ -52,9 +66,8 @@ export class GetEntitiesTool {
             : undefined,
           limit: req.limit,
           offset: req.offset,
+          format: req.format,
         };
-
-        const result = await ctx.catalogClient.getEntities(sanitizedRequest);
 
         if (req.format === 'jsonapi') {
           const jsonApiResult = await (ctx.catalogClient as BackstageCatalogApi).getEntitiesJsonApi(sanitizedRequest);
@@ -66,8 +79,10 @@ export class GetEntitiesTool {
           });
         }
 
-        logger.debug('Returning standard formatted entities', { count: result.items?.length || 0 });
-        return FormattedTextResponse({ status: ApiStatus.SUCCESS, data: result.items }, formatEntityList);
+        // Default to JSON format for better LLM access
+        const result = await ctx.catalogClient.getEntities(sanitizedRequest);
+        logger.debug('Returning JSON formatted entities', { count: result.items?.length || 0 });
+        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
       },
       request,
       context,

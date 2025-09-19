@@ -1,3 +1,17 @@
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 jest.mock('../utils/core/logger.js', () => ({
@@ -9,7 +23,7 @@ jest.mock('../utils/core/logger.js', () => ({
   },
 }));
 
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
 import { AuthConfig, TokenInfo } from '../types/auth.js';
 import { AuthManager } from './auth-manager.js';
@@ -27,12 +41,9 @@ describe('AuthManager', () => {
   let authManager: AuthManager;
   let config: TestAuthConfig;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   afterEach(() => {
     jest.clearAllTimers();
+    jest.clearAllMocks();
   });
 
   describe('constructor', () => {
@@ -210,15 +221,17 @@ describe('AuthManager', () => {
           expiresAt: Date.now() - 1000, // Expired 1 second ago
         };
 
-        const mockResponse = {
+        const mockResponse: Partial<AxiosResponse> = {
           data: {
             access_token: 'new-access-token',
             refresh_token: 'new-refresh-token',
             expires_in: 3600,
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         const header = await authManager.getAuthorizationHeader();
         expect(header).toBe('Bearer new-access-token');
@@ -265,8 +278,10 @@ describe('AuthManager', () => {
             expires_in: 3600,
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -283,8 +298,10 @@ describe('AuthManager', () => {
             access_token: 'access-token',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -299,8 +316,10 @@ describe('AuthManager', () => {
             expires_in: 'invalid',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -313,8 +332,10 @@ describe('AuthManager', () => {
           data: {
             access_token: 'access-token',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -387,6 +408,9 @@ describe('AuthManager', () => {
 
     describe('concurrent refresh', () => {
       it('should handle concurrent token refresh', async () => {
+        // Reset all mocks to ensure clean state
+        jest.resetAllMocks();
+
         config = {
           type: 'oauth',
           clientId: 'client-id',
@@ -407,19 +431,20 @@ describe('AuthManager', () => {
             access_token: 'new-access-token',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        const axiosPostSpy = jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
 
-        // Start multiple concurrent requests
+        // Ensure only one refresh happens
         const promises = [
           authManager.getAuthorizationHeader(),
           authManager.getAuthorizationHeader(),
           authManager.getAuthorizationHeader(),
         ];
-
         const results = await Promise.all(promises);
         expect(results).toEqual(['Bearer new-access-token', 'Bearer new-access-token', 'Bearer new-access-token']);
-        expect(axios.post).toHaveBeenCalledTimes(1); // Only one actual refresh
+        expect(axiosPostSpy).toHaveBeenCalledTimes(1); // Only one actual refresh
       });
     });
   });

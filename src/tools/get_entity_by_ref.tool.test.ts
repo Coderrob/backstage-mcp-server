@@ -1,6 +1,21 @@
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+import { Entity } from '@backstage/catalog-model';
 import { jest } from '@jest/globals';
 
-import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus, IBackstageCatalogApi } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetEntityByRefTool } from './get_entity_by_ref.tool.js';
 
@@ -33,7 +48,9 @@ describe('GetEntityByRefTool', () => {
 
     // Spy on the sanitizeEntityRef method
     sanitizeEntityRefSpy = jest.spyOn(inputSanitizer, 'sanitizeEntityRef');
-    sanitizeEntityRefSpy.mockImplementation((ref: string | { kind: string; namespace: string; name: string }) => ref);
+    sanitizeEntityRefSpy.mockImplementationOnce(
+      (ref: string | { kind: string; namespace: string; name: string }) => ref
+    );
   });
 
   describe('execute', () => {
@@ -42,13 +59,13 @@ describe('GetEntityByRefTool', () => {
         entityRef: 'component:default/my-component',
       };
 
-      const expectedEntity = {
+      const expectedEntity: Entity = {
         apiVersion: 'backstage.io/v1alpha1',
         kind: 'Component',
         metadata: { name: 'my-component', namespace: 'default' },
         spec: { type: 'service' },
       };
-      mockCatalogClient.getEntityByRef.mockResolvedValue(expectedEntity);
+      mockCatalogClient.getEntityByRef.mockResolvedValueOnce(expectedEntity);
 
       const result = await GetEntityByRefTool.execute(request, mockContext);
 
@@ -57,10 +74,21 @@ describe('GetEntityByRefTool', () => {
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
 
-      const responseText = result.content[0].text;
-      expect(responseText).toContain('Found Component entity: default/my-component');
-      expect(responseText).toContain('Title: No title');
-      expect(responseText).toContain('Description: No description');
+      const responseData = JSON.parse(result.content[0].text as string);
+      expect(responseData).toEqual({
+        data: {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'my-component',
+            namespace: 'default',
+          },
+          spec: {
+            type: 'service',
+          },
+        },
+        status: ApiStatus.SUCCESS,
+      });
     });
 
     it('should call the catalog client getEntityByRef method with compound entityRef', async () => {
@@ -72,13 +100,13 @@ describe('GetEntityByRefTool', () => {
         },
       };
 
-      const expectedEntity = {
+      const expectedEntity: Entity = {
         apiVersion: 'backstage.io/v1alpha1',
         kind: 'Component',
         metadata: { name: 'my-component', namespace: 'default' },
         spec: { type: 'service' },
       };
-      mockCatalogClient.getEntityByRef.mockResolvedValue(expectedEntity);
+      mockCatalogClient.getEntityByRef.mockResolvedValueOnce(expectedEntity);
 
       const result = await GetEntityByRefTool.execute(request, mockContext);
 
@@ -95,10 +123,21 @@ describe('GetEntityByRefTool', () => {
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
 
-      const responseText = result.content[0].text;
-      expect(responseText).toContain('Found Component entity: default/my-component');
-      expect(responseText).toContain('Title: No title');
-      expect(responseText).toContain('Description: No description');
+      const responseData = JSON.parse(result.content[0].text as string);
+      expect(responseData).toEqual({
+        data: {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'my-component',
+            namespace: 'default',
+          },
+          spec: {
+            type: 'service',
+          },
+        },
+        status: ApiStatus.SUCCESS,
+      });
     });
 
     it('should handle errors from the catalog client', async () => {
@@ -107,7 +146,7 @@ describe('GetEntityByRefTool', () => {
       };
 
       const error = new Error('Entity not found');
-      mockCatalogClient.getEntityByRef.mockRejectedValue(error);
+      mockCatalogClient.getEntityByRef.mockRejectedValueOnce(error);
 
       const result = await GetEntityByRefTool.execute(request, mockContext);
 
@@ -115,8 +154,34 @@ describe('GetEntityByRefTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
-      expect(errorData.data.message).toBe('Entity not found');
+      expect(errorData).toMatchObject({
+        data: {
+          code: 'NOT_FOUND',
+          message: 'Entity not found',
+          source: {
+            operation: 'get_entity_by_ref',
+            tool: 'get_entity_by_ref',
+          },
+        },
+        errors: [
+          {
+            code: 'NOT_FOUND',
+            detail: 'Entity not found',
+            meta: {
+              args: {
+                entityRef: 'component:default/nonexistent',
+              },
+              tool: 'get_entity_by_ref',
+            },
+            source: {
+              parameter: 'get_entity_by_ref',
+            },
+            status: '404',
+            title: 'Resource Not Found',
+          },
+        ],
+        status: ApiStatus.ERROR,
+      });
     });
   });
 });

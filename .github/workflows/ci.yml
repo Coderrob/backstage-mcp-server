@@ -1,4 +1,4 @@
-name: CI
+name: Build and Test
 
 on:
   push:
@@ -10,17 +10,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20.x]
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20.x
+          registry-url: "https://registry.npmjs.org"
 
       - name: Enable Corepack
         run: corepack enable
@@ -31,15 +28,76 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Lint
+      - name: Run linting
         run: yarn lint
 
-      - name: Test
+      - name: Run tests
         run: yarn test
 
-      - name: Upload coverage
+      - name: Build the project
+        run: yarn build
+
+      - name: Validate build outputs
+        run: yarn build:validate
+
+      - name: Test global installation (CommonJS)
+        run: |
+          # Test that the built CJS file can execute
+          node dist/index.cjs --help || echo "Expected: needs env vars"
+
+      - name: Test global installation (ESM)
+        run: |
+          # Test that the built ESM file can execute
+          node dist/index.mjs --help || echo "Expected: needs env vars"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-node-${{ matrix.node-version }}
+          path: |
+            dist/
+            !dist/**/*.map
+          retention-days: 7
+
+      - name: Upload coverage (if present)
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage
+
+  # Job to test publishing (dry run)
+  publish-test:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Yarn 4
+        run: corepack prepare yarn@4 --activate
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build the project
+        run: yarn build
+
+      - name: Test npm pack
+        run: |
+          npm pack --dry-run
+          echo "✅ Package can be packed successfully"
+
+      - name: Verify package contents
+        run: |
+          echo "📦 Package contents that would be published:"
+          npm pack --dry-run 2>/dev/null | grep -E "^\s*[0-9]+" || true

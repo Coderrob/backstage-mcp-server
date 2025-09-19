@@ -1,6 +1,21 @@
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import { jest } from '@jest/globals';
 
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { RemoveEntityByUidTool } from './remove_entity_by_uid.tool.js';
 
@@ -28,7 +43,7 @@ describe('RemoveEntityByUidTool', () => {
         uid: '550e8400-e29b-41d4-a716-446655440000',
       };
 
-      mockCatalogClient.removeEntityByUid.mockResolvedValue(undefined);
+      mockCatalogClient.removeEntityByUid.mockResolvedValueOnce(undefined);
 
       const result = await RemoveEntityByUidTool.execute(request, mockContext);
 
@@ -37,7 +52,7 @@ describe('RemoveEntityByUidTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
     });
 
     it('should handle errors from the catalog client', async () => {
@@ -54,7 +69,7 @@ describe('RemoveEntityByUidTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Entity not found');
     });
   });
