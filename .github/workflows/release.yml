@@ -34,7 +34,7 @@ jobs:
         run: yarn build
 
       - name: Validate build
-        run: yarn validate:build
+        run: yarn build:validate
 
       - name: Publish to NPM
         run: npm publish

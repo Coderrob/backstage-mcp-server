@@ -38,7 +38,7 @@ jobs:
         run: yarn build
 
       - name: Validate build outputs
-        run: yarn validate:build
+        run: yarn build:validate
 
       - name: Test global installation (CommonJS)
         run: |
