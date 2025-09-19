@@ -12,29 +12,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { AddLocationRequest } from '@backstage/catalog-client';
-import { jest } from '@jest/globals';
+import { AddLocationRequest, AddLocationResponse } from '@backstage/catalog-client';
 
-import { ApiStatus, IBackstageCatalogApi } from '../types/apis.js';
-import { IToolRegistrationContext } from '../types/tools.js';
+import { ToolTestHelper } from '../test/tool-test-helper.js';
 import { AddLocationTool } from './add_location.tool.js';
 
 describe('AddLocationTool', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  ToolTestHelper.setupTestEnvironment();
 
-  let mockCatalogClient: jest.Mocked<IBackstageCatalogApi>;
-  let mockContext: IToolRegistrationContext;
+  let mockCatalogClient: ReturnType<typeof ToolTestHelper.createMockCatalogClient>;
+  let mockContext: ReturnType<typeof ToolTestHelper.createMockContext>;
 
   beforeEach(() => {
-    mockCatalogClient = {
-      addLocation: jest.fn(),
-    } as unknown as jest.Mocked<IBackstageCatalogApi>;
-
-    mockContext = {
-      catalogClient: mockCatalogClient,
-    } as unknown as jest.Mocked<IToolRegistrationContext>;
+    mockCatalogClient = ToolTestHelper.createMockCatalogClient();
+    mockContext = ToolTestHelper.createMockContext(mockCatalogClient);
   });
 
   describe('execute', () => {
@@ -44,19 +35,16 @@ describe('AddLocationTool', () => {
         target: 'https://github.com/example/repo',
       };
 
-      const expectedResponse = { id: 'location-123' } as const;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mockCatalogClient.addLocation.mockResolvedValueOnce(expectedResponse as any);
+      const expectedResponse: AddLocationResponse = {
+        location: { id: 'location-123', type: 'github', target: 'https://github.com/example/repo' },
+        entities: [],
+      };
+      mockCatalogClient.addLocation.mockResolvedValue(expectedResponse);
 
       const result = await AddLocationTool.execute(request, mockContext);
 
       expect(mockCatalogClient.addLocation).toHaveBeenCalledWith(request);
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-
-      const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe(ApiStatus.SUCCESS);
-      expect(responseData.data).toEqual(expectedResponse);
+      ToolTestHelper.expectSuccessResponse(result, expectedResponse);
     });
 
     it('should handle errors from the catalog client', async () => {
@@ -70,14 +58,7 @@ describe('AddLocationTool', () => {
 
       const result = await AddLocationTool.execute(request, mockContext);
 
-      // ToolErrorHandler should format the error as a JSON:API error response
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('text');
-
-      const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe(ApiStatus.ERROR);
-      expect(errorData.data.message).toBe('Location already exists');
-      expect(errorData.data.code).toBe('CONFLICT');
+      ToolTestHelper.expectErrorResponse(result, 'Location already exists', 'CONFLICT');
     });
   });
 });

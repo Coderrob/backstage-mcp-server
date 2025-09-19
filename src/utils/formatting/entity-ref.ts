@@ -49,7 +49,7 @@ export class EntityRef {
     // Case A: kind present? (has ':')
     if (source.includes(':')) {
       const [kindPart, maybeRest] = partsAfter(source, ':');
-      const kind = assertKind(kindPart);
+      const kind = assertKind(kindPart.toLowerCase()); // Convert to lowercase for case-insensitive matching
 
       // Case A1: kind:namespace/name
       if (maybeRest?.includes('/')) {

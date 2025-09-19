@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "backstage": {
+      "command": "node",
+      "args": ["dist/index.cjs"],
+      "env": {
+        "BACKSTAGE_BASE_URL": "http://localhost:7007",
+        "BACKSTAGE_TOKEN": "eyJ0eXAiOiJ2bmQuYmFja3N0YWdlLnVzZXIiLCJhbGciOiJFUzI1NiIsImtpZCI6Ijc2MjRjZmQxLWE1ZDgtNGJhNC1hYjFmLWU1M2I2NWRlZTIzNSJ9.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjcwMDcvYXBpL2F1dGgiLCJzdWIiOiJ1c2VyOmRldmVsb3BtZW50L2d1ZXN0IiwiZW50IjpbInVzZXI6ZGV2ZWxvcG1lbnQvZ3Vlc3QiXSwiYXVkIjoiYmFja3N0YWdlIiwiaWF0IjoxNzU4MjkxMjQxLCJleHAiOjE3NTgyOTQ4NDEsInVpcCI6IkJ1aWltMzh0Z1RXWjgzY2JSTUk4UDhZdHEtTUlVdGlOSG0wOVZXR2MzQ2RmR3pCZVVIbDNyUVdWMk93NEhjSm9LSUlfU3dtTG03XzNvUzZGazM1T1lBIn0.i9JPDXMeO-N5O1XeuVjzpexekcU2ryjfdvy56Ur1QExjuk0pat2awyfJ5XPljKJ1sGLKwIy92yE-rvOdB44AxQ"
+      }
+    }
+  }
+}

@@ -12,18 +12,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-/** @type {import('ts-jest').JestConfigWithTsJest} **/
+/** @type {import('jest').Config} **/
 export default {
-  preset: 'ts-jest/presets/default-esm',
-  testEnvironment: 'jest-environment-node',
-  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  preset: null,
+  testEnvironment: 'node',
+  transform: {
+    '^.+\\.(ts|tsx)$': ['babel-jest', { configFile: './babel.config.json' }],
+  },
   extensionsToTreatAsEsm: ['.ts'],
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@backstage/catalog-model$': '<rootDir>/__mocks__/@backstage/catalog-model.js',
-  },
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', { useESM: true, tsconfig: 'tsconfig.spec.json' }],
   },
   transformIgnorePatterns: ['node_modules/(?!(@modelcontextprotocol)/)'],
   testPathIgnorePatterns: ['<rootDir>/dist/'],
@@ -33,6 +37,7 @@ export default {
     '!src/**/*.test.ts',
     '!src/types/**/*',
     '!src/**/__fixtures__/**/*',
+    '!src/**/*.example.ts',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 };

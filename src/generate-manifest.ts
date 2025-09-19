@@ -12,8 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
 import type { ITool, IToolMetadata, IToolRegistrar } from './types/tools.js';
 import { logger } from './utils/core/logger.js';
@@ -29,9 +28,9 @@ class MockToolRegistrar implements IToolRegistrar {
 }
 
 export async function generateManifest(): Promise<void> {
-  // ESM doesn't provide a __dirname variable - synthesize one from import.meta.url
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
+  // Get the directory of the current file using a more compatible approach
+  const currentDir = process.cwd();
+  const srcDir = join(currentDir, 'src');
 
   const toolLoader = new ToolLoader(
     new DefaultToolFactory(),
@@ -41,12 +40,7 @@ export async function generateManifest(): Promise<void> {
   );
 
   await toolLoader.registerAll();
-  await toolLoader.exportManifest(join(__dirname, '..', 'tools-manifest.json'));
+  await toolLoader.exportManifest(join(srcDir, '..', 'tools-manifest.json'));
 
   logger.info('Tools manifest generated successfully!');
 }
-
-generateManifest().catch((error) => {
-  logger.error('Failed to generate manifest:', error);
-  process.exit(1);
-});

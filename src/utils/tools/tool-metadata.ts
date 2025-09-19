@@ -12,13 +12,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import { z } from 'zod';
+
 import { toolMetadataMap } from '../../decorators/tool.decorator.js';
 import { IToolMetadata, IToolMetadataProvider, ToolClass } from '../../types/tools.js';
 import { isFunction, isObject } from '../core/guards.js';
 
 /**
  * Metadata provider that uses reflection to retrieve tool metadata.
- * Looks up metadata from the tool decorator registry.
+ * Looks up metadata from the tool decorator registry or factory-created tools.
  */
 export class ReflectToolMetadataProvider implements IToolMetadataProvider {
   /**
@@ -34,6 +36,47 @@ export class ReflectToolMetadataProvider implements IToolMetadataProvider {
       : toolClass != null && isObject(toolClass)
         ? (toolClass as { constructor: unknown }).constructor
         : toolClass;
-    return toolMetadataMap.get(key as ToolClass);
+
+    // First try decorator-based lookup
+    const decoratorMetadata = toolMetadataMap.get(key as ToolClass);
+    if (decoratorMetadata) {
+      return decoratorMetadata;
+    }
+
+    // Try factory-based lookup for tools created with ToolFactory
+    const factoryMetadata = this.extractFactoryMetadata(key as ToolClass);
+    if (factoryMetadata) {
+      return factoryMetadata;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extracts metadata from factory-created tools that have static properties.
+   * @param toolClass - The tool class to extract metadata from
+   * @returns The tool metadata if found, undefined otherwise
+   */
+  private extractFactoryMetadata(toolClass: ToolClass): IToolMetadata | undefined {
+    if (!isFunction(toolClass)) {
+      return undefined;
+    }
+
+    // Check if this is a factory-created tool by looking for static properties
+    const staticProps = toolClass as unknown as {
+      toolName?: string;
+      description?: string;
+      paramsSchema?: z.ZodTypeAny;
+    };
+
+    if (staticProps.toolName && staticProps.description && staticProps.paramsSchema) {
+      return {
+        name: staticProps.toolName,
+        description: staticProps.description,
+        paramsSchema: staticProps.paramsSchema,
+      };
+    }
+
+    return undefined;
   }
 }

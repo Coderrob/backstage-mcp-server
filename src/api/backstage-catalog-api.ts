@@ -245,10 +245,10 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
       logger.debug('Fetching entity from API', { entityRef: refString });
 
       // Parse the entity reference using the EntityRef class
-      const entityRef = EntityRef.parse(refString);
+      const parsedEntityRef = EntityRef.parse(refString);
 
       const { data } = await this.client.get<Entity>(
-        `/entities/by-name/${encodeURIComponent(entityRef.kind)}/${encodeURIComponent(entityRef.namespace)}/${encodeURIComponent(entityRef.name)}`
+        `/entities/by-name/${encodeURIComponent(parsedEntityRef.kind)}/${encodeURIComponent(parsedEntityRef.namespace)}/${encodeURIComponent(parsedEntityRef.name)}`
       );
 
       // Cache the result for 5 minutes

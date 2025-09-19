@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-export const CompoundEntityRef = {
+const CompoundEntityRef = {
   parse: (ref) => {
     // Simple mock implementation
     const parts = ref.split(':');
@@ -25,4 +25,9 @@ export const CompoundEntityRef = {
   },
 };
 
-export const DEFAULT_NAMESPACE = 'default';
+const DEFAULT_NAMESPACE = 'default';
+
+module.exports = {
+  CompoundEntityRef,
+  DEFAULT_NAMESPACE,
+};

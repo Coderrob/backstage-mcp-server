@@ -12,16 +12,3 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { AddLocationOperation } from '../utils/tools/catalog-operations.js';
-import { ToolName } from '../utils/tools/common-imports.js';
-import { ToolFactory } from '../utils/tools/generic-tool-factory.js';
-
-/**
- * AddLocationTool - Generated using advanced patterns
- * Demonstrates: Factory Pattern, Generics, SOLID Principles, Strategy Pattern
- */
-export const AddLocationTool = ToolFactory({
-  name: ToolName.ADD_LOCATION,
-  description: 'Create a new location in the catalog.',
-  paramsSchema: AddLocationOperation.paramsSchema,
-})(AddLocationOperation);

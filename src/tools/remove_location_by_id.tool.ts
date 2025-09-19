@@ -12,42 +12,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import 'reflect-metadata';
+import { RemoveLocationByIdOperation } from '../utils/tools/catalog-operations.js';
+import { ToolName } from '../utils/tools/common-imports.js';
+import { ToolFactory } from '../utils/tools/generic-tool-factory.js';
 
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
-
-import { Tool } from '../decorators/tool.decorator.js';
-import { ApiStatus } from '../types/apis.js';
-import { ToolName } from '../types/constants.js';
-import { IToolRegistrationContext } from '../types/tools.js';
-import { JsonToTextResponse } from '../utils/formatting/responses.js';
-import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
-
-const paramsSchema = z.object({
-  locationId: z.string(),
-});
-
-@Tool({
+/**
+ * RemoveLocationByIdTool - Generated using advanced patterns
+ * Demonstrates: Factory Pattern, Generics, SOLID Principles, Strategy Pattern
+ */
+export const RemoveLocationByIdTool = ToolFactory({
   name: ToolName.REMOVE_LOCATION_BY_ID,
   description: 'Remove a location from the catalog by id.',
-  paramsSchema,
-})
-export class RemoveLocationByIdTool {
-  static async execute(
-    request: z.infer<typeof paramsSchema>,
-    context: IToolRegistrationContext
-  ): Promise<CallToolResult> {
-    return ToolErrorHandler.executeTool(
-      ToolName.REMOVE_LOCATION_BY_ID,
-      'removeLocationById',
-      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        await ctx.catalogClient.removeLocationById(args.locationId);
-        return JsonToTextResponse({ status: ApiStatus.SUCCESS });
-      },
-      request,
-      context,
-      true
-    );
-  }
-}
+  paramsSchema: RemoveLocationByIdOperation.paramsSchema,
+})(RemoveLocationByIdOperation);
