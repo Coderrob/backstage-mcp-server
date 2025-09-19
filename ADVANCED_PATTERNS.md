@@ -19,6 +19,7 @@ export abstract class BaseTool<TParams = Record<string, unknown>, TResult = unkn
 ```
 
 **Benefits:**
+
 - ✅ Full TypeScript IntelliSense
 - ✅ Automatic parameter validation
 - ✅ Type-safe result formatting
@@ -36,7 +37,7 @@ Advanced decorators with automatic categorization and metadata:
   description: 'Retrieve entity data',
   paramsSchema: entitySchema,
   cacheable: true,
-  tags: ['entity', 'read']
+  tags: ['entity', 'read'],
 })
 export class GetEntityTool extends BaseTool<EntityParams, Entity> {
   // Fully type-safe implementation
@@ -44,6 +45,7 @@ export class GetEntityTool extends BaseTool<EntityParams, Entity> {
 ```
 
 **Decorator Types:**
+
 - `@ReadTool` - GET operations with caching
 - `@WriteTool` - POST/PUT with confirmation
 - `@AuthenticatedTool` - Requires authentication
@@ -57,9 +59,7 @@ Different execution strategies for various scenarios:
 
 ```typescript
 // Standard execution
-const standardTool = ToolFactory.create()
-  .withStrategy(new StandardExecutionStrategy())
-  .build();
+const standardTool = ToolFactory.create().withStrategy(new StandardExecutionStrategy()).build();
 
 // Cached execution
 const cachedTool = ToolFactory.create()
@@ -67,9 +67,7 @@ const cachedTool = ToolFactory.create()
   .build();
 
 // Batched execution
-const batchTool = ToolFactory.create()
-  .withStrategy(new BatchedExecutionStrategy())
-  .build();
+const batchTool = ToolFactory.create().withStrategy(new BatchedExecutionStrategy()).build();
 ```
 
 ### 4. Middleware Pipeline Pattern
@@ -79,8 +77,7 @@ const batchTool = ToolFactory.create()
 Extensible middleware system for cross-cutting concerns:
 
 ```typescript
-export const AuthenticatedTool = ToolFactory
-  .create()
+export const AuthenticatedTool = ToolFactory.create()
   .use(new AuthenticationMiddleware())
   .use(new ValidationMiddleware())
   .use(new LoggingMiddleware())
@@ -88,6 +85,7 @@ export const AuthenticatedTool = ToolFactory
 ```
 
 **Built-in Middleware:**
+
 - `AuthenticationMiddleware` - Handles auth requirements
 - `ValidationMiddleware` - Input validation
 - `CachingMiddleware` - Response caching
@@ -99,8 +97,7 @@ export const AuthenticatedTool = ToolFactory
 Fluent API for tool creation and configuration:
 
 ```typescript
-export const MyTool = ToolFactory
-  .createReadTool()
+export const MyTool = ToolFactory.createReadTool()
   .name('my-tool')
   .description('A powerful tool')
   .schema(mySchema)
@@ -171,8 +168,7 @@ export class GetEntityTool extends BaseTool<z.infer<typeof paramsSchema>, Entity
 ### Advanced Tool with Middleware and Strategy
 
 ```typescript
-export const AdvancedTool = ToolFactory
-  .createWriteTool()
+export const AdvancedTool = ToolFactory.createWriteTool()
   .name('advanced-tool')
   .description('Advanced tool with full feature set')
   .schema(advancedSchema)
@@ -195,25 +191,21 @@ export class MetricsPlugin implements IMcpPlugin {
 
   async initialize(context: IToolRegistrationContext): Promise<void> {
     // Add metrics middleware to all tools
-    context.toolRegistrar.register(
-      ToolFactory.create()
-        .use(new MetricsMiddleware())
-        .build()
-    );
+    context.toolRegistrar.register(ToolFactory.create().use(new MetricsMiddleware()).build());
   }
 }
 ```
 
 ## 📊 Benefits Achieved
 
-| Pattern | Benefit | Implementation |
-|---------|---------|----------------|
-| **Generics** | Type safety, IntelliSense | `BaseTool<TParams, TResult>` |
-| **Decorators** | Metadata, categorization | `@ReadTool`, `@WriteTool` |
-| **Strategy** | Execution flexibility | `CachedExecutionStrategy` |
-| **Middleware** | Cross-cutting concerns | Pipeline architecture |
-| **Builder** | Fluent configuration | `ToolFactory.create()` |
-| **Plugin** | Extensibility | `PluginManager` |
+| Pattern        | Benefit                   | Implementation               |
+| -------------- | ------------------------- | ---------------------------- |
+| **Generics**   | Type safety, IntelliSense | `BaseTool<TParams, TResult>` |
+| **Decorators** | Metadata, categorization  | `@ReadTool`, `@WriteTool`    |
+| **Strategy**   | Execution flexibility     | `CachedExecutionStrategy`    |
+| **Middleware** | Cross-cutting concerns    | Pipeline architecture        |
+| **Builder**    | Fluent configuration      | `ToolFactory.create()`       |
+| **Plugin**     | Extensibility             | `PluginManager`              |
 
 ## 🔄 Migration Guide
 
@@ -244,11 +236,10 @@ export class ModernTool extends BaseTool<LegacyParams, LegacyResult> {
 ```typescript
 import { ToolMigrationHelper } from './utils/tools/migration-helper.js';
 
-const modernTool = ToolMigrationHelper.migrateLegacyTool(
-  LegacyTool,
-  legacyMetadata,
-  { addCaching: true, addValidation: true }
-);
+const modernTool = ToolMigrationHelper.migrateLegacyTool(LegacyTool, legacyMetadata, {
+  addCaching: true,
+  addValidation: true,
+});
 ```
 
 ## 🎯 Best Practices
@@ -290,9 +281,7 @@ pluginManager.register(new MetricsPlugin());
 pluginManager.register(new SecurityPlugin());
 
 // Use advanced tool factory
-const advancedTool = ToolFactory.createReadTool()
-  .withStrategy(new CachedExecutionStrategy())
-  .build();
+const advancedTool = ToolFactory.createReadTool().withStrategy(new CachedExecutionStrategy()).build();
 ```
 
 This implementation provides a solid foundation for scalable, maintainable, and extensible MCP server development with modern TypeScript patterns.
