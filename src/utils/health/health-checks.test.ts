@@ -47,7 +47,7 @@ describe('HealthChecker', () => {
     it('should register a health check', () => {
       const mockCheck = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -62,7 +62,7 @@ describe('HealthChecker', () => {
     it('should return healthy status when all checks pass', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -70,7 +70,7 @@ describe('HealthChecker', () => {
         });
       const mockCheck2 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -88,7 +88,7 @@ describe('HealthChecker', () => {
     it('should return degraded status when one check is degraded', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -96,7 +96,7 @@ describe('HealthChecker', () => {
         });
       const mockCheck2 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.DEGRADED,
           message: 'degraded',
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -112,7 +112,7 @@ describe('HealthChecker', () => {
     it('should return unhealthy status when one check fails', async () => {
       const mockCheck1 = jest
         .fn<() => Promise<{ status: HealthStatus; message: string; timestamp: string; duration: number }>>()
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           status: HealthStatus.HEALTHY,
           message: 'ok',
           timestamp: '2023-01-01T00:00:00.000Z',

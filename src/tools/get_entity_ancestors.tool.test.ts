@@ -15,6 +15,7 @@
 import { jest } from '@jest/globals';
 
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetEntityAncestorsTool } from './get_entity_ancestors.tool.js';
 
@@ -64,7 +65,7 @@ describe('GetEntityAncestorsTool', () => {
         ],
       };
 
-      mockCatalogClient.getEntityAncestors.mockResolvedValue(ancestorsResult);
+      mockCatalogClient.getEntityAncestors.mockResolvedValueOnce(ancestorsResult);
 
       const result = await GetEntityAncestorsTool.execute(request, mockContext);
 
@@ -75,7 +76,7 @@ describe('GetEntityAncestorsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(ancestorsResult);
     });
 
@@ -110,7 +111,7 @@ describe('GetEntityAncestorsTool', () => {
         ],
       };
 
-      mockCatalogClient.getEntityAncestors.mockResolvedValue(ancestorsResult);
+      mockCatalogClient.getEntityAncestors.mockResolvedValueOnce(ancestorsResult);
 
       const result = await GetEntityAncestorsTool.execute(request, mockContext);
 
@@ -121,7 +122,7 @@ describe('GetEntityAncestorsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(ancestorsResult);
     });
 
@@ -139,7 +140,7 @@ describe('GetEntityAncestorsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Failed to get entity ancestors');
     });
   });

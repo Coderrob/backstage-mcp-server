@@ -15,6 +15,7 @@
 import { jest } from '@jest/globals';
 
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { RemoveEntityByUidTool } from './remove_entity_by_uid.tool.js';
 
@@ -42,7 +43,7 @@ describe('RemoveEntityByUidTool', () => {
         uid: '550e8400-e29b-41d4-a716-446655440000',
       };
 
-      mockCatalogClient.removeEntityByUid.mockResolvedValue(undefined);
+      mockCatalogClient.removeEntityByUid.mockResolvedValueOnce(undefined);
 
       const result = await RemoveEntityByUidTool.execute(request, mockContext);
 
@@ -51,7 +52,7 @@ describe('RemoveEntityByUidTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
     });
 
     it('should handle errors from the catalog client', async () => {
@@ -68,7 +69,7 @@ describe('RemoveEntityByUidTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Entity not found');
     });
   });

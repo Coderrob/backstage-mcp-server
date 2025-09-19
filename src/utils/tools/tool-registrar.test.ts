@@ -91,7 +91,7 @@ describe('DefaultToolRegistrar', () => {
       const extra = { extra: 'data' };
       const result = { content: [] };
 
-      mockTool.execute.mockResolvedValue(result);
+      mockTool.execute.mockResolvedValueOnce(result);
 
       registrar.register(mockTool, metadata);
 

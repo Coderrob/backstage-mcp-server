@@ -140,7 +140,7 @@ describe('BackstageCatalogApi', () => {
       const request: GetEntitiesRequest & PaginationParams = { limit: 10, offset: 0 };
       mockCacheManager.get.mockReturnValue(undefined);
       mockedPaginationHelper.normalizeParams.mockReturnValue({ limit: 10, offset: 0, page: 1 });
-      mockClient.get.mockResolvedValue(axiosResponse<GetEntitiesResponse>(mockResponse));
+      mockClient.get.mockResolvedValueOnce(axiosResponse<GetEntitiesResponse>(mockResponse));
 
       const result = await api.getEntities(request);
 
@@ -157,7 +157,7 @@ describe('BackstageCatalogApi', () => {
     } as unknown as GetEntitiesByRefsResponse;
 
     it('should post to /entities/by-refs and return data', async () => {
-      mockClient.post.mockResolvedValue(axiosResponse(mockResponse));
+      mockClient.post.mockResolvedValueOnce(axiosResponse(mockResponse));
 
       const result = await api.getEntitiesByRefs(request);
 
@@ -173,7 +173,7 @@ describe('BackstageCatalogApi', () => {
     } as unknown as QueryEntitiesResponse;
 
     it('should post to /entities/query and return data', async () => {
-      mockClient.post.mockResolvedValue(axiosResponse(mockResponse));
+      mockClient.post.mockResolvedValueOnce(axiosResponse(mockResponse));
 
       const result = await api.queryEntities(request);
 
@@ -187,7 +187,7 @@ describe('BackstageCatalogApi', () => {
     const mockResponse = { items: [], rootEntityRef: request.entityRef } as unknown as GetEntityAncestorsResponse;
 
     it('should get from /entities/by-name/.../ancestry and return data', async () => {
-      mockClient.get.mockResolvedValue(axiosResponse(mockResponse));
+      mockClient.get.mockResolvedValueOnce(axiosResponse(mockResponse));
 
       const result = await api.getEntityAncestors(request);
 
@@ -219,7 +219,7 @@ describe('BackstageCatalogApi', () => {
     it('should fetch from API and cache if not cached', async () => {
       mockCacheManager.get.mockReturnValue(undefined);
       mockedEntityRef.parse.mockReturnValue({ kind: 'component', namespace: 'default', name: 'test' });
-      mockClient.get.mockResolvedValue(axiosResponse<Entity>(mockEntity));
+      mockClient.get.mockResolvedValueOnce(axiosResponse<Entity>(mockEntity));
 
       const result = await api.getEntityByRef(entityRef);
 
@@ -243,7 +243,7 @@ describe('BackstageCatalogApi', () => {
   describe('removeEntityByUid', () => {
     it('should delete entity by UID', async () => {
       const uid = 'test-uid';
-      mockClient.delete.mockResolvedValue(axiosResponse<void>(undefined));
+      mockClient.delete.mockResolvedValueOnce(axiosResponse<void>(undefined));
 
       await api.removeEntityByUid(uid);
 
@@ -254,7 +254,7 @@ describe('BackstageCatalogApi', () => {
   describe('refreshEntity', () => {
     it('should post to /refresh with entityRef', async () => {
       const entityRef = 'component:default/test';
-      mockClient.post.mockResolvedValue(axiosResponse<void>(undefined));
+      mockClient.post.mockResolvedValueOnce(axiosResponse<void>(undefined));
 
       await api.refreshEntity(entityRef);
 
@@ -267,7 +267,7 @@ describe('BackstageCatalogApi', () => {
     const mockResponse = { facets: {} } as unknown as GetEntityFacetsResponse;
 
     it('should post to /entities/facets and return data', async () => {
-      mockClient.post.mockResolvedValue(axiosResponse(mockResponse));
+      mockClient.post.mockResolvedValueOnce(axiosResponse(mockResponse));
 
       const result = await api.getEntityFacets(request);
 
@@ -281,7 +281,7 @@ describe('BackstageCatalogApi', () => {
     const mockLocation = { type: 'url', target: 'http://example.com' } as unknown as Location;
 
     it('should get location by ID', async () => {
-      mockClient.get.mockResolvedValue(axiosResponse<Location>(mockLocation));
+      mockClient.get.mockResolvedValueOnce(axiosResponse<Location>(mockLocation));
 
       const result = await api.getLocationById(id);
 
@@ -304,7 +304,7 @@ describe('BackstageCatalogApi', () => {
     const mockLocation = { type: 'url', target: 'http://example.com' } as unknown as Location;
 
     it('should get location by ref', async () => {
-      mockClient.get.mockResolvedValue(axiosResponse<Location>(mockLocation));
+      mockClient.get.mockResolvedValueOnce(axiosResponse<Location>(mockLocation));
 
       const result = await api.getLocationByRef(locationRef);
 
@@ -327,7 +327,7 @@ describe('BackstageCatalogApi', () => {
     const mockResponse = { location: { type: 'url', target: 'http://example.com' } } as unknown as AddLocationResponse;
 
     it('should post to /locations and return data', async () => {
-      mockClient.post.mockResolvedValue(axiosResponse<AddLocationResponse>(mockResponse));
+      mockClient.post.mockResolvedValueOnce(axiosResponse<AddLocationResponse>(mockResponse));
 
       const result = await api.addLocation(location);
 
@@ -339,7 +339,7 @@ describe('BackstageCatalogApi', () => {
   describe('removeLocationById', () => {
     it('should delete location by ID', async () => {
       const id = 'test-id';
-      mockClient.delete.mockResolvedValue(axiosResponse<void>(undefined));
+      mockClient.delete.mockResolvedValueOnce(axiosResponse<void>(undefined));
 
       await api.removeLocationById(id);
 
@@ -352,7 +352,7 @@ describe('BackstageCatalogApi', () => {
     const mockLocation = { type: 'url', target: 'http://example.com' } as unknown as Location;
 
     it('should get location by entity ref', async () => {
-      mockClient.get.mockResolvedValue(axiosResponse<Location>(mockLocation));
+      mockClient.get.mockResolvedValueOnce(axiosResponse<Location>(mockLocation));
 
       const result = await api.getLocationByEntity(entityRef);
 
@@ -380,7 +380,7 @@ describe('BackstageCatalogApi', () => {
     const mockResponse: ValidateEntityResponse = { valid: true };
 
     it('should post to /validate-entity and return data', async () => {
-      mockClient.post.mockResolvedValue(axiosResponse<ValidateEntityResponse>(mockResponse));
+      mockClient.post.mockResolvedValueOnce(axiosResponse<ValidateEntityResponse>(mockResponse));
 
       const result = await api.validateEntity(entity, locationRef);
 
@@ -396,7 +396,7 @@ describe('BackstageCatalogApi', () => {
     const mockDocument: JsonApiDocument = { data: [] };
 
     it('should get entities and format to JSON:API', async () => {
-      jest.spyOn(api, 'getEntities').mockResolvedValue({ items: mockEntities } as unknown as GetEntitiesResponse);
+      jest.spyOn(api, 'getEntities').mockResolvedValueOnce({ items: mockEntities } as unknown as GetEntitiesResponse);
       mockedJsonApiFormatter.entitiesToDocument.mockReturnValue(mockDocument);
 
       const result = await api.getEntitiesJsonApi();

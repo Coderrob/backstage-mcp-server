@@ -78,3 +78,21 @@ export enum DefaultValue {
   UNKNOWN = 'unknown',
   ENTITY = 'entity',
 }
+
+/**
+ * Content types used in MCP responses
+ */
+export enum ContentType {
+  TEXT = 'text',
+}
+
+/**
+ * Common field names used in API responses
+ */
+export enum FieldName {
+  DATA = 'data',
+  MESSAGE = 'message',
+  CONTENT = 'content',
+  STATUS = 'status',
+  TYPE = 'type',
+}

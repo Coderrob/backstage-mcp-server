@@ -445,6 +445,51 @@ quick_check() {
     fi
 }
 
+# Safe dependency update (patch versions only)
+safe_update() {
+    echo -e "${BLUE}=== Cross-Platform Safe Dependency Update ===${NC}"
+    log "Delegating to deps.sh update_safe function"
+
+    # Delegate to the update_safe function in deps.sh
+    "$SCRIPT_DIR/deps.sh" update "$@"
+}
+
+# Check for outdated packages
+check_outdated() {
+    echo -e "${BLUE}=== Cross-Platform Outdated Package Check ===${NC}"
+    log "Delegating to deps.sh check_outdated function"
+
+    # Delegate to the check_outdated function in deps.sh
+    "$SCRIPT_DIR/deps.sh" outdated "$@"
+}
+
+# Deduplicate dependencies
+deduplicate() {
+    echo -e "${BLUE}=== Cross-Platform Dependency Deduplication ===${NC}"
+    log "Delegating to deps.sh deduplicate function"
+
+    # Delegate to the deduplicate function in deps.sh
+    "$SCRIPT_DIR/deps.sh" dedupe "$@"
+}
+
+# Security audit
+security_audit() {
+    echo -e "${BLUE}=== Cross-Platform Security Audit ===${NC}"
+    log "Delegating to deps.sh security_audit function"
+
+    # Delegate to the security_audit function in deps.sh
+    "$SCRIPT_DIR/deps.sh" audit "$@"
+}
+
+# Full dependency analysis
+full_analysis() {
+    echo -e "${BLUE}=== Cross-Platform Full Dependency Analysis ===${NC}"
+    log "Delegating to deps.sh full_analysis function"
+
+    # Delegate to the full_analysis function in deps.sh
+    "$SCRIPT_DIR/deps.sh" analyze "$@"
+}
+
 # Show environment information
 show_info() {
     echo -e "${BLUE}=== Environment Information ===${NC}"

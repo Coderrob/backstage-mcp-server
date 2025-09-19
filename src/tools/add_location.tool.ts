@@ -25,7 +25,7 @@ import { JsonToTextResponse } from '../utils/formatting/responses.js';
 import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
 
 const paramsSchema = z.object({
-  type: z.string(),
+  type: z.string().optional(),
   target: z.string(),
 });
 

@@ -14,6 +14,7 @@
  */
 import { jest } from '@jest/globals';
 
+import { ApiStatus } from '../types/apis.js';
 import { IBackstageCatalogApi } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { ValidateEntityTool } from './validate_entity.tool.js';
@@ -55,7 +56,7 @@ describe('ValidateEntityTool', () => {
         errors: [],
       };
 
-      mockCatalogClient.validateEntity.mockResolvedValue(validationResult);
+      mockCatalogClient.validateEntity.mockResolvedValueOnce(validationResult);
 
       const result = await ValidateEntityTool.execute(request, mockContext);
 
@@ -64,7 +65,7 @@ describe('ValidateEntityTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(validationResult);
     });
 
@@ -90,7 +91,7 @@ describe('ValidateEntityTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Invalid entity structure');
     });
   });

@@ -82,7 +82,7 @@ describe('healthCheckMiddleware', () => {
       version: '1.0.0',
       checks: {},
     };
-    (healthChecker.runAllChecks as jest.MockedFunction<typeof healthChecker.runAllChecks>).mockResolvedValue(
+    (healthChecker.runAllChecks as jest.MockedFunction<typeof healthChecker.runAllChecks>).mockResolvedValueOnce(
       mockResult
     );
 

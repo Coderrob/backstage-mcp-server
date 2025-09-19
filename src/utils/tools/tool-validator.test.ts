@@ -12,21 +12,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { jest } from '@jest/globals';
+import { z } from 'zod';
 
 import { IToolMetadata } from '../../types/tools.js';
 import { DefaultToolValidator } from './tool-validator.js';
 
-// Mock the validation function
-jest.mock('./validate-tool-metadata.js', () => ({
-  validateToolMetadata: jest.fn(),
-}));
-
 describe('DefaultToolValidator', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
   let validator: DefaultToolValidator;
 
   beforeEach(() => {
@@ -43,6 +34,7 @@ describe('DefaultToolValidator', () => {
 
       expect(() => validator.validate(metadata, file)).not.toThrow();
     });
+
     it('should throw for invalid metadata', () => {
       const metadata = {
         name: '', // Invalid: empty name
@@ -51,6 +43,35 @@ describe('DefaultToolValidator', () => {
       const file = '/path/to/tool.js';
 
       expect(() => validator.validate(metadata, file)).toThrow();
+    });
+
+    it('should validate metadata with paramsSchema as plain object', () => {
+      const metadata = {
+        name: 'test-tool',
+        description: 'Test tool',
+        paramsSchema: {
+          type: 'object',
+          properties: {
+            param1: { type: 'string' },
+          },
+        },
+      } as unknown as IToolMetadata; // Cast through unknown since this represents runtime metadata that may have plain object schemas
+      const file = '/path/to/tool.js';
+
+      expect(() => validator.validate(metadata, file)).not.toThrow();
+    });
+
+    it('should validate metadata with paramsSchema as Zod schema', () => {
+      const metadata: IToolMetadata = {
+        name: 'test-tool',
+        description: 'Test tool',
+        paramsSchema: z.object({
+          param1: z.string(),
+        }),
+      };
+      const file = '/path/to/tool.js';
+
+      expect(() => validator.validate(metadata, file)).not.toThrow();
     });
   });
 });

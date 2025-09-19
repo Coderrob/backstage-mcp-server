@@ -15,6 +15,7 @@
 import { jest } from '@jest/globals';
 
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetEntityFacetsTool } from './get_entity_facets.tool.js';
 
@@ -55,7 +56,7 @@ describe('GetEntityFacetsTool', () => {
         },
       };
 
-      mockCatalogClient.getEntityFacets.mockResolvedValue(facetsResult);
+      mockCatalogClient.getEntityFacets.mockResolvedValueOnce(facetsResult);
 
       const result = await GetEntityFacetsTool.execute(request, mockContext);
 
@@ -64,7 +65,7 @@ describe('GetEntityFacetsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(facetsResult);
     });
 
@@ -83,7 +84,7 @@ describe('GetEntityFacetsTool', () => {
         },
       };
 
-      mockCatalogClient.getEntityFacets.mockResolvedValue(facetsResult);
+      mockCatalogClient.getEntityFacets.mockResolvedValueOnce(facetsResult);
 
       const result = await GetEntityFacetsTool.execute(request, mockContext);
 
@@ -92,7 +93,7 @@ describe('GetEntityFacetsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(facetsResult);
     });
 
@@ -110,7 +111,7 @@ describe('GetEntityFacetsTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Failed to get facets');
     });
   });

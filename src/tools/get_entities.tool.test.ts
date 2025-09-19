@@ -16,7 +16,7 @@ import { GetEntitiesResponse } from '@backstage/catalog-client';
 import { jest } from '@jest/globals';
 
 import { inputSanitizer } from '../auth/input-sanitizer.js';
-import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus, IBackstageCatalogApi } from '../types/apis.js';
 import { JsonApiDocument } from '../types/json-api.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetEntitiesTool } from './get_entities.tool.js';
@@ -97,7 +97,7 @@ describe('GetEntitiesTool', () => {
         ],
       };
 
-      mockCatalogClient.getEntities.mockResolvedValue(entitiesResult);
+      mockCatalogClient.getEntities.mockResolvedValueOnce(entitiesResult);
 
       const result = await GetEntitiesTool.execute(request, mockContext);
 
@@ -116,7 +116,7 @@ describe('GetEntitiesTool', () => {
       // FormattedTextResponse returns formatted text, not JSON
       const responseText = result.content[0].text;
       const expectedResponseText = {
-        status: 'success',
+        status: ApiStatus.SUCCESS,
         data: {
           items: [
             {
@@ -153,7 +153,7 @@ describe('GetEntitiesTool', () => {
         meta: { total: 1 },
       };
 
-      mockCatalogClient.getEntitiesJsonApi.mockResolvedValue(jsonApiResult);
+      mockCatalogClient.getEntitiesJsonApi.mockResolvedValueOnce(jsonApiResult);
 
       const result = await GetEntitiesTool.execute(request, mockContext);
 
@@ -167,7 +167,7 @@ describe('GetEntitiesTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const responseData = JSON.parse(result.content[0].text as string);
-      expect(responseData.status).toBe('success');
+      expect(responseData.status).toBe(ApiStatus.SUCCESS);
       expect(responseData.data).toEqual(jsonApiResult);
     });
 
@@ -186,7 +186,7 @@ describe('GetEntitiesTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Failed to get_entities: Failed to get entities');
     });
 
@@ -201,7 +201,7 @@ describe('GetEntitiesTool', () => {
         meta: { total: 0 },
       };
 
-      mockCatalogClient.getEntitiesJsonApi.mockResolvedValue(jsonApiResult);
+      mockCatalogClient.getEntitiesJsonApi.mockResolvedValueOnce(jsonApiResult);
 
       const result = await GetEntitiesTool.execute(request, mockContext);
 
@@ -209,7 +209,7 @@ describe('GetEntitiesTool', () => {
       expect(mockCatalogClient.getEntities).not.toHaveBeenCalled();
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('"status": "success"');
+      expect(result.content[0].text).toContain(`"status": "${ApiStatus.SUCCESS}"`);
       expect(result.content[0].text).toContain('"data":');
     });
   });

@@ -17,7 +17,7 @@ import { validateToolMetadata } from './validate-tool-metadata.js';
 
 /**
  * Default implementation of IToolValidator that validates tool metadata.
- * Uses the validateToolMetadata function to perform validation.
+ * Uses the validateToolMetadata function to perform validation with type safety.
  */
 export class DefaultToolValidator implements IToolValidator {
   /**
@@ -28,6 +28,14 @@ export class DefaultToolValidator implements IToolValidator {
    * @throws Error if the metadata is invalid
    */
   validate(metadata: IToolMetadata, file: string): void {
-    validateToolMetadata(metadata, file);
+    // Validate the metadata and ensure it's compatible with IToolMetadata
+    const result = validateToolMetadata(metadata, file);
+
+    // Both RawToolMetadata and IToolMetadata should be valid IToolMetadata at runtime
+    // The discriminated result ensures type safety during validation
+    if (result.type === 'raw' || result.type === 'runtime') {
+      // Validation passed, metadata is valid
+      return;
+    }
   }
 }

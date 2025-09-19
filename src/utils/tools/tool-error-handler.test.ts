@@ -47,7 +47,7 @@ describe('ToolErrorHandler', () => {
     it('should execute tool successfully and return result', async () => {
       const args = { key: 'value' };
       const expectedResult: CallToolResult = { content: [{ type: 'text', text: 'success' }] };
-      mockToolFn.mockResolvedValue(expectedResult);
+      mockToolFn.mockResolvedValueOnce(expectedResult);
 
       const result = await ToolErrorHandler.executeTool('testTool', 'testOp', mockToolFn, args, mockContext);
 

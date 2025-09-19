@@ -176,7 +176,7 @@ describe('CacheManager', () => {
     });
 
     it('should fetch and cache if not exists', async () => {
-      const fetcher = jest.fn<() => Promise<string>>().mockResolvedValue('fetched');
+      const fetcher = jest.fn<() => Promise<string>>().mockResolvedValueOnce('fetched');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (cache as unknown as CacheManagerWithPrivate).getOrSet('key', fetcher as () => Promise<any>);
@@ -187,7 +187,7 @@ describe('CacheManager', () => {
     });
 
     it('should use custom ttl for fetcher', async () => {
-      const fetcher = jest.fn<() => Promise<string>>().mockResolvedValue('fetched');
+      const fetcher = jest.fn<() => Promise<string>>().mockResolvedValueOnce('fetched');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (cache as unknown as CacheManagerWithPrivate).getOrSet('key', fetcher as () => Promise<any>, 1000);

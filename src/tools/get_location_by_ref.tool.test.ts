@@ -15,6 +15,7 @@
 import { jest } from '@jest/globals';
 
 import { IBackstageCatalogApi } from '../types/apis.js';
+import { ApiStatus } from '../types/apis.js';
 import { IToolRegistrationContext } from '../types/tools.js';
 import { GetLocationByRefTool } from './get_location_by_ref.tool.js';
 
@@ -47,7 +48,7 @@ describe('GetLocationByRefTool', () => {
         type: 'github',
         target: 'https://github.com/example/repo',
       };
-      mockCatalogClient.getLocationByRef.mockResolvedValue(expectedLocation);
+      mockCatalogClient.getLocationByRef.mockResolvedValueOnce(expectedLocation);
 
       const result = await GetLocationByRefTool.execute(request, mockContext);
 
@@ -55,11 +56,15 @@ describe('GetLocationByRefTool', () => {
       expect(result.content).toHaveLength(1);
       expect(result.content[0].type).toBe('text');
 
-      const responseText = result.content[0].text;
-      expect(responseText).toContain('Location found:');
-      expect(responseText).toContain('ID: location-123');
-      expect(responseText).toContain('Type: github');
-      expect(responseText).toContain('Target: https://github.com/example/repo');
+      const responseData = JSON.parse(result.content[0].text as string);
+      expect(responseData).toEqual({
+        data: {
+          id: 'location-123',
+          target: 'https://github.com/example/repo',
+          type: 'github',
+        },
+        status: 'success',
+      });
     });
 
     it('should handle errors from the catalog client', async () => {
@@ -76,7 +81,7 @@ describe('GetLocationByRefTool', () => {
       expect(result.content[0].type).toBe('text');
 
       const errorData = JSON.parse(result.content[0].text as string);
-      expect(errorData.status).toBe('error');
+      expect(errorData.status).toBe(ApiStatus.ERROR);
       expect(errorData.data.message).toBe('Location not found');
     });
   });

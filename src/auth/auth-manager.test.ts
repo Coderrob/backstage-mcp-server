@@ -23,7 +23,7 @@ jest.mock('../utils/core/logger.js', () => ({
   },
 }));
 
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
 import { AuthConfig, TokenInfo } from '../types/auth.js';
 import { AuthManager } from './auth-manager.js';
@@ -41,12 +41,9 @@ describe('AuthManager', () => {
   let authManager: AuthManager;
   let config: TestAuthConfig;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   afterEach(() => {
     jest.clearAllTimers();
+    jest.clearAllMocks();
   });
 
   describe('constructor', () => {
@@ -224,15 +221,17 @@ describe('AuthManager', () => {
           expiresAt: Date.now() - 1000, // Expired 1 second ago
         };
 
-        const mockResponse = {
+        const mockResponse: AxiosResponse = {
           data: {
             access_token: 'new-access-token',
             refresh_token: 'new-refresh-token',
             expires_in: 3600,
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         const header = await authManager.getAuthorizationHeader();
         expect(header).toBe('Bearer new-access-token');
@@ -279,8 +278,10 @@ describe('AuthManager', () => {
             expires_in: 3600,
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -297,8 +298,10 @@ describe('AuthManager', () => {
             access_token: 'access-token',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -313,8 +316,10 @@ describe('AuthManager', () => {
             expires_in: 'invalid',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -327,8 +332,10 @@ describe('AuthManager', () => {
           data: {
             access_token: 'access-token',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        jest.spyOn(axios, 'post').mockResolvedValueOnce(mockResponse);
 
         await authManager.getAuthorizationHeader();
 
@@ -401,6 +408,9 @@ describe('AuthManager', () => {
 
     describe('concurrent refresh', () => {
       it('should handle concurrent token refresh', async () => {
+        // Reset all mocks to ensure clean state
+        jest.resetAllMocks();
+
         config = {
           type: 'oauth',
           clientId: 'client-id',
@@ -421,19 +431,20 @@ describe('AuthManager', () => {
             access_token: 'new-access-token',
             token_type: 'Bearer',
           },
+          status: 200,
+          statusText: 'OK',
         };
-        jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
+        const axiosPostSpy = jest.spyOn(axios, 'post').mockResolvedValue(mockResponse);
 
-        // Start multiple concurrent requests
+        // Ensure only one refresh happens
         const promises = [
           authManager.getAuthorizationHeader(),
           authManager.getAuthorizationHeader(),
           authManager.getAuthorizationHeader(),
         ];
-
         const results = await Promise.all(promises);
         expect(results).toEqual(['Bearer new-access-token', 'Bearer new-access-token', 'Bearer new-access-token']);
-        expect(axios.post).toHaveBeenCalledTimes(1); // Only one actual refresh
+        expect(axiosPostSpy).toHaveBeenCalledTimes(1); // Only one actual refresh
       });
     });
   });
