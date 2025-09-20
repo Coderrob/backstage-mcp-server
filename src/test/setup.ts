@@ -12,7 +12,5 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { jest } from '@jest/globals';
 
-// Make jest available globally for ESM tests
-(globalThis as unknown as { jest: typeof jest }).jest = jest;
+export {}; // Ensure this file is treated as a module

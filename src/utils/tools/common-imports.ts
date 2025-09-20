@@ -12,16 +12,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { AddLocationOperation } from '../utils/tools/catalog-operations.js';
-import { ToolName } from '../utils/tools/common-imports.js';
-import { ToolFactory } from '../utils/tools/generic-tool-factory.js';
+import 'reflect-metadata';
 
-/**
- * AddLocationTool - Generated using advanced patterns
- * Demonstrates: Factory Pattern, Generics, SOLID Principles, Strategy Pattern
- */
-export const AddLocationTool = ToolFactory({
-  name: ToolName.ADD_LOCATION,
-  description: 'Create a new location in the catalog.',
-  paramsSchema: AddLocationOperation.paramsSchema,
-})(AddLocationOperation);
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+
+import { Tool } from '../../decorators/tool.decorator.js';
+import { ApiStatus } from '../../types/apis.js';
+import { ToolName } from '../../types/constants.js';
+import { IToolRegistrationContext } from '../../types/tools.js';
+import { JsonToTextResponse } from '../formatting/responses.js';
+import { ToolErrorHandler } from './tool-error-handler.js';
+
+// Common imports used across all tools
+export { ApiStatus, JsonToTextResponse, Tool, ToolErrorHandler, ToolName, z };
+
+export type { CallToolResult, IToolRegistrationContext };

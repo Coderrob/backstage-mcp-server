@@ -38,6 +38,14 @@ export interface IToolMetadata {
   name: string;
   description: string;
   paramsSchema?: z.ZodTypeAny;
+  category?: string;
+  tags?: string[];
+  version?: string;
+  deprecated?: boolean;
+  cacheable?: boolean;
+  requiresConfirmation?: boolean;
+  requiredScopes?: string[];
+  maxBatchSize?: number;
 }
 
 export interface IToolRegistrationContext {

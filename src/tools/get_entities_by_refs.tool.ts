@@ -12,53 +12,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import 'reflect-metadata';
+import { GetEntitiesByRefsOperation } from '../utils/tools/catalog-operations.js';
+import { ToolName } from '../utils/tools/common-imports.js';
+import { ToolFactory } from '../utils/tools/generic-tool-factory.js';
 
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
-
-import { Tool } from '../decorators/tool.decorator.js';
-import { ApiStatus } from '../types/apis.js';
-import { ToolName } from '../types/constants.js';
-import { IToolRegistrationContext } from '../types/tools.js';
-import { isString } from '../utils/core/guards.js';
-import { EntityRef } from '../utils/formatting/entity-ref.js';
-import { JsonToTextResponse } from '../utils/formatting/responses.js';
-import { ToolErrorHandler } from '../utils/tools/tool-error-handler.js';
-
-const compoundEntityRefSchema = z.object({
-  kind: z.string(),
-  namespace: z.string(),
-  name: z.string(),
-});
-
-const paramsSchema = z.object({
-  entityRefs: z.array(z.union([z.string(), compoundEntityRefSchema])),
-});
-
-@Tool({
+/**
+ * GetEntitiesByRefsTool - Generated using advanced patterns
+ * Demonstrates: Factory Pattern, Generics, SOLID Principles, Strategy Pattern
+ */
+export const GetEntitiesByRefsTool = ToolFactory({
   name: ToolName.GET_ENTITIES_BY_REFS,
   description: 'Get multiple entities by their refs.',
-  paramsSchema,
-})
-export class GetEntitiesByRefsTool {
-  static async execute(
-    request: z.infer<typeof paramsSchema>,
-    context: IToolRegistrationContext
-  ): Promise<CallToolResult> {
-    return ToolErrorHandler.executeTool(
-      ToolName.GET_ENTITIES_BY_REFS,
-      'getEntitiesByRefs',
-      async (args: z.infer<typeof paramsSchema>, ctx: IToolRegistrationContext) => {
-        const entityRefs = args.entityRefs.map((ref) => (isString(ref) ? ref : EntityRef.toString(ref)));
-        const result = await ctx.catalogClient.getEntitiesByRefs({
-          entityRefs,
-        });
-        return JsonToTextResponse({ status: ApiStatus.SUCCESS, data: result });
-      },
-      request,
-      context,
-      true
-    );
-  }
-}
+  paramsSchema: GetEntitiesByRefsOperation.paramsSchema,
+})(GetEntitiesByRefsOperation);

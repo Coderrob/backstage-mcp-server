@@ -1,255 +1,398 @@
-# Unit Test Planning and Implementation
+# Backstage MCP Server Enhancement Planning Document
 
-This document outlines the comprehensive unit testing plan for the backstage-mcp-server repository, following the established testing standards and expectations.
+## Executive Summary
 
-## Overview
+This document provides a comprehensive analysis and planning framework for enhancing the Backstage MCP Server to provide exceptional tooling for natural language interactions with the Backstage software catalog. The current implementation has architectural issues that prevent proper tool registration and discovery, which must be resolved before advanced catalog querying capabilities can be implemented.
 
-- **Testing Framework**: Jest with TypeScript
-- **Coverage Requirements**: 95% statements, branches, functions, lines
-- **Test Location**: Side-by-side with source files (e.g., `Bar.ts` → `Bar.test.ts`)
-- **Mock Strategy**: Readonly mocks, cleared in afterEach
-- **Structure**: One describe per unit, nested for methods
+## Current State Analysis
 
-## Test Implementation Plan
+### Architecture Overview
 
-### 1. Core Utilities (`src/utils/core/`)
+The Backstage MCP Server is designed to provide MCP (Model Context Protocol) tools for interacting with a Backstage software catalog. The server architecture consists of:
 
-#### assertions.ts
+1. **MCP Server Layer**: Uses `@modelcontextprotocol/sdk` for MCP protocol handling
+2. **Tool Registration System**: Discovers and registers tools with the MCP server
+3. **Catalog API Layer**: Interfaces with Backstage's catalog API
+4. **Tool Implementation Layer**: Individual tool classes that implement specific catalog operations
 
-**Functions**: `isValidEntityKind`, `isValidEntityNamespace`, `isValidEntityName`
+### Critical Issues Identified
 
-**Dependencies**:
+#### 1. Tool Registration Failure
 
-- `VALID_ENTITY_KINDS` from entities.ts
-- `isString`, `isNonEmptyString` from guards.ts
+**Problem**: The tool registration system is broken due to metadata discovery issues.
 
-**Positive Cases**:
+**Root Cause**:
 
-- Valid entity kinds return true
-- Valid namespaces/names return true
+- Recent refactoring converted tools from decorator-based pattern to factory-based pattern
+- `ReflectToolMetadataProvider` expects metadata from `@Tool` decorator registry
+- Factory-created tools don't populate the metadata registry
+- Tools are not being registered with the MCP server
 
-**Negative Cases**:
+**Evidence**:
 
-- Invalid kinds return false
-- Empty/invalid strings return false
+```typescript
+// Old pattern (working)
+@Tool({
+  name: ToolName.GET_ENTITY_BY_REF,
+  description: 'Get entity by reference',
+  paramsSchema: entityRefSchema,
+})
+export class GetEntityByRefTool {
+  static async execute() {
+    /* implementation */
+  }
+}
 
-**Test Structure**:
+// New pattern (broken)
+export const GetEntityByRefTool = ToolFactory({
+  name: ToolName.GET_ENTITY_BY_REF,
+  description: 'Get entity by reference',
+  paramsSchema: GetEntityByRefOperation.paramsSchema,
+})(GetEntityByRefOperation);
+```
 
-- Table-driven tests for each function
-- Mock guards if needed
+**Impact**: No tools are being registered with the MCP server, making the entire system non-functional.
 
-#### guards.ts
+#### 2. Manifest Generation Issues
 
-**Functions**: `isString`, `isNumber`, `isObject`, `isFunction`, `isNonEmptyString`, `isStringOrNumber`, `isBigInt`
+**Problem**: The generated `tools-manifest.json` doesn't match the actual tool schemas.
 
-**Dependencies**: None (pure functions)
+**Evidence**: The manifest shows simplified parameter lists that don't reflect the actual Zod schemas used by the tools.
 
-**Positive/Negative Cases**: Standard type checks
+#### 3. Schema Complexity Mismatch
 
-**Test Structure**: Table-driven with various inputs
+**Problem**: Tool schemas are more complex than what's exposed in the manifest.
 
-#### logger.ts
+**Example**:
 
-**Functions**: Logger instance creation
+- Manifest shows: `"params": ["entityRef"]`
+- Actual schema: `entityRef: z.union([z.string(), z.object({kind, namespace, name})])`
 
-**Dependencies**: Pino library
+### Backstage Catalog API Analysis
 
-**Test Structure**: Mock pino, verify calls
+#### Entity Reference Formats
 
-#### mapping.ts
+Backstage supports three entity reference formats:
 
-**Functions**: `mapEntityToJsonApi`, `mapJsonApiToEntity`
+1. **Full Reference**: `<kind>:<namespace>/<name>` (e.g., `Component:default/my-app`)
+2. **Short Reference**: `<kind>:<name>` (e.g., `Component:my-app`)
+3. **Name Only**: `<name>` (e.g., `my-app`) - requires context to resolve
 
-**Dependencies**: Type definitions
+#### Well-Known Relationships
 
-**Test Structure**: Input/output mapping tests
+Backstage defines implicit relationships between entity types:
 
-### 2. Formatting Utilities (`src/utils/formatting/`)
+**Ownership Relationships**:
 
-#### entity-ref.ts
+- `spec.owner` can reference User or Group entities
+- Format can be: full ref, short ref, or name-only
+- Requires resolution logic to determine entity type
 
-**Class**: `EntityRef`
+**System Relationships**:
 
-**Methods**: `parse`, `stringify`, `isValid`
+- `spec.system` references System entities
+- `spec.domain` references Domain entities
+- Components/Resources/APIs belong to Systems
+- Systems belong to Domains
 
-**Dependencies**: Guards, constants
+**Membership Relationships**:
 
-#### jsonapi-formatter.ts
+- `spec.memberOf` lists Group entities a User belongs to
+- Groups can have `spec.type`: `team`, `plt`, `blt`, `dlt`
 
-**Class**: `JsonApiFormatter`
+#### Query Capabilities Required
 
-**Methods**: `entityToResource`, `resourceToEntity`, etc.
+To support natural language queries like:
 
-**Dependencies**: Type definitions
+- "How many entities are in the Examples system?"
+- "What team does Marty Riley work on?"
+- "Who owns the user-service component?"
 
-#### pagination-helper.ts
+The system needs:
 
-**Class**: `PaginationHelper`
+1. **Entity Resolution**: Convert fuzzy names to entity references
+2. **Relationship Traversal**: Navigate entity relationships
+3. **Context-Aware Queries**: Use entity type context for resolution
+4. **Facet Analysis**: Count entities by various criteria
 
-**Methods**: `normalizeParams`, `buildMeta`, `applyPagination`
+## Enhancement Requirements
 
-**Dependencies**: Guards
+### Phase 1: Fix Tool Registration (Critical)
 
-#### responses.ts
+#### 1.1 Metadata Provider Enhancement
 
-**Functions**: `FormattedTextResponse`, `JsonToTextResponse`, `createSimpleError`, etc.
+**Who**: Tool Metadata System
+**What**: Update `ReflectToolMetadataProvider` to handle factory-created tools
+**Why**: Current provider only works with decorator-based tools
+**Where**: `src/utils/tools/tool-metadata.ts`
 
-**Dependencies**: Type definitions
+**Implementation**:
 
-### 3. Tool Utilities (`src/utils/tools/`)
+```typescript
+export class EnhancedToolMetadataProvider implements IToolMetadataProvider {
+  getMetadata(tool: ToolClass | object): IToolMetadata | undefined {
+    // Try decorator-based lookup first
+    const decoratorMetadata = toolMetadataMap.get(tool as ToolClass);
+    if (decoratorMetadata) return decoratorMetadata;
 
-#### tool-error-handler.ts
+    // Try factory-based lookup
+    if (isFactoryCreatedTool(tool)) {
+      return extractMetadataFromFactoryTool(tool);
+    }
 
-**Class**: `ToolErrorHandler`
+    return undefined;
+  }
+}
+```
 
-**Methods**: `handleError`, `createErrorResponse`
+#### 1.2 Tool Discovery Enhancement
 
-**Dependencies**: Formatting functions
+**Who**: Tool Loader System
+**What**: Update `ToolLoader` to handle both decorator and factory patterns
+**Why**: Current loader assumes all tools use decorators
+**Where**: `src/utils/tools/tool-loader.ts`
 
-#### tool-factory.ts
+#### 1.3 Manifest Generation Fix
 
-**Class**: `DefaultToolFactory`
+**Who**: Manifest Generation System
+**What**: Update manifest generation to reflect actual Zod schemas
+**Why**: Current manifest shows incorrect parameter information
+**Where**: `src/utils/tools/tool-loader.ts`
 
-**Methods**: `create`
+### Phase 2: Advanced Catalog Querying
 
-**Dependencies**: File system, module loading
+#### 2.1 Entity Resolution Engine
 
-#### tool-loader.ts
+**Who**: New Entity Resolution Service
+**What**: Create service to resolve fuzzy entity names to references
+**Why**: Support natural language queries like "user-service"
+**Where**: `src/utils/catalog/entity-resolver.ts`
 
-**Class**: `ToolLoader`
+**Capabilities**:
 
-**Methods**: `registerAll`, `addToManifest`
+- Fuzzy name matching across `metadata.name`, `metadata.title`
+- Context-aware resolution (prefer certain entity types)
+- Multiple result handling with scoring
 
-**Dependencies**: Tool classes, file system
+#### 2.2 Relationship Traversal Engine
 
-#### tool-metadata.ts
+**Who**: New Relationship Service
+**What**: Navigate entity relationships for complex queries
+**Why**: Support queries like "who owns X" or "what team does Y work on"
+**Where**: `src/utils/catalog/relationship-traversal.ts`
 
-**Classes**: `ReflectToolMetadataProvider`
+**Capabilities**:
 
-**Methods**: `getMetadata`
+- Traverse ownership relationships
+- Navigate membership hierarchies
+- Resolve implicit references
+- Handle circular relationship detection
 
-**Dependencies**: Reflection API
+#### 2.3 Natural Language Query Processor
 
-#### tool-registrar.ts
+**Who**: New Query Processor Service
+**What**: Parse and execute natural language catalog queries
+**Why**: Enable conversational catalog interactions
+**Where**: `src/utils/catalog/query-processor.ts`
 
-**Class**: `DefaultToolRegistrar`
+**Supported Query Types**:
 
-**Methods**: `register`
+- Count queries: "How many APIs are in system X?"
+- Ownership queries: "Who owns component Y?"
+- Membership queries: "What team does person Z work on?"
+- Relationship queries: "What components belong to domain A?"
 
-**Dependencies**: Server context
+### Phase 3: Enhanced Tool Capabilities
 
-#### tool-validator.ts
+#### 3.1 Smart Entity Lookup Tool
 
-**Class**: `DefaultToolValidator`
+**Who**: Enhanced GetEntityByRefTool
+**What**: Add fuzzy matching and context awareness
+**Why**: Support natural language entity references
+**Where**: `src/tools/get_entity_by_ref.tool.ts`
 
-**Methods**: `validate`
+#### 3.2 Advanced Query Tool
 
-**Dependencies**: Metadata schema
+**Who**: Enhanced GetEntitiesByQueryTool
+**What**: Add relationship-aware filtering
+**Why**: Support complex multi-entity queries
+**Where**: `src/tools/get_entities_by_query.tool.ts`
 
-#### validate-tool-metadata.ts
+#### 3.3 Entity Analysis Tool
 
-**Function**: `validateToolMetadata`
+**Who**: New Entity Analysis Tool
+**What**: Provide entity relationship insights
+**Why**: Support "who owns what" type queries
+**Where**: `src/tools/analyze_entity.tool.ts`
 
-**Dependencies**: Zod schemas
+### Phase 4: Testing and Validation
 
-### 4. API Layer (`src/api/`)
+#### 4.1 Integration Testing
 
-#### backstage-catalog-api.ts
+**Who**: Test Infrastructure
+**What**: Create end-to-end tests for natural language queries
+**Why**: Validate complex query capabilities
+**Where**: `src/test/integration/`
 
-**Class**: `BackstageCatalogApi`
+#### 4.2 Dogfooding Validation
 
-**Methods**: All catalog operations (getEntities, addLocation, etc.)
+**Who**: Development Team
+**What**: Test all example queries from requirements
+**Why**: Ensure real-world usability
+**Where**: Manual testing and validation
 
-**Dependencies**: Axios, auth, cache, formatting
+## Implementation Plan
 
-### 5. Auth Layer (`src/auth/`)
+### Week 1: Tool Registration Fix
 
-#### auth-manager.ts
+**Tasks**:
 
-**Class**: `AuthManager`
+1. Fix `ReflectToolMetadataProvider` for factory tools
+2. Update `ToolLoader` discovery logic
+3. Fix manifest generation
+4. Test basic tool registration
 
-**Methods**: `authenticate`, `getToken`, `refreshToken`
+**Validation**: All 13 tools register correctly with MCP server
 
-**Dependencies**: Axios, environment
+### Week 2: Entity Resolution Foundation
 
-#### input-sanitizer.ts
+**Tasks**:
 
-**Class**: `InputSanitizer`
+1. Implement `EntityResolver` service
+2. Add fuzzy matching capabilities
+3. Create entity reference utilities
+4. Test basic entity resolution
 
-**Methods**: `sanitizeString`, `sanitizeObject`
+**Validation**: Can resolve "user-service" to correct entity reference
 
-**Dependencies**: Guards
+### Week 3: Relationship Traversal
 
-#### security-auditor.ts
+**Tasks**:
 
-**Class**: `SecurityAuditor`
+1. Implement `RelationshipTraversal` service
+2. Add ownership relationship navigation
+3. Add membership hierarchy traversal
+4. Test relationship queries
 
-**Methods**: `auditRequest`, `logEvent`
+**Validation**: Can answer "who owns component X?"
 
-**Dependencies**: Logger
+### Week 4: Natural Language Processing
 
-### 6. Cache Layer (`src/cache/`)
+**Tasks**:
 
-#### cache-manager.ts
+1. Implement `QueryProcessor` service
+2. Add query parsing and execution
+3. Integrate with existing tools
+4. Test complex queries
 
-**Class**: `CacheManager`
+**Validation**: Can handle all example queries from requirements
 
-**Methods**: `get`, `set`, `clear`, `cleanup`
+### Week 5: Enhanced Tools and Testing
 
-**Dependencies**: Timers, logger
+**Tasks**:
 
-### 7. Decorators (`src/decorators/`)
+1. Enhance existing tools with smart capabilities
+2. Create new analysis tools
+3. Implement comprehensive integration tests
+4. Performance optimization
 
-#### tool.decorator.ts
+**Validation**: All example queries work end-to-end
 
-**Decorator**: `Tool`
+## Risk Assessment
 
-**Dependencies**: Metadata reflection
+### High Risk Items
 
-### 8. Tools (`src/tools/`)
+1. **Tool Registration Fix**: Critical path - if not fixed, entire system is broken
+2. **Entity Resolution Accuracy**: Fuzzy matching could return incorrect results
+3. **Performance**: Complex relationship traversal could be slow
 
-Each tool class has an `execute` method with specific logic.
+### Mitigation Strategies
 
-**Common Dependencies**: API client, input sanitizer, response formatters
+1. **Incremental Testing**: Test each component as it's built
+2. **Fallback Mechanisms**: Provide exact match fallbacks for fuzzy resolution
+3. **Caching**: Implement result caching for performance
+4. **Error Handling**: Comprehensive error handling for edge cases
 
-**Test Structure**: Mock API, test success/error responses
+## Success Criteria
 
-### 9. Main Files
+### Functional Requirements
 
-#### server.ts
+- ✅ All 13 tools register correctly with MCP server
+- ✅ Tool manifest accurately reflects actual schemas
+- ✅ Can resolve fuzzy entity names to correct references
+- ✅ Can traverse ownership and membership relationships
+- ✅ Can answer all example queries from requirements
+- ✅ Natural language queries work conversationally
 
-**Function**: `startServer`
+### Non-Functional Requirements
 
-**Dependencies**: Environment, all components
+- ✅ Response time < 2 seconds for simple queries
+- ✅ Response time < 5 seconds for complex relationship queries
+- ✅ Error handling for invalid queries
+- ✅ Comprehensive test coverage (>80%)
+- ✅ Clear error messages for debugging
 
-#### generate-manifest.ts
+## Dependencies
 
-**Function**: Main export
+### External Dependencies
 
-**Dependencies**: Tool loading components
+- Backstage Catalog API (already integrated)
+- MCP SDK (already integrated)
+- Zod for schema validation (already integrated)
 
-## Implementation Instructions
+### Internal Dependencies
 
-1. Create test files side-by-side with source files
-2. Use the canonical skeleton from standards
-3. Mock all external dependencies
-4. Cover positive and negative paths
-5. Use table-driven tests where appropriate
-6. Assert call counts and parameters
-7. Ensure 95%+ coverage
+- Tool registration system (needs fixing)
+- Catalog API client (already working)
+- Authentication system (already working)
 
-## Memory Leak Prevention
+## Monitoring and Maintenance
 
-- Clear all mocks in afterEach
-- Use jest.resetModules() for module isolation
-- Avoid global state
-- Run tests with --detectLeaks flag
+### Key Metrics
 
-## Coverage Verification
+- Tool registration success rate
+- Query success rate
+- Average response time
+- Error rate by query type
 
-Run `npm test -- --coverage` and verify:
+### Maintenance Tasks
 
-- Statements: ≥95%
-- Branches: ≥95%
-- Functions: ≥95%
-- Lines: ≥95%
+- Regular updates to Backstage API compatibility
+- Performance monitoring and optimization
+- Test suite maintenance
+- Documentation updates
+
+---
+
+## Current Status Assessment
+
+**Date**: September 19, 2025  
+**Status**: ✅ FIXED - Tool Registration Issue Resolved  
+**Next Action**: Begin Phase 2 - Enhanced Query Capabilities
+
+### ✅ Completed: Phase 1 - Tool Registration Fix & Basic Testing
+
+**Issue**: Tool registration system was broken due to metadata discovery issues with factory-created tools.  
+**Root Cause**: `ReflectToolMetadataProvider` only worked with decorator-based tools, but the refactored tools use factory pattern.  
+**Solution**: Enhanced `ReflectToolMetadataProvider` to extract metadata from factory-created tools by checking static properties (`toolName`, `description`, `paramsSchema`).  
+**Result**: All 13 tools now register successfully with the MCP server.
+
+**Additional Fixes Applied**:
+
+- ✅ **Case sensitivity fix**: `EntityRef.parse()` now handles case-insensitive entity kinds (e.g., "Component" → "component")
+- ✅ **Variable shadowing fix**: Fixed parameter shadowing in `getEntityByRef` method
+- ✅ **Error handling**: Tools now return proper HTTP error responses instead of parsing errors
+
+**Verification Results**:
+
+- ✅ **Server logs**: "Found 13 tool classes to process"
+- ✅ **Server logs**: "Registered 13 tools successfully"
+- ✅ **MCP Protocol**: All 13 tools properly exposed via `tools/list`
+- ✅ **Input Schemas**: Zod schemas correctly converted to JSON Schema
+- ✅ **Tool Execution**: Tools process requests and return proper error responses (401 Unauthorized expected with dummy token)
+- ✅ **Case Insensitive**: Entity kinds like "Component", "User", "API" work correctly
+- ✅ **Build Status**: Clean compilation with no errors
+
+### 🔄 Ready for Phase 2: Enhanced Query Capabilities
+
+Now that basic tool functionality is verified and working, we can proceed with implementing the advanced natural language querying capabilities.

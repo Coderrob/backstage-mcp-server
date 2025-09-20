@@ -12,6 +12,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import { z } from 'zod';
+
 /**
  * Type guard that checks if a value is a string.
  * @param value - The value to check
@@ -109,4 +111,22 @@ export function isNullOrUndefined(value: unknown): value is null | undefined {
  */
 export function isError(value: unknown): value is Error {
   return value instanceof Error;
+}
+
+/**
+ * Type guard that checks if a value is a Zod schema.
+ * @param value - The value to check
+ * @returns True if the value is a Zod schema, false otherwise
+ */
+export function isZodSchema(value: unknown): value is z.ZodTypeAny {
+  return isObject(value) && '_def' in value && isObject(value._def);
+}
+
+/**
+ * Type guard that checks if a value is a ZodObject schema.
+ * @param value - The value to check
+ * @returns True if the value is a ZodObject, false otherwise
+ */
+export function isZodObject(value: unknown): value is z.ZodObject<Record<string, z.ZodTypeAny>> {
+  return isZodSchema(value) && value._def?.typeName === 'ZodObject';
 }
