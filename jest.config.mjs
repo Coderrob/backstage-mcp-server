@@ -12,7 +12,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-/** @type {import('jest').Config} **/
+
+/** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
   preset: null,
   testEnvironment: 'node',

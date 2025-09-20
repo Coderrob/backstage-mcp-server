@@ -103,7 +103,7 @@
     "prepublishOnly": "yarn build",
     "start": "node dist/index.cjs",
     "start:esm": "node dist/index.mjs",
-    "test": "jest --coverage"
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --coverage"
   },
   "type": "module",
   "types": "dist/index.d.ts",
