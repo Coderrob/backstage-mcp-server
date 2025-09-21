@@ -25,11 +25,11 @@ export default [
     ignores: ['dist/**', '.yarn/**', 'node_modules/**', 'coverage/**', '__mocks__/**'],
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['./src/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.spec.json'],
+        project: ['./tsconfig.json', './tsconfig.test.json'],
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
@@ -84,11 +84,11 @@ export default [
     },
   },
   {
-    files: ['src/**/*.test.ts'],
+    files: ['./src/**/*.test.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.spec.json'],
+        project: ['./tsconfig.json', './tsconfig.test.json'],
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
@@ -145,7 +145,7 @@ export default [
           argsIgnorePattern: '^_',
         },
       ],
-      'import/no-extraneous-dependencies': ['error', { devDependencies: ['**/*.test.ts'] }],
+      'import/no-extraneous-dependencies': ['error', { devDependencies: ['./src/**/*.test.ts'] }],
     },
     settings: {
       'import/resolver': {

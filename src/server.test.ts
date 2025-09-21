@@ -14,7 +14,7 @@
  */
 import { jest } from '@jest/globals';
 
-import { buildAuthConfig } from './server.js';
+import { buildAuthConfig } from './application/server/server.js';
 
 describe('server', () => {
   afterEach(() => {

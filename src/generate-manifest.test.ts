@@ -15,10 +15,10 @@
 import { jest } from '@jest/globals';
 
 import { generateManifest } from './generate-manifest.js';
-import { logger } from './utils/core/logger.js';
+import { logger } from './shared/utils/logger.js';
 
 // Mock dependencies
-jest.mock('./utils/core/logger.js', () => ({
+jest.mock('./shared/utils/logger.js', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
@@ -41,7 +41,7 @@ describe('generateManifest', () => {
   it('should generate manifest successfully', async () => {
     await generateManifest();
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Tools manifest generated successfully!');
+    expect(mockLogger.info).toHaveBeenCalledWith('Tools manifest generation is now handled by the plugin system!');
   });
 
   it('should handle errors gracefully', async () => {

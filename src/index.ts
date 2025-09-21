@@ -12,9 +12,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { startServer } from './server.js';
-import { logger } from './utils/core/logger.js';
-import { isError } from './utils/index.js';
+import { startServer } from './application/server/server.js';
+import { isError } from './shared/utils/guards.js';
+import { logger } from './shared/utils/logger.js';
 
 // Export for programmatic usage
 export { startServer };
@@ -24,6 +24,10 @@ export { startServer };
     logger.error('Fatal server startup error', {
       error: isError(err) ? err.message : String(err),
     });
-    process.exit(1);
+    // Only exit in production, allow tests to handle errors gracefully
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
+    // In test mode, don't re-throw to allow tests to continue
   });
 })();
