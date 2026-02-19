@@ -4,7 +4,7 @@
   "dependencies": {
     "@backstage/catalog-client": "^1.9.1",
     "@backstage/catalog-model": "^1.7.3",
-    "@modelcontextprotocol/sdk": "^1.18.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "axios": "^1.12.2",
     "pino": "^9.9.5",
     "pino-pretty": "^13.1.1",
