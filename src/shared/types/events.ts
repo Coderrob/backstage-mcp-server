@@ -43,6 +43,21 @@ export interface ISecurityEvent {
 }
 
 /**
+ * Input type for logging security events (without auto-generated fields)
+ */
+export interface ISecurityEventInput {
+  type: SecurityEventType;
+  userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  resource: string;
+  action: string;
+  success: boolean;
+  details?: Record<string, unknown>;
+  errorMessage?: string;
+}
+
+/**
  * Filter criteria for querying security events
  */
 export interface ISecurityEventFilter {

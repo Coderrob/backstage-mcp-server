@@ -15,7 +15,7 @@
 
 import axios, { AxiosResponse } from 'axios';
 
-import { IAuthConfig, ITokenInfo } from '../../shared/types/auth.js';
+import { AuthType, IAuthConfig, ITokenInfo } from '../../shared/types/auth.js';
 import { AuthenticationError, ConfigurationError } from '../../shared/utils/custom-errors.js';
 import { isNonEmptyString, isNullOrUndefined, isNumber } from '../../shared/utils/guards.js';
 import { logger } from '../../shared/utils/logger.js';
@@ -115,13 +115,13 @@ export class AuthManager {
    */
   private async performTokenRefresh(): Promise<ITokenInfo> {
     switch (this.config.type) {
-      case 'bearer':
+      case AuthType.Bearer:
         return this.handleBearerToken();
-      case 'oauth':
+      case AuthType.OAuth:
         return this.handleOAuthRefresh();
-      case 'api-key':
+      case AuthType.ApiKey:
         return this.handleApiKey();
-      case 'service-account':
+      case AuthType.ServiceAccount:
         return this.handleServiceAccount();
       default:
         throw new ConfigurationError(`Unsupported authentication type: ${this.config.type}`);
@@ -153,7 +153,8 @@ export class AuthManager {
     this.validateOAuthConfig();
     this.validateRefreshToken();
 
-    const response = await axios.post(this.config.tokenUrl!, {
+    const tokenUrl = this.config.tokenUrl ?? '';
+    const response = await axios.post(tokenUrl, {
       grant_type: 'refresh_token',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,

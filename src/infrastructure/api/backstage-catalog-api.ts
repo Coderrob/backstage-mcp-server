@@ -46,7 +46,7 @@ import { JsonApiFormatter } from '../../shared/utils/jsonapi-formatter.js';
 import { logger } from '../../shared/utils/logger.js';
 import { PaginationHelper } from '../../shared/utils/pagination-helper.js';
 
-interface BackstageCatalogApiOptions {
+interface IBackstageCatalogApiOptions {
   baseUrl: string;
   auth: IAuthConfig;
 }
@@ -56,7 +56,7 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   private readonly authManager: AuthManager;
   private readonly cacheManager: CacheManager;
 
-  constructor({ baseUrl, auth }: BackstageCatalogApiOptions) {
+  constructor({ baseUrl, auth }: IBackstageCatalogApiOptions) {
     logger.debug('Initializing BackstageCatalogApi', { baseUrl, authType: auth.type });
     this.authManager = new AuthManager(auth);
     this.cacheManager = new CacheManager();
@@ -124,8 +124,8 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   private handleRequestError(error: unknown): Promise<never> {
     // Log security events for certain error types. Narrow to axios errors first
     if (isAxiosError(error)) {
-      const resource = isNonEmptyString(error.config?.url) ? String(error.config!.url) : 'unknown';
-      const action = isNonEmptyString(error.config?.method) ? String(error.config!.method).toUpperCase() : 'UNKNOWN';
+      const resource = isNonEmptyString(error.config?.url) ? String(error.config?.url) : 'unknown';
+      const action = isNonEmptyString(error.config?.method) ? String(error.config?.method).toUpperCase() : 'UNKNOWN';
 
       if (error.response?.status === 401) {
         securityAuditor.logEvent({
@@ -147,7 +147,7 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
     } else {
       // Fallback for non-axios errors that may still have a response shape
       const maybe = error as unknown as { response?: { status?: number } } | undefined;
-      const maybeResponse = maybe && maybe.response ? maybe.response : undefined;
+      const maybeResponse = maybe?.response;
       if (isNumber(maybeResponse?.status) && maybeResponse.status === 401) {
         securityAuditor.logEvent({
           type: SecurityEventType.UNAUTHORIZED_ACCESS,
@@ -175,25 +175,26 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
     _options?: CatalogRequestOptions
   ): Promise<GetEntitiesResponse> {
     logger.debug('Fetching entities', { request });
-    // Extract pagination parameters
     const { limit, offset } = PaginationHelper.normalizeParams(request);
-
-    // Create cache key from request parameters including pagination
     const cacheKey = `entities:${JSON.stringify({ ...request, limit, offset })}`;
-
-    // Check cache first
     const cached = this.cacheManager.get<GetEntitiesResponse>(cacheKey);
     if (isDefined(cached)) {
       logger.debug('Entities returned from cache');
       return cached;
     }
+    return this.fetchAndCacheEntities(cacheKey, request, limit, offset);
+  }
 
+  private async fetchAndCacheEntities(
+    cacheKey: string,
+    request: (GetEntitiesRequest & IPaginationParams) | undefined,
+    limit: number,
+    offset: number
+  ): Promise<GetEntitiesResponse> {
     logger.debug('Fetching entities from API', { limit, offset });
     const { data } = await this.client.get<GetEntitiesResponse>('/entities', {
       params: { ...request, limit, offset },
     });
-
-    // Cache the result for 2 minutes (shorter TTL for list operations)
     this.cacheManager.set(cacheKey, data, 2 * 60 * 1000);
     logger.debug(`Fetched ${data.items?.length || 0} entities from API`);
     return data;
@@ -233,33 +234,26 @@ export class BackstageCatalogApi implements IBackstageCatalogApi {
   ): Promise<Entity | undefined> {
     const refString = isString(entityRef) ? String(entityRef) : this.formatCompoundEntityRef(entityRef);
     logger.debug('Fetching entity by ref', { entityRef: refString });
-
     const cacheKey = `entity:${refString}`;
-
-    // Check cache first
     const cached = this.cacheManager.get<Entity>(cacheKey);
     if (isDefined(cached)) {
       logger.debug('Entity returned from cache', { entityRef: refString });
       return cached;
     }
+    return this.fetchAndCacheEntity(cacheKey, refString);
+  }
 
+  private async fetchAndCacheEntity(cacheKey: string, refString: string): Promise<Entity | undefined> {
     try {
       logger.debug('Fetching entity from API', { entityRef: refString });
-
-      // Parse the entity reference using the EntityRef class
       const parsedEntityRef = EntityRef.parse(refString);
-
       const { data } = await this.client.get<Entity>(
         `/entities/by-name/${encodeURIComponent(parsedEntityRef.kind)}/${encodeURIComponent(parsedEntityRef.namespace)}/${encodeURIComponent(parsedEntityRef.name)}`
       );
-
-      // Cache the result for 5 minutes
       this.cacheManager.set(cacheKey, data, 5 * 60 * 1000);
       logger.debug('Entity fetched and cached', { entityRef: refString });
-
       return data;
     } catch (error) {
-      // Support both real AxiosErrors and plain mocked error objects that carry a response.status
       const status = this.extractResponseStatus(error);
       if (status === 404) {
         logger.debug('Entity not found', { entityRef: refString });

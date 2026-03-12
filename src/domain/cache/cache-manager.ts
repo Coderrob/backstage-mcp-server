@@ -98,7 +98,7 @@ export class CacheManager {
   /**
    * Get cache statistics
    */
-  getStats(): {
+  collectStats(): {
     size: number;
     maxSize: number;
     hitRate: number;
@@ -125,7 +125,7 @@ export class CacheManager {
   /**
    * Get or set with a fetcher function
    */
-  async getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T> {
+  async fetchOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T> {
     let value = this.get<T>(key);
     if (value !== undefined) {
       return value;

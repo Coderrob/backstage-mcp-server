@@ -15,6 +15,7 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
+import zeroTolerance from '@coderrob/eslint-plugin-zero-tolerance';
 import importPlugin from 'eslint-plugin-import';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
@@ -47,11 +48,13 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       'simple-import-sort': simpleImportSort,
+      'zero-tolerance': zeroTolerance,
       import: importPlugin,
       'unused-imports': unusedImports,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      ...zeroTolerance.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -76,6 +79,16 @@ export default [
           argsIgnorePattern: '^_',
         },
       ],
+      // zero-tolerance rule customizations
+      'zero-tolerance/sort-imports': 'off',
+      'zero-tolerance/max-function-lines': ['warn', { max: 50 }],
+      'zero-tolerance/max-params': ['warn', { max: 5 }],
+      'zero-tolerance/no-magic-numbers': 'off',
+      'zero-tolerance/no-magic-strings': 'off',
+      'zero-tolerance/require-jsdoc-functions': 'off',
+      'zero-tolerance/no-re-export': 'off',
+      'zero-tolerance/no-jest-have-been-called': 'off',
+      'zero-tolerance/no-mock-implementation': 'off',
     },
     settings: {
       'import/resolver': {
@@ -116,11 +129,13 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       'simple-import-sort': simpleImportSort,
+      'zero-tolerance': zeroTolerance,
       import: importPlugin,
       'unused-imports': unusedImports,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      ...zeroTolerance.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -146,6 +161,15 @@ export default [
         },
       ],
       'import/no-extraneous-dependencies': ['error', { devDependencies: ['./src/**/*.test.ts'] }],
+      // zero-tolerance rule customizations for test files
+      'zero-tolerance/sort-imports': 'off',
+      'zero-tolerance/max-function-lines': ['warn', { max: 50 }],
+      'zero-tolerance/max-params': ['warn', { max: 5 }],
+      'zero-tolerance/no-magic-numbers': 'off',
+      'zero-tolerance/no-magic-strings': 'off',
+      'zero-tolerance/require-jsdoc-functions': 'off',
+      'zero-tolerance/no-re-export': 'off',
+      'zero-tolerance/no-mock-implementation': 'off',
     },
     settings: {
       'import/resolver': {

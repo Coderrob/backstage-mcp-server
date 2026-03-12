@@ -88,21 +88,19 @@ export class PluginManager {
     if (!this.context) {
       throw new Error('Server context not set');
     }
-
-    for (const plugin of this.plugins.values()) {
-      await plugin.initialize(this.context);
-    }
+    const ctx = this.context;
+    await Promise.all(Array.from(this.plugins.values()).map((plugin) => plugin.initialize(ctx)));
   }
 
   /**
    * Destroy all registered plugins
    */
   async destroyAll(): Promise<void> {
-    for (const plugin of this.plugins.values()) {
-      if (plugin.destroy) {
-        await plugin.destroy();
-      }
-    }
+    await Promise.all(
+      Array.from(this.plugins.values())
+        .filter((plugin): plugin is IMcpPlugin & { destroy(): Promise<void> } => plugin.destroy !== undefined)
+        .map((plugin) => plugin.destroy())
+    );
     this.plugins.clear();
   }
 }

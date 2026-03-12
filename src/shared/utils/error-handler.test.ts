@@ -43,7 +43,7 @@ class TestMCPError extends MCPError {
     statusCode: number = 400,
     details?: Record<string, unknown>
   ) {
-    super(message, code, statusCode, true, details);
+    super(message, code, statusCode, { isOperational: true, details });
   }
 }
 
@@ -53,8 +53,8 @@ describe('ErrorMetrics', () => {
   });
 
   it('should be a singleton', () => {
-    const instance1 = ErrorMetrics.getInstance();
-    const instance2 = ErrorMetrics.getInstance();
+    const instance1 = ErrorMetrics.resolve();
+    const instance2 = ErrorMetrics.resolve();
     expect(instance1).toBe(instance2);
   });
 
@@ -215,12 +215,11 @@ describe('withErrorHandling', () => {
   });
 
   it('should record and re-throw error', async () => {
-    const error = new Error('Operation failed');
     await expect(
       withErrorHandling('test', async () => {
-        throw error;
+        throw new Error('Operation failed');
       })
-    ).rejects.toThrow(error);
+    ).rejects.toThrow('Operation failed');
     expect(errorMetrics.getMetrics()).toEqual({ UNKNOWN_ERROR: 1 });
     expect(logger.error).toHaveBeenCalledWith(
       'Operation failed: test',
@@ -231,12 +230,11 @@ describe('withErrorHandling', () => {
   });
 
   it('should handle MCPError', async () => {
-    const error = new TestMCPError('Not found', 'NOT_FOUND', 404);
     await expect(
       withErrorHandling('test', async () => {
-        throw error;
+        throw new TestMCPError('Not found', 'NOT_FOUND', 404);
       })
-    ).rejects.toThrow(error);
+    ).rejects.toThrow('Not found');
     expect(errorMetrics.getMetrics()).toEqual({ NOT_FOUND: 1 });
   });
 });
@@ -322,7 +320,7 @@ describe('MCPError Abstract Base Class', () => {
     // Create a test class that allows setting isOperational to false
     class NonOperationalTestError extends MCPError {
       constructor(message: string) {
-        super(message, 'NON_OP_ERROR', 500, false);
+        super(message, 'NON_OP_ERROR', 500, { isOperational: false });
       }
     }
 

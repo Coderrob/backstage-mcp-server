@@ -34,7 +34,7 @@ export class HealthChecker {
    * Gets the singleton instance of the health checker.
    * @returns The health checker instance
    */
-  static getInstance(): HealthChecker {
+  static resolve(): HealthChecker {
     if (!HealthChecker.instance) {
       HealthChecker.instance = new HealthChecker();
     }
@@ -57,14 +57,17 @@ export class HealthChecker {
    */
   async runAllChecks(): Promise<IHealthCheckResult> {
     const startTime = Date.now();
+
+    const checkEntries = Array.from(this.checks.entries());
+    const checkResults = await Promise.all(
+      checkEntries.map(([name, checkFn]) => this.executeSingleCheck(name, checkFn, startTime).then((result) => ({ name, result })))
+    );
+
     const checks: Record<string, IHealthCheck> = {};
     let overallStatus = HealthStatus.HEALTHY;
-
-    for (const [name, checkFn] of this.checks) {
-      const checkResult = await this.executeSingleCheck(name, checkFn, startTime);
-      checks[name] = checkResult;
-
-      overallStatus = this.updateOverallStatus(overallStatus, checkResult.status);
+    for (const { name, result } of checkResults) {
+      checks[name] = result;
+      overallStatus = this.updateOverallStatus(overallStatus, result.status);
     }
 
     return this.buildHealthResult(overallStatus, checks);
@@ -159,4 +162,4 @@ export class HealthChecker {
 /**
  * Global health checker instance.
  */
-export const healthChecker = HealthChecker.getInstance();
+export const healthChecker = HealthChecker.resolve();

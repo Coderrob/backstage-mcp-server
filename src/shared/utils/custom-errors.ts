@@ -26,15 +26,14 @@ export abstract class MCPError extends Error {
     message: string,
     code: string,
     statusCode: number,
-    isOperational: boolean = true,
-    details?: Record<string, unknown>
+    options: { isOperational?: boolean; details?: Record<string, unknown> } = {}
   ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
     this.statusCode = statusCode;
-    this.isOperational = isOperational;
-    this.details = details;
+    this.isOperational = options.isOperational ?? true;
+    this.details = options.details;
     this.timestamp = new Date();
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
@@ -95,7 +94,7 @@ export abstract class MCPError extends Error {
  */
 export class ValidationError extends MCPError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'VALIDATION_ERROR', 400, true, details);
+    super(message, 'VALIDATION_ERROR', 400, { details });
   }
 }
 
@@ -104,7 +103,7 @@ export class ValidationError extends MCPError {
  */
 export class AuthenticationError extends MCPError {
   constructor(message: string = 'Authentication required', details?: Record<string, unknown>) {
-    super(message, 'AUTHENTICATION_ERROR', 401, true, details);
+    super(message, 'AUTHENTICATION_ERROR', 401, { details });
   }
 }
 
@@ -113,7 +112,7 @@ export class AuthenticationError extends MCPError {
  */
 export class AuthorizationError extends MCPError {
   constructor(message: string = 'Insufficient permissions', details?: Record<string, unknown>) {
-    super(message, 'AUTHORIZATION_ERROR', 403, true, details);
+    super(message, 'AUTHORIZATION_ERROR', 403, { details });
   }
 }
 
@@ -122,7 +121,7 @@ export class AuthorizationError extends MCPError {
  */
 export class NotFoundError extends MCPError {
   constructor(resource: string, details?: Record<string, unknown>) {
-    super(`${resource} not found`, 'NOT_FOUND_ERROR', 404, true, details);
+    super(`${resource} not found`, 'NOT_FOUND_ERROR', 404, { details });
   }
 }
 
@@ -131,7 +130,7 @@ export class NotFoundError extends MCPError {
  */
 export class ConflictError extends MCPError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'CONFLICT_ERROR', 409, true, details);
+    super(message, 'CONFLICT_ERROR', 409, { details });
   }
 }
 
@@ -140,9 +139,8 @@ export class ConflictError extends MCPError {
  */
 export class RateLimitError extends MCPError {
   constructor(message: string, retryAfter?: number, details?: Record<string, unknown>) {
-    super(message, 'RATE_LIMIT_ERROR', 429, true, {
-      retryAfter,
-      ...details,
+    super(message, 'RATE_LIMIT_ERROR', 429, {
+      details: { retryAfter, ...details },
     });
   }
 }
@@ -152,7 +150,7 @@ export class RateLimitError extends MCPError {
  */
 export class NetworkError extends MCPError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'NETWORK_ERROR', 502, true, details);
+    super(message, 'NETWORK_ERROR', 502, { details });
   }
 }
 
@@ -161,7 +159,7 @@ export class NetworkError extends MCPError {
  */
 export class BackstageAPIError extends MCPError {
   constructor(message: string, statusCode: number = 502, details?: Record<string, unknown>) {
-    super(message, 'BACKSTAGE_API_ERROR', statusCode, true, details);
+    super(message, 'BACKSTAGE_API_ERROR', statusCode, { details });
   }
 }
 
@@ -170,7 +168,7 @@ export class BackstageAPIError extends MCPError {
  */
 export class ConfigurationError extends MCPError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'CONFIGURATION_ERROR', 500, false, details);
+    super(message, 'CONFIGURATION_ERROR', 500, { isOperational: false, details });
   }
 }
 
@@ -179,7 +177,7 @@ export class ConfigurationError extends MCPError {
  */
 export class InternalServerError extends MCPError {
   constructor(message: string = 'Internal server error', details?: Record<string, unknown>) {
-    super(message, 'INTERNAL_SERVER_ERROR', 500, false, details);
+    super(message, 'INTERNAL_SERVER_ERROR', 500, { isOperational: false, details });
   }
 }
 
@@ -188,11 +186,13 @@ export class InternalServerError extends MCPError {
  */
 export class ToolExecutionError extends MCPError {
   constructor(toolName: string, operation: string, originalError?: Error, details?: Record<string, unknown>) {
-    super(`Tool execution failed: ${toolName}.${operation}`, 'TOOL_EXECUTION_ERROR', 500, true, {
-      tool: toolName,
-      operation,
-      originalError: originalError?.message,
-      ...details,
+    super(`Tool execution failed: ${toolName}.${operation}`, 'TOOL_EXECUTION_ERROR', 500, {
+      details: {
+        tool: toolName,
+        operation,
+        originalError: originalError?.message,
+        ...details,
+      },
     });
   }
 }
@@ -202,10 +202,12 @@ export class ToolExecutionError extends MCPError {
  */
 export class TimeoutError extends MCPError {
   constructor(operation: string, timeoutMs: number, details?: Record<string, unknown>) {
-    super(`Operation timed out: ${operation}`, 'TIMEOUT_ERROR', 408, true, {
-      operation,
-      timeoutMs,
-      ...details,
+    super(`Operation timed out: ${operation}`, 'TIMEOUT_ERROR', 408, {
+      details: {
+        operation,
+        timeoutMs,
+        ...details,
+      },
     });
   }
 }

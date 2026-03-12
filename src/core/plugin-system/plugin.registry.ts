@@ -30,7 +30,7 @@ export class PluginRegistry {
   /**
    * Get the singleton instance
    */
-  static getInstance(): PluginRegistry {
+  static resolve(): PluginRegistry {
     if (!PluginRegistry.instance) {
       PluginRegistry.instance = new PluginRegistry();
     }
@@ -48,13 +48,12 @@ export class PluginRegistry {
    * Auto-register plugins from a list
    */
   async autoRegisterPlugins(plugins: IToolPlugin[]): Promise<void> {
-    for (const plugin of plugins) {
-      try {
-        await this.pluginManager.registerPlugin(plugin);
-      } catch (error) {
-        console.error(`Failed to auto-register plugin '${plugin.name}':`, error);
+    const results = await Promise.allSettled(plugins.map((plugin) => this.pluginManager.registerPlugin(plugin)));
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.error(`Failed to auto-register plugin '${plugins[i]?.name ?? 'unknown'}':`, result.reason);
       }
-    }
+    });
   }
 
   /**

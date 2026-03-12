@@ -158,10 +158,13 @@ export class ToolBuilder {
    */
   build(): IEnhancedTool {
     this.validateConfiguration();
+    const { name = '', description = '' } = this.metadata;
+    const toolClass = this.toolClass;
+    if (!toolClass) throw new Error('Tool class not configured');
 
     const metadata: IToolMetadata = {
-      name: this.metadata.name!,
-      description: this.metadata.description!,
+      name,
+      description,
       paramsSchema: this.metadata.paramsSchema,
       category: this.metadata.category,
       tags: this.metadata.tags,
@@ -174,7 +177,7 @@ export class ToolBuilder {
     };
 
     return new EnhancedTool(
-      this.toolClass!,
+      toolClass,
       metadata,
       this.middlewarePipeline,
       this.executionStrategy || new StandardExecutionStrategy()

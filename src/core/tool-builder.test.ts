@@ -26,7 +26,7 @@ jest.mock('./execution-strategies/standard-execution.strategy.js');
 jest.mock('./middleware/tool-middleware.pipeline.js');
 
 // Define interface for accessing private members in tests
-interface ToolBuilderPrivate {
+interface IToolBuilderPrivate {
   metadata: Partial<IToolMetadata>;
   executionStrategy?: IToolExecutionStrategy;
   toolClass?: new () => ITool;
@@ -89,7 +89,7 @@ describe('ToolBuilder', () => {
         .requiresScopes('admin');
 
       // Access private metadata for testing
-      const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+      const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
       expect(metadata.name).toBe('test-tool');
       expect(metadata.description).toBe('Test tool');
       expect(metadata.category).toBe('test');
@@ -105,7 +105,7 @@ describe('ToolBuilder', () => {
     it('should set schema', () => {
       const schema = z.object({ param: z.string() });
       builder.schema(schema);
-      const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+      const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
       expect(metadata.paramsSchema).toBe(schema);
     });
   });
@@ -126,14 +126,14 @@ describe('ToolBuilder', () => {
     it('should set execution strategy', () => {
       const strategy = mockStrategy;
       builder.withStrategy(strategy);
-      expect((builder as unknown as ToolBuilderPrivate).executionStrategy).toBe(strategy);
+      expect((builder as unknown as IToolBuilderPrivate).executionStrategy).toBe(strategy);
     });
   });
 
   describe('tool class', () => {
     it('should set tool class', () => {
       builder.withClass(MockTool);
-      expect((builder as unknown as ToolBuilderPrivate).toolClass).toBe(MockTool);
+      expect((builder as unknown as IToolBuilderPrivate).toolClass).toBe(MockTool);
     });
   });
 
@@ -184,7 +184,7 @@ describe('ToolFactory', () => {
 
   it('should create read tool with defaults', () => {
     const builder = ToolFactory.createReadTool();
-    const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+    const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
     expect(metadata.category).toBe('read');
     expect(metadata.cacheable).toBe(true);
     expect(metadata.tags).toEqual(['readonly', 'query']);
@@ -192,7 +192,7 @@ describe('ToolFactory', () => {
 
   it('should create write tool with defaults', () => {
     const builder = ToolFactory.createWriteTool();
-    const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+    const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
     expect(metadata.category).toBe('write');
     expect(metadata.requiresConfirmation).toBe(true);
     expect(metadata.tags).toEqual(['write', 'mutation']);
@@ -200,7 +200,7 @@ describe('ToolFactory', () => {
 
   it('should create batch tool with defaults', () => {
     const builder = ToolFactory.createBatchTool(20);
-    const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+    const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
     expect(metadata.category).toBe('batch');
     expect(metadata.maxBatchSize).toBe(20);
     expect(metadata.tags).toEqual(['batch', 'bulk']);
@@ -208,7 +208,7 @@ describe('ToolFactory', () => {
 
   it('should create admin tool with defaults', () => {
     const builder = ToolFactory.createAdminTool();
-    const metadata = (builder as unknown as ToolBuilderPrivate).metadata;
+    const metadata = (builder as unknown as IToolBuilderPrivate).metadata;
     expect(metadata.category).toBe('admin');
     expect(metadata.requiresConfirmation).toBe(true);
     expect(metadata.requiredScopes).toEqual(['admin']);

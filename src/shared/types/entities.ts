@@ -12,8 +12,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { Entity } from '@backstage/catalog-model';
-
 /**
  * Enumeration of valid Backstage entity kinds
  */
@@ -47,7 +45,7 @@ export const VALID_ENTITY_KINDS: ReadonlySet<EntityKind> = new Set<EntityKind>([
 /**
  * Backstage entity interface
  */
-export interface IBackstageEntity extends Omit<Entity, 'spec' | 'metadata'> {
+export interface IBackstageEntity {
   apiVersion: string;
   kind: string;
   metadata: IEntityMetadata;

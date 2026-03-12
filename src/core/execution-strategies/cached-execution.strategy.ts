@@ -97,7 +97,7 @@ export class CachedExecutionStrategy implements IToolExecutionStrategy {
   /**
    * Get cache statistics
    */
-  getCacheStats(): { size: number; maxAge: number } {
+  collectCacheStats(): { size: number; maxAge: number } {
     const now = Date.now();
     let maxAge = 0;
 
