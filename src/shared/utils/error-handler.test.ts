@@ -43,7 +43,7 @@ class TestMCPError extends MCPError {
     statusCode: number = 400,
     details?: Record<string, unknown>
   ) {
-    super(message, code, statusCode, true, details);
+    super(message, code, statusCode, { isOperational: true, details });
   }
 }
 
@@ -320,7 +320,7 @@ describe('MCPError Abstract Base Class', () => {
     // Create a test class that allows setting isOperational to false
     class NonOperationalTestError extends MCPError {
       constructor(message: string) {
-        super(message, 'NON_OP_ERROR', 500, false);
+        super(message, 'NON_OP_ERROR', 500, { isOperational: false });
       }
     }
 

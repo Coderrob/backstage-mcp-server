@@ -36,8 +36,7 @@ type AuthManagerWithPrivate = {
   maxEvents?: number;
 };
 
-type TestAuthType = AuthType | 'unsupported';
-type TestAuthConfig = IAuthConfig & { type: TestAuthType };
+type TestAuthConfig = IAuthConfig & { type: AuthType | string };
 
 describe('AuthManager', () => {
   let authManager: AuthManager;
