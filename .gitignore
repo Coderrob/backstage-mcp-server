@@ -113,6 +113,12 @@ dist
 # Docusaurus cache and generated files
 .docusaurus
 
+# Build reports and artifacts
+build-report.json
+build-audit.jsonl
+.build_backup_path
+build-backups/
+
 # Serverless directories
 .serverless/
 
