@@ -46,7 +46,7 @@ describe('src/index main IIFE', () => {
     delete process.env.BACKSTAGE_TOKEN;
   });
 
-  it('starts the server successfully and does not log errors', async () => {
+  it('should start the server successfully and not log errors', async () => {
     mockStartServer.mockResolvedValueOnce(undefined);
 
     // Importing the ESM module triggers the IIFE

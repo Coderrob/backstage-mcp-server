@@ -15,14 +15,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { ISecurityEventSummary, SecurityEventType } from '../../shared/types/events.js';
+import { ISecurityEvent, ISecurityEventSummary, SecurityEventType } from '../../shared/types/events.js';
 import { SecurityAuditor } from './security-auditor.js';
 
 type SecurityAuditorWithPrivate = {
   maxEvents: number;
   generateEventId(): string;
   logEvent(event: unknown): void;
-  getEvents(filter?: unknown): unknown[];
+  filterEvents(filter?: unknown): ISecurityEvent[];
   getSecuritySummary(): ISecurityEventSummary;
 };
 
@@ -53,13 +53,11 @@ describe('SecurityAuditor', () => {
 
       auditor.logEvent(event);
 
-      const events = auditor.getEvents();
+      const events = auditor.filterEvents();
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject(event);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((events[0] as any).id).toMatch(/^sec_\d+_[a-z0-9]+$/);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((events[0] as any).timestamp).toBeInstanceOf(Date);
+      expect(events[0].id).toMatch(/^sec_\d+_[a-z0-9]+$/);
+      expect(events[0].timestamp).toBeInstanceOf(Date);
     });
 
     it('should throw error for invalid event', () => {
@@ -86,7 +84,7 @@ describe('SecurityAuditor', () => {
         });
       }
 
-      const events = auditor.getEvents();
+      const events = auditor.filterEvents();
       expect(events).toHaveLength(5);
     });
 
@@ -152,37 +150,35 @@ describe('SecurityAuditor', () => {
     });
 
     it('should return all events without filter', () => {
-      const events = auditor.getEvents();
+      const events = auditor.filterEvents();
       expect(events).toHaveLength(3);
     });
 
     it('should filter by type', () => {
-      const events = auditor.getEvents({ type: SecurityEventType.AUTH_SUCCESS });
+      const events = auditor.filterEvents({ type: SecurityEventType.AUTH_SUCCESS });
       expect(events).toHaveLength(1);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((events[0] as any).type).toBe(SecurityEventType.AUTH_SUCCESS);
+      expect(events[0].type).toBe(SecurityEventType.AUTH_SUCCESS);
     });
 
     it('should filter by userId', () => {
-      const events = auditor.getEvents({ userId: 'user1' });
+      const events = auditor.filterEvents({ userId: 'user1' });
       expect(events).toHaveLength(1);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((events[0] as any).userId).toBe('user1');
+      expect(events[0].userId).toBe('user1');
     });
 
     it('should filter by since date', () => {
       const since = new Date(Date.now() - 1000);
-      const events = auditor.getEvents({ since });
+      const events = auditor.filterEvents({ since });
       expect(events).toHaveLength(3);
     });
 
     it('should limit results', () => {
-      const events = auditor.getEvents({ limit: 2 });
+      const events = auditor.filterEvents({ limit: 2 });
       expect(events).toHaveLength(2);
     });
 
     it('should combine filters', () => {
-      const events = auditor.getEvents({
+      const events = auditor.filterEvents({
         type: SecurityEventType.AUTH_SUCCESS,
         userId: 'user1',
         limit: 10,

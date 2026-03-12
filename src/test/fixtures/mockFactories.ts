@@ -13,7 +13,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import { jest } from '@jest/globals';
-import { AxiosInstance } from 'axios';
+import { AxiosInstance, AxiosResponse } from 'axios';
 
 import { CacheManager } from '../../domain/cache/cache-manager.js';
 
@@ -42,14 +42,14 @@ export function createMockCacheManager(): jest.Mocked<CacheManager> {
     set: jest.fn(),
     delete: jest.fn(),
     clear: jest.fn(),
-    getOrSet: jest.fn(),
-    getStats: jest.fn(() => ({ size: 0, maxSize: 0, hitRate: 0, totalHits: 0, totalMisses: 0 })),
+    fetchOrSet: jest.fn(),
+    collectStats: jest.fn(() => ({ size: 0, maxSize: 0, hitRate: 0, totalHits: 0, totalMisses: 0 })),
     stopCleanupTimer: jest.fn(),
   };
   return m as unknown as jest.Mocked<CacheManager>;
 }
 
 // Small helper to quickly create an AxiosResponse-like object for tests
-export function axiosResponse<T>(data: T): import('axios').AxiosResponse<T> {
-  return { data } as import('axios').AxiosResponse<T>;
+export function axiosResponse<T>(data: T): AxiosResponse<T> {
+  return { data } as AxiosResponse<T>;
 }

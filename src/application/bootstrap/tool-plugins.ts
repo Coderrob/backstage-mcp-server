@@ -22,7 +22,7 @@ import { CatalogToolsPlugin } from '../../domain/catalog/catalog-tools.plugin.js
  * @returns Promise that resolves to the initialized PluginRegistry
  */
 export async function initializeToolPlugins(): Promise<PluginRegistry> {
-  const pluginRegistry = PluginRegistry.getInstance();
+  const pluginRegistry = PluginRegistry.resolve();
 
   // Register core catalog tools plugin
   await pluginRegistry.getPluginManager().registerPlugin(new CatalogToolsPlugin());

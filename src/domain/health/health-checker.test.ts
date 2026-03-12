@@ -19,6 +19,8 @@ import { HealthStatus } from '../../shared/types/health.js'; // Assuming types a
 import { HealthTestUtils } from '../../test/helpers/test-utils.js';
 import { HealthChecker } from './health-checker.js';
 
+type HealthCheckerStatic = typeof HealthChecker & { instance: HealthChecker | null };
+
 // Mock dependencies
 jest.mock('../../shared/utils/logger');
 jest.mock('../../shared/utils/error-handler');
@@ -28,9 +30,8 @@ describe('HealthChecker', () => {
 
   beforeEach(() => {
     // Reset singleton for each test
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (HealthChecker as any).instance = null;
-    checker = HealthChecker.getInstance();
+    (HealthChecker as unknown as HealthCheckerStatic).instance = null;
+    checker = HealthChecker.resolve();
   });
 
   afterEach(() => {
@@ -39,8 +40,8 @@ describe('HealthChecker', () => {
 
   describe('getInstance', () => {
     it('should return the same instance (singleton)', () => {
-      const instance1 = HealthChecker.getInstance();
-      const instance2 = HealthChecker.getInstance();
+      const instance1 = HealthChecker.resolve();
+      const instance2 = HealthChecker.resolve();
       expect(instance1).toBe(instance2);
     });
   });

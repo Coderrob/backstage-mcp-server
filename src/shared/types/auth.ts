@@ -14,10 +14,20 @@
  */
 
 /**
+ * Enumeration of supported authentication types.
+ */
+export enum AuthType {
+  Bearer = 'bearer',
+  OAuth = 'oauth',
+  ApiKey = 'api-key',
+  ServiceAccount = 'service-account',
+}
+
+/**
  * Configuration for different authentication methods.
  */
 export interface IAuthConfig {
-  type: 'bearer' | 'oauth' | 'api-key' | 'service-account';
+  type: AuthType;
   token?: string;
   clientId?: string;
   clientSecret?: string;

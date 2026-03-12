@@ -18,6 +18,7 @@ import { z } from 'zod';
 import {
   ISecurityEvent,
   ISecurityEventFilter,
+  ISecurityEventInput,
   ISecurityEventSummary,
   SecurityEventType,
 } from '../../shared/types/events.js';
@@ -52,7 +53,7 @@ export class SecurityAuditor {
    * Validates the event data and maintains the event history limit.
    * @param event - The security event data (without id and timestamp)
    */
-  logEvent(event: Omit<ISecurityEvent, 'id' | 'timestamp'>): void {
+  logEvent(event: ISecurityEventInput): void {
     const fullEvent: ISecurityEvent = {
       ...event,
       id: this.generateEventId(),
@@ -72,7 +73,7 @@ export class SecurityAuditor {
     // Log to console in development (use warn so eslint no-console rule permits it)
     if (process.env.NODE_ENV !== 'production') {
       console.warn(
-        `[SECURITY] ${event.type}: ${event.resource} - ${event.action} (${event.success === true ? 'SUCCESS' : 'FAILED'})`
+        `[SECURITY] ${event.type}: ${event.resource} - ${event.action} (${event.success ? 'SUCCESS' : 'FAILED'})`
       );
     }
 
@@ -112,23 +113,23 @@ export class SecurityAuditor {
    * @param filter.limit - Limit the number of returned events
    * @returns Array of filtered security events
    */
-  getEvents(filter?: ISecurityEventFilter): ISecurityEvent[] {
+  filterEvents(filter?: ISecurityEventFilter): ISecurityEvent[] {
     let filtered = this.events;
 
-    if (filter && filter.type !== undefined) {
+    if (filter?.type !== undefined) {
       filtered = filtered.filter((e) => e.type === filter.type);
     }
 
-    if (filter && filter.userId !== undefined) {
+    if (filter?.userId !== undefined) {
       filtered = filtered.filter((e) => e.userId === filter.userId);
     }
 
-    if (filter && filter.since !== undefined) {
+    if (filter?.since !== undefined) {
       const since = filter.since as Date;
       filtered = filtered.filter((e) => e.timestamp >= since);
     }
 
-    if (filter && filter.limit !== undefined) {
+    if (filter?.limit !== undefined) {
       const limit = filter.limit as number;
       filtered = filtered.slice(-limit);
     }

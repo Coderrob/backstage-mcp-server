@@ -27,7 +27,7 @@ jest.mock('../../shared/utils/logger.js', () => ({
 type CacheManagerWithPrivate = {
   cleanup(): void;
 
-  getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T>;
+  fetchOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T>;
 
   get<T>(key: string): T | undefined;
 
@@ -135,7 +135,7 @@ describe('CacheManager', () => {
 
   describe('getStats', () => {
     it('should return correct stats for empty cache', () => {
-      const stats = cache.getStats();
+      const stats = cache.collectStats();
       expect(stats).toEqual({
         size: 0,
         maxSize: 1000,
@@ -154,7 +154,7 @@ describe('CacheManager', () => {
       cache.get('key1'); // hit
       cache.get('missing'); // miss
 
-      const stats = cache.getStats();
+      const stats = cache.collectStats();
       expect(stats.size).toBe(2);
       expect(stats.totalHits).toBe(2);
       expect(stats.totalMisses).toBe(2); // 4 requests - 2 hits
@@ -167,7 +167,7 @@ describe('CacheManager', () => {
       cache.set('key', 'cached');
       const fetcher = jest.fn();
 
-      const result = await (cache as unknown as CacheManagerWithPrivate).getOrSet(
+      const result = await (cache as unknown as CacheManagerWithPrivate).fetchOrSet(
         'key',
         fetcher as () => Promise<string>
       );
@@ -179,8 +179,7 @@ describe('CacheManager', () => {
     it('should fetch and cache if not exists', async () => {
       const fetcher = jest.fn<() => Promise<string>>().mockResolvedValueOnce('fetched');
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (cache as unknown as CacheManagerWithPrivate).getOrSet('key', fetcher as () => Promise<any>);
+      const result = await (cache as unknown as CacheManagerWithPrivate).fetchOrSet('key', fetcher);
 
       expect(result).toBe('fetched');
       expect(fetcher).toHaveBeenCalledTimes(1);
@@ -190,8 +189,7 @@ describe('CacheManager', () => {
     it('should use custom ttl for fetcher', async () => {
       const fetcher = jest.fn<() => Promise<string>>().mockResolvedValueOnce('fetched');
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (cache as unknown as CacheManagerWithPrivate).getOrSet('key', fetcher as () => Promise<any>, 1000);
+      await (cache as unknown as CacheManagerWithPrivate).fetchOrSet('key', fetcher, 1000);
       expect(cache.get('key')).toBe('fetched');
 
       jest.advanceTimersByTime(1001);

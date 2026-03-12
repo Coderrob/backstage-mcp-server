@@ -15,11 +15,12 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import { registerBuiltInHealthChecks } from '../../domain/health/checks/register-builtIn.health-checks.js';
 import { BackstageCatalogApi } from '../../infrastructure/api/backstage-catalog-api.js';
-import { IAuthConfig } from '../../shared/types/auth.js';
+import { AuthType, IAuthConfig } from '../../shared/types/auth.js';
 import { ConfigurationError } from '../../shared/utils/custom-errors.js';
 import { withErrorHandling } from '../../shared/utils/error-handler.js';
 import { isNonEmptyString } from '../../shared/utils/guards.js';
@@ -89,8 +90,7 @@ export async function startServer(): Promise<void> {
         version: metadata.version,
       }));
 
-      const fs = await import('fs/promises');
-      await fs.writeFile(join(configDir, '..', 'tools-manifest.json'), JSON.stringify(manifest, null, 2));
+      await writeFile(join(configDir, '..', 'tools-manifest.json'), JSON.stringify(manifest, null, 2));
     }
 
     logger.debug('Setting up transport and connecting server');
@@ -116,21 +116,21 @@ export function buildAuthConfig(): IAuthConfig {
   const serviceAccountKey = process.env.BACKSTAGE_SERVICE_ACCOUNT_KEY;
 
   if (isNonEmptyString(token)) {
-    return { type: 'bearer', token };
+    return { type: AuthType.Bearer, token };
   }
   if (isNonEmptyString(clientId) && isNonEmptyString(clientSecret) && isNonEmptyString(tokenUrl)) {
     return {
-      type: 'oauth',
+      type: AuthType.OAuth,
       clientId,
       clientSecret,
       tokenUrl,
     };
   }
   if (isNonEmptyString(apiKey)) {
-    return { type: 'api-key', apiKey };
+    return { type: AuthType.ApiKey, apiKey };
   }
   if (isNonEmptyString(serviceAccountKey)) {
-    return { type: 'service-account', serviceAccountKey };
+    return { type: AuthType.ServiceAccount, serviceAccountKey };
   }
 
   throw new ConfigurationError(

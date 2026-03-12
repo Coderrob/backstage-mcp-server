@@ -94,14 +94,12 @@ export class PluginManager {
    */
   async shutdown(): Promise<void> {
     const pluginNames = Array.from(this.plugins.keys());
-
-    for (const pluginName of pluginNames) {
-      try {
-        await this.unregisterPlugin(pluginName);
-      } catch (error) {
-        console.error(`Error shutting down plugin '${pluginName}':`, error);
+    const results = await Promise.allSettled(pluginNames.map((name) => this.unregisterPlugin(name)));
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.error(`Error shutting down plugin '${pluginNames[i] ?? 'unknown'}':`, result.reason);
       }
-    }
+    });
   }
 
   /**

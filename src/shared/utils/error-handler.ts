@@ -26,7 +26,7 @@ export class ErrorMetrics {
 
   private constructor() {}
 
-  static getInstance(): ErrorMetrics {
+  static resolve(): ErrorMetrics {
     if (!ErrorMetrics.instance) {
       ErrorMetrics.instance = new ErrorMetrics();
     }
@@ -75,7 +75,7 @@ export class ErrorMetrics {
 /**
  * Global error metrics instance
  */
-export const errorMetrics = ErrorMetrics.getInstance();
+export const errorMetrics = ErrorMetrics.resolve();
 
 /**
  * Express error handling middleware

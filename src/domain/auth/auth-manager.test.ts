@@ -26,7 +26,7 @@ jest.mock('../../shared/utils/logger.js', () => ({
 
 import axios, { AxiosResponse } from 'axios';
 
-import { IAuthConfig, ITokenInfo } from '../../shared/types/auth.js';
+import { AuthType, IAuthConfig, ITokenInfo } from '../../shared/types/auth.js';
 import { AuthManager } from './auth-manager.js';
 
 // Type for testing private properties
@@ -36,7 +36,8 @@ type AuthManagerWithPrivate = {
   maxEvents?: number;
 };
 
-type TestAuthConfig = IAuthConfig & { type: IAuthConfig['type'] | 'unsupported' };
+type TestAuthType = AuthType | 'unsupported';
+type TestAuthConfig = IAuthConfig & { type: TestAuthType };
 
 describe('AuthManager', () => {
   let authManager: AuthManager;
@@ -49,7 +50,7 @@ describe('AuthManager', () => {
 
   describe('constructor', () => {
     it('should initialize with config', () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
       expect(authManager).toBeDefined();
     });
@@ -57,7 +58,7 @@ describe('AuthManager', () => {
 
   describe('getAuthorizationHeader', () => {
     it('should return authorization header for bearer token', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
       const header = await authManager.getAuthorizationHeader();
@@ -65,14 +66,14 @@ describe('AuthManager', () => {
     });
 
     it('should throw error if bearer token not configured', async () => {
-      config = { type: 'bearer' };
+      config = { type: AuthType.Bearer };
       authManager = new AuthManager(config);
 
       await expect(authManager.getAuthorizationHeader()).rejects.toThrow('Bearer token not configured');
     });
 
     it('should refresh token if expired', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
       // Simulate expired token
@@ -89,7 +90,7 @@ describe('AuthManager', () => {
 
   describe('authenticate', () => {
     it('should ensure valid token', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
       await authManager.authenticate();
@@ -98,37 +99,33 @@ describe('AuthManager', () => {
 
   describe('checkRateLimit', () => {
     it('should allow requests within limit', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
-      for (let i = 0; i < 100; i++) {
-        await expect(authManager.checkRateLimit()).resolves.toBeUndefined();
-      }
+      await Promise.all(
+        Array.from({ length: 100 }, () => expect(authManager.checkRateLimit()).resolves.toBeUndefined())
+      );
     });
 
     it('should throw error when rate limit exceeded', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
       // Make 100 requests
-      for (let i = 0; i < 100; i++) {
-        await authManager.checkRateLimit();
-      }
+      await Promise.all(Array.from({ length: 100 }, () => authManager.checkRateLimit()));
 
       // 101st should fail
       await expect(authManager.checkRateLimit()).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should reset after window', async () => {
-      config = { type: 'bearer', token: 'test-token' };
+      config = { type: AuthType.Bearer, token: 'test-token' };
       authManager = new AuthManager(config);
 
       jest.useFakeTimers();
 
       // Make 100 requests
-      for (let i = 0; i < 100; i++) {
-        await authManager.checkRateLimit();
-      }
+      await Promise.all(Array.from({ length: 100 }, () => authManager.checkRateLimit()));
 
       // Advance time by 61 seconds
       jest.advanceTimersByTime(61000);
@@ -141,7 +138,7 @@ describe('AuthManager', () => {
   describe('token handling', () => {
     describe('bearer token', () => {
       it('should handle bearer token', async () => {
-        config = { type: 'bearer', token: 'test-token' };
+        config = { type: AuthType.Bearer, token: 'test-token' };
         authManager = new AuthManager(config);
 
         const header = await authManager.getAuthorizationHeader();
@@ -149,7 +146,7 @@ describe('AuthManager', () => {
       });
 
       it('should throw error if token not configured', async () => {
-        config = { type: 'bearer' };
+        config = { type: AuthType.Bearer };
         authManager = new AuthManager(config);
 
         await expect(authManager.getAuthorizationHeader()).rejects.toThrow('Bearer token not configured');
@@ -158,7 +155,7 @@ describe('AuthManager', () => {
 
     describe('api-key', () => {
       it('should handle api key', async () => {
-        config = { type: 'api-key', apiKey: 'test-key' };
+        config = { type: AuthType.ApiKey, apiKey: 'test-key' };
         authManager = new AuthManager(config);
 
         const header = await authManager.getAuthorizationHeader();
@@ -166,7 +163,7 @@ describe('AuthManager', () => {
       });
 
       it('should throw error if api key not configured', async () => {
-        config = { type: 'api-key' };
+        config = { type: AuthType.ApiKey };
         authManager = new AuthManager(config);
 
         await expect(authManager.getAuthorizationHeader()).rejects.toThrow('API key not configured');
@@ -175,7 +172,7 @@ describe('AuthManager', () => {
 
     describe('service-account', () => {
       it('should handle service account', async () => {
-        config = { type: 'service-account', serviceAccountKey: 'test-key' };
+        config = { type: AuthType.ServiceAccount, serviceAccountKey: 'test-key' };
         authManager = new AuthManager(config);
 
         const header = await authManager.getAuthorizationHeader();
@@ -183,7 +180,7 @@ describe('AuthManager', () => {
       });
 
       it('should throw error if service account key not configured', async () => {
-        config = { type: 'service-account' };
+        config = { type: AuthType.ServiceAccount };
         authManager = new AuthManager(config);
 
         await expect(authManager.getAuthorizationHeader()).rejects.toThrow('Service account key not configured');
@@ -193,7 +190,7 @@ describe('AuthManager', () => {
     describe('oauth', () => {
       beforeEach(() => {
         config = {
-          type: 'oauth',
+          type: AuthType.OAuth,
           clientId: 'client-id',
           clientSecret: 'client-secret',
           tokenUrl: 'https://example.com/token',
@@ -208,7 +205,7 @@ describe('AuthManager', () => {
 
       it('should refresh oauth token', async () => {
         config = {
-          type: 'oauth',
+          type: AuthType.OAuth,
           clientId: 'client-id',
           clientSecret: 'client-secret',
           tokenUrl: 'https://example.com/token',
@@ -245,7 +242,7 @@ describe('AuthManager', () => {
       });
 
       it('should throw error if oauth config incomplete', async () => {
-        config = { type: 'oauth' };
+        config = { type: AuthType.OAuth };
         authManager = new AuthManager(config);
 
         await expect(authManager.getAuthorizationHeader()).rejects.toThrow('OAuth configuration incomplete');
@@ -253,7 +250,7 @@ describe('AuthManager', () => {
 
       it('should throw error if no refresh token', async () => {
         config = {
-          type: 'oauth',
+          type: AuthType.OAuth,
           clientId: 'client-id',
           clientSecret: 'client-secret',
           tokenUrl: 'https://example.com/token',
@@ -286,7 +283,9 @@ describe('AuthManager', () => {
 
         await authManager.getAuthorizationHeader();
 
-        const tokenInfo = (authManager as unknown as AuthManagerWithPrivate).tokenInfo!;
+        const privateManager = authManager as unknown as AuthManagerWithPrivate;
+        if (!privateManager.tokenInfo) throw new Error("Expected tokenInfo to be defined");
+        const tokenInfo = privateManager.tokenInfo;
         expect(tokenInfo.accessToken).toBe('access-token');
         expect(tokenInfo.refreshToken).toBe('refresh-token');
         expect(tokenInfo.tokenType).toBe('Bearer');
@@ -306,7 +305,9 @@ describe('AuthManager', () => {
 
         await authManager.getAuthorizationHeader();
 
-        const tokenInfo = (authManager as unknown as AuthManagerWithPrivate).tokenInfo!;
+        const privateManager = authManager as unknown as AuthManagerWithPrivate;
+        if (!privateManager.tokenInfo) throw new Error("Expected tokenInfo to be defined");
+        const tokenInfo = privateManager.tokenInfo;
         expect(tokenInfo.expiresAt).toBeUndefined();
       });
 
@@ -324,7 +325,9 @@ describe('AuthManager', () => {
 
         await authManager.getAuthorizationHeader();
 
-        const tokenInfo = (authManager as unknown as AuthManagerWithPrivate).tokenInfo!;
+        const privateManager = authManager as unknown as AuthManagerWithPrivate;
+        if (!privateManager.tokenInfo) throw new Error("Expected tokenInfo to be defined");
+        const tokenInfo = privateManager.tokenInfo;
         expect(tokenInfo.expiresAt).toBeUndefined();
       });
 
@@ -340,14 +343,16 @@ describe('AuthManager', () => {
 
         await authManager.getAuthorizationHeader();
 
-        const tokenInfo = (authManager as unknown as AuthManagerWithPrivate).tokenInfo!;
+        const privateManager = authManager as unknown as AuthManagerWithPrivate;
+        if (!privateManager.tokenInfo) throw new Error("Expected tokenInfo to be defined");
+        const tokenInfo = privateManager.tokenInfo;
         expect(tokenInfo.tokenType).toBe('Bearer');
       });
     });
 
     describe('unsupported type', () => {
       it('should throw error for unsupported auth type', async () => {
-        config = { type: 'unsupported' as TestAuthConfig['type'] };
+        config = { type: 'unsupported' as AuthType };
         authManager = new AuthManager(config);
 
         await expect(authManager.getAuthorizationHeader()).rejects.toThrow(
@@ -358,7 +363,7 @@ describe('AuthManager', () => {
 
     describe('token validity', () => {
       it('should consider token valid if no expiry', () => {
-        config = { type: 'bearer', token: 'test' };
+        config = { type: AuthType.Bearer, token: 'test' };
         authManager = new AuthManager(config);
         (authManager as unknown as AuthManagerWithPrivate).tokenInfo = { accessToken: 'token', tokenType: 'Bearer' };
 
@@ -367,7 +372,7 @@ describe('AuthManager', () => {
       });
 
       it('should consider token invalid if expired', () => {
-        config = { type: 'bearer', token: 'test' };
+        config = { type: AuthType.Bearer, token: 'test' };
         authManager = new AuthManager(config);
         (authManager as unknown as AuthManagerWithPrivate).tokenInfo = {
           accessToken: 'token',
@@ -380,7 +385,7 @@ describe('AuthManager', () => {
       });
 
       it('should consider token valid if not expired', () => {
-        config = { type: 'bearer', token: 'test' };
+        config = { type: AuthType.Bearer, token: 'test' };
         authManager = new AuthManager(config);
         (authManager as unknown as AuthManagerWithPrivate).tokenInfo = {
           accessToken: 'token',
@@ -393,7 +398,7 @@ describe('AuthManager', () => {
       });
 
       it('should refresh 5 minutes before expiry', () => {
-        config = { type: 'bearer', token: 'test' };
+        config = { type: AuthType.Bearer, token: 'test' };
         authManager = new AuthManager(config);
         const expiresAt = Date.now() + 10000; // 10 seconds from now - should refresh
         (authManager as unknown as AuthManagerWithPrivate).tokenInfo = {
@@ -413,7 +418,7 @@ describe('AuthManager', () => {
         jest.resetAllMocks();
 
         config = {
-          type: 'oauth',
+          type: AuthType.OAuth,
           clientId: 'client-id',
           clientSecret: 'client-secret',
           tokenUrl: 'https://example.com/token',

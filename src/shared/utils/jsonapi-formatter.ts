@@ -15,7 +15,7 @@
 // JSON:API specification implementation for richer LLM context
 // https://jsonapi.org/
 
-import { IApiDocument, IApiError, IApiResource } from '../../shared/types/apis.js';
+import { IApiDocument, IApiError, IApiRelationship, IApiResource } from '../../shared/types/apis.js';
 import { DefaultValue, EntityField } from '../../shared/types/constants.js';
 import {
   isDefined,
@@ -85,14 +85,15 @@ export class JsonApiFormatter {
     // Add relationships if they exist
     const relations = Array.isArray(entity.relations) ? (entity.relations as unknown[]) : [];
     if (isNonEmptyArray(relations)) {
-      resource.relationships = {};
+      const relationships: Record<string, IApiRelationship> = {};
+      resource.relationships = relationships;
       relations.forEach((relation: unknown) => {
         const rel = relation as Record<string, unknown> | undefined;
         if (rel && isObject(rel)) {
           const relKey = isNonEmptyString(rel.type) ? String(rel.type).toLowerCase() : 'unknown';
           const targetRef = rel.targetRef as Record<string, unknown> | undefined;
           if (!targetRef || !isObject(targetRef)) return;
-          resource.relationships![relKey] = {
+          relationships[relKey] = {
             data: {
               id: this.getEntityId(targetRef),
               type: isNonEmptyString(targetRef.kind) ? String(targetRef.kind).toLowerCase() : 'entity',

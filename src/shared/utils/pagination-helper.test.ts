@@ -14,6 +14,7 @@
  */
 import { jest } from '@jest/globals';
 
+import { IPaginationMeta } from '../../shared/types/paging.js';
 import { PaginationHelper } from './pagination-helper.js';
 
 describe('PaginationHelper', () => {
@@ -130,7 +131,7 @@ describe('PaginationHelper', () => {
 
   describe('generateLinks', () => {
     const baseUrl = '/api/entities';
-    const pagination: Parameters<typeof PaginationHelper.generateLinks>[1] = {
+    const pagination: IPaginationMeta = {
       total: 100,
       limit: 10,
       offset: 20,

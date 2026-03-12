@@ -19,7 +19,7 @@ import { logger } from './shared/utils/logger.js';
 // Export for programmatic usage
 export { startServer };
 
-(async function main(): Promise<void> {
+void (async function main(): Promise<void> {
   await startServer().catch((err) => {
     logger.error('Fatal server startup error', {
       error: isError(err) ? err.message : String(err),

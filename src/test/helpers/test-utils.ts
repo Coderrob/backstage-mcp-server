@@ -18,6 +18,7 @@ import { Request, Response } from 'express';
 
 import { HttpStatusCode } from '../../shared/types/constants.js';
 import { HealthStatus, IHealthCheckResult } from '../../shared/types/health.js';
+import { ILogger } from '../../shared/types/logger.js';
 import { logger } from '../../shared/utils/logger.js';
 
 /**
@@ -57,7 +58,7 @@ export class TestUtils {
    * Sets up common logger mocks for testing
    * Note: This assumes the logger module has already been mocked with jest.mock
    */
-  static setupLoggerMocks(): jest.Mocked<Pick<typeof logger, 'debug' | 'info' | 'error' | 'warn'>> {
+  static setupLoggerMocks(): jest.Mocked<ILogger> {
     // Access the mocked logger - this will be the mocked version if jest.mock is set up
     const mockLogger = jest.mocked(logger);
     return mockLogger;

@@ -16,6 +16,7 @@ import { Request, Response } from 'express';
 
 import { IHealthCheckResult } from '../../../shared/types/health.js';
 import { logger } from '../../../shared/utils/logger.js';
+import { healthChecker } from '../health-checker.js';
 
 /**
  * Abstract base class for health check middlewares.
@@ -55,7 +56,6 @@ export abstract class BaseHealthMiddleware {
   public createMiddleware() {
     return async (req: Request, res: Response): Promise<void> => {
       try {
-        const { healthChecker } = await import('../health-checker.js');
         const result = await healthChecker.runAllChecks();
         const { statusCode, body } = this.formatResponse(result);
 
