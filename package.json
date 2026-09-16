@@ -106,7 +106,8 @@
     "test:contract": "vitest run src/mcp/application.test.ts src/backstage/backstage.plugin.test.ts src/backstage/api/backstage-catalog-api.test.ts",
     "test:inspector": "node scripts/test-inspector.mjs",
     "test:live": "yarn build && node scripts/test-live-backstage.mjs",
-    "test:mcp": "yarn test:contract && yarn build && yarn test:cli && yarn test:inspector",
+    "test:mcp": "yarn test:contract && yarn build && yarn test:cli && yarn test:tools && yarn test:inspector",
+    "test:tools": "node scripts/smoke-all-tools.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit"
   },

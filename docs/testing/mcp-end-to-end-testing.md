@@ -14,6 +14,7 @@ The command is defined in [`package.json`](../../package.json) and executes, in 
 test:contract
   -> build
   -> test:cli
+  -> test:tools
   -> test:inspector
 ```
 
@@ -83,6 +84,12 @@ The subsequent black-box stages run `dist/cli.cjs`; they do not execute source f
 
 This stage supplies an implementation-independent check in addition to the SDK client used by the application.
 
+### Complete tool-surface smoke test
+
+`test:tools` runs [`scripts/smoke-all-tools.mjs`](../../scripts/smoke-all-tools.mjs). It starts a deterministic HTTP boundary, launches the packaged `dist/cli.cjs` in a separate child process, connects only through the official MCP SDK's `StdioClientTransport`, lists the tools, and invokes all 13 through `tools/call`.
+
+The smoke client does not import `BackstageCatalogApi`, tool handlers, or a direct HTTP client. The HTTP stub records the 13 requests received from the child server and asserts their method, Catalog route, and server-injected bearer credential. This creates observable evidence for both halves of the end-to-end path: MCP JSON-RPC crossed stdio, and the MCP server—not the test client—crossed the Catalog HTTP boundary.
+
 ## Expected successful output
 
 The final stages should report equivalent results to:
@@ -90,6 +97,7 @@ The final stages should report equivalent results to:
 ```text
 Test Files  3 passed (3)
 CLI smoke test passed (13 tools, one authenticated call)
+All-tools MCP smoke test passed (13 MCP calls, 13 authenticated Catalog requests)
 MCP Inspector test passed (13 portable tools, one tool call)
 ```
 
