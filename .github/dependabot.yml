@@ -7,6 +7,9 @@ multi-ecosystem-groups:
       day: monday
       time: "09:00"
       timezone: America/Chicago
+    commit-message:
+      prefix: deps
+      include: scope
 
 updates:
   - package-ecosystem: npm
@@ -19,10 +22,6 @@ updates:
       semver-major-days: 30
       semver-minor-days: 12
       semver-patch-days: 7
-    commit-message:
-      prefix: deps
-      include: scope
-
   - package-ecosystem: github-actions
     directory: /
     patterns:
@@ -30,6 +29,3 @@ updates:
     multi-ecosystem-group: all-dependencies
     cooldown:
       default-days: 12
-    commit-message:
-      prefix: deps
-      include: scope
