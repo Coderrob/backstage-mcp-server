@@ -805,5 +805,7 @@ parse_args_enhanced() {
 }
 
 # Enhanced entry point - simplified
-parse_args_enhanced "$@"
-main_enhanced
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    parse_args_enhanced "$@"
+    main_enhanced
+fi

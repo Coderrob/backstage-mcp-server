@@ -249,7 +249,7 @@ validate_build_artifacts() {
     log_audit "INFO" "Validating build artifacts"
 
     # Check for required files
-    local required_files=("dist/index.mjs" "dist/index.cjs" "dist/index.d.ts")
+    local required_files=("dist/index.mjs" "dist/index.cjs" "dist/index.d.ts" "dist/cli.mjs" "dist/cli.cjs")
 
     for file in "${required_files[@]}"; do
         if [[ ! -f "$PROJECT_ROOT/$file" ]]; then
@@ -262,13 +262,14 @@ validate_build_artifacts() {
         fi
     done
 
-    # Validate file contents
-    if [[ -f "$PROJECT_ROOT/dist/index.cjs" ]]; then
-        if ! head -1 "$PROJECT_ROOT/dist/index.cjs" | grep -q "#!/usr/bin/env node"; then
-            log_audit "ERROR" "CommonJS build missing shebang"
+    # Validate executable file contents
+    local cli_files=("dist/cli.mjs" "dist/cli.cjs")
+    for file in "${cli_files[@]}"; do
+        if [[ -f "$PROJECT_ROOT/$file" ]] && ! head -1 "$PROJECT_ROOT/$file" | grep -q "#!/usr/bin/env node"; then
+            log_audit "ERROR" "CLI build missing shebang" "{\"file\": \"$file\"}"
             build_success=false
         fi
-    fi
+    done
 
     # Check file sizes are reasonable (not empty, not too large)
     for file in "${required_files[@]}"; do
@@ -296,26 +297,20 @@ validate_build_artifacts() {
 # Runtime testing of build artifacts
 test_build_artifacts() {
     log_audit "INFO" "Testing build artifact execution"
+    local execution_success=true
+    local javascript_files=("dist/index.cjs" "dist/index.mjs" "dist/cli.cjs" "dist/cli.mjs")
 
-    # Test CommonJS build
-    if [[ -f "$PROJECT_ROOT/dist/index.cjs" ]]; then
-        if timeout 10s node "$PROJECT_ROOT/dist/index.cjs" --help >/dev/null 2>&1; then
-            log_audit "INFO" "CommonJS build execution test passed"
+    for file in "${javascript_files[@]}"; do
+        if timeout 10s node --check "$PROJECT_ROOT/$file" >/dev/null 2>&1; then
+            log_audit "INFO" "Build artifact syntax test passed" "{\"file\": \"$file\"}"
         else
             local exit_code=$?
-            log_audit "WARN" "CommonJS build execution test failed" "{\"exit_code\": $exit_code}"
+            log_audit "ERROR" "Build artifact syntax test failed" "{\"file\": \"$file\", \"exit_code\": $exit_code}"
+            execution_success=false
         fi
-    fi
+    done
 
-    # Test ESM build
-    if [[ -f "$PROJECT_ROOT/dist/index.mjs" ]]; then
-        if timeout 10s node "$PROJECT_ROOT/dist/index.mjs" --help >/dev/null 2>&1; then
-            log_audit "INFO" "ESM build execution test passed"
-        else
-            local exit_code=$?
-            log_audit "WARN" "ESM build execution test failed" "{\"exit_code\": $exit_code}"
-        fi
-    fi
+    [[ "$execution_success" == true ]]
 }
 
 # Comprehensive build validation
@@ -362,7 +357,7 @@ validate_build_comprehensive() {
 
     # Post-build validation
     validate_build_artifacts || return 1
-    test_build_artifacts
+    test_build_artifacts || return 1
 
     # Generate build report
     generate_build_report
@@ -377,23 +372,30 @@ generate_build_report() {
     local build_time
     build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")
 
-    local file_sizes="{}"
+    local esm_size=0
+    local cjs_size=0
+    local dts_size=0
+    local cli_esm_size=0
+    local cli_cjs_size=0
+
     if [[ -f "$PROJECT_ROOT/dist/index.mjs" ]]; then
-        local esm_size
         esm_size=$(stat -f%z "$PROJECT_ROOT/dist/index.mjs" 2>/dev/null || stat -c%s "$PROJECT_ROOT/dist/index.mjs" 2>/dev/null || echo "0")
-        file_sizes=$(echo "$file_sizes" | jq ".esm = $esm_size")
     fi
 
     if [[ -f "$PROJECT_ROOT/dist/index.cjs" ]]; then
-        local cjs_size
         cjs_size=$(stat -f%z "$PROJECT_ROOT/dist/index.cjs" 2>/dev/null || stat -c%s "$PROJECT_ROOT/dist/index.cjs" 2>/dev/null || echo "0")
-        file_sizes=$(echo "$file_sizes" | jq ".cjs = $cjs_size")
     fi
 
     if [[ -f "$PROJECT_ROOT/dist/index.d.ts" ]]; then
-        local dts_size
         dts_size=$(stat -f%z "$PROJECT_ROOT/dist/index.d.ts" 2>/dev/null || stat -c%s "$PROJECT_ROOT/dist/index.d.ts" 2>/dev/null || echo "0")
-        file_sizes=$(echo "$file_sizes" | jq ".dts = $dts_size")
+    fi
+
+    if [[ -f "$PROJECT_ROOT/dist/cli.mjs" ]]; then
+        cli_esm_size=$(stat -f%z "$PROJECT_ROOT/dist/cli.mjs" 2>/dev/null || stat -c%s "$PROJECT_ROOT/dist/cli.mjs" 2>/dev/null || echo "0")
+    fi
+
+    if [[ -f "$PROJECT_ROOT/dist/cli.cjs" ]]; then
+        cli_cjs_size=$(stat -f%z "$PROJECT_ROOT/dist/cli.cjs" 2>/dev/null || stat -c%s "$PROJECT_ROOT/dist/cli.cjs" 2>/dev/null || echo "0")
     fi
 
     local build_report
@@ -404,11 +406,19 @@ generate_build_report() {
     "platform": "$PLATFORM",
     "shell_env": "$SHELL_ENV",
     "success": true,
-    "file_sizes_bytes": $file_sizes,
+    "file_sizes_bytes": {
+      "esm": $esm_size,
+      "cjs": $cjs_size,
+      "dts": $dts_size,
+      "cli_esm": $cli_esm_size,
+      "cli_cjs": $cli_cjs_size
+    },
     "artifacts": {
       "esm": $([[ -f "$PROJECT_ROOT/dist/index.mjs" ]] && echo "true" || echo "false"),
       "cjs": $([[ -f "$PROJECT_ROOT/dist/index.cjs" ]] && echo "true" || echo "false"),
-      "dts": $([[ -f "$PROJECT_ROOT/dist/index.d.ts" ]] && echo "true" || echo "false")
+      "dts": $([[ -f "$PROJECT_ROOT/dist/index.d.ts" ]] && echo "true" || echo "false"),
+      "cli_esm": $([[ -f "$PROJECT_ROOT/dist/cli.mjs" ]] && echo "true" || echo "false"),
+      "cli_cjs": $([[ -f "$PROJECT_ROOT/dist/cli.cjs" ]] && echo "true" || echo "false")
     },
     "logs": {
       "audit_log": "$AUDIT_LOG",
@@ -551,4 +561,6 @@ EOF
 }
 
 # Execute enhanced validation
-main_enhanced "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main_enhanced "$@"
+fi

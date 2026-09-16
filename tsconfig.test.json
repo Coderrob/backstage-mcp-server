@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "dist/spec",
-    "types": ["jest", "node"]
+    "types": ["vitest", "node"]
   },
   "include": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__fixtures__/**/*"],
   "exclude": ["node_modules", "dist", "coverage"]

@@ -113,7 +113,7 @@ dist
 # Docusaurus cache and generated files
 .docusaurus
 
-# Build reports and artifacts
+# Build validation reports and backups
 build-report.json
 build-audit.jsonl
 .build_backup_path
@@ -141,3 +141,5 @@ build-backups/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+.vscode/

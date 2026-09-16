@@ -5,66 +5,74 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20.x
+          node-version: 24.x
           registry-url: "https://registry.npmjs.org"
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Yarn 4
-        run: corepack prepare yarn@4 --activate
+      - name: Activate pinned Yarn
+        run: |
+          corepack enable
+          corepack install --global yarn@4.4.0
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
+
+      - name: Verify tag matches package version
+        run: |
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"
+
+      - name: Run linting
+        run: yarn lint
+
+      - name: Type-check production and tests
+        run: yarn typecheck
+
+      - name: Validate source architecture
+        run: yarn architecture:check
+
+      - name: Reject unused files, exports, and dependencies
+        run: yarn knip
 
       - name: Run tests
         run: yarn test
 
-      - name: Build the project
-        run: yarn build
+      - name: Test shell scripts with BATS
+        run: yarn test:shell
 
-      - name: Validate build
+      - name: Test packaged MCP server
+        run: yarn test:mcp
+
+      - name: Validate generated manifest
+        run: yarn manifest:check
+
+      - name: Validate build outputs
         run: yarn build:validate
 
-      - name: Publish to NPM
-        run: npm publish
+      - name: Publish package
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
+      - name: Create GitHub release
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "Release $GITHUB_REF_NAME"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            ## Changes in this Release
-
-            - Built with Rollup for optimized dual-format output
-            - CommonJS and ESM bundles available
-            - Global installation support via npm
-
-            ## Installation
-
-            ```bash
-            npm install -g @coderrob/backstage-mcp-server
-            ```
-
-            ## Usage
-
-            ```bash
-            backstage-mcp-server
-            ```
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

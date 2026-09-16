@@ -1,414 +1,186 @@
 # Backstage MCP Server
 
-A production-ready, enterprise-grade Model Context Protocol (MCP) server that exposes the Backstage Catalog API as tools for Large Language Models (LLMs). Features comprehensive operational transparency, cross-platform compatibility, and automated error recovery.
+A type-safe Model Context Protocol server for the Backstage Catalog API, built on a reusable generic MCP harness.
 
-This allows LLMs to interact with Backstage software catalogs through a standardized protocol with enterprise-grade reliability and monitoring.
+## Implemented tools
 
-## Features
+- `get_entities` — query catalog entities with filters, full-text search, field selection, ordering, and cursor pagination.
+- `get_entity_by_ref` — retrieve one entity from a string or compound entity reference.
+- `add_location` — add or dry-run a catalog location.
 
-- **Complete Catalog API Coverage**: Implements all major Backstage Catalog API endpoints as MCP tools
-- **Dynamic Tool Loading**: Automatically discovers and registers tools from the codebase
-- **Type-Safe**: Full TypeScript support with Zod schema validation
-- **Production Ready**: Built for reliability with proper error handling and logging
-- **Enterprise Grade**: Cross-platform support with operational transparency and monitoring
-- **Operational Transparency**: Comprehensive audit trails, health monitoring, and automated error recovery
-- **Cross-Platform Compatibility**: Works seamlessly on Windows, macOS, and Linux
-- **Advanced Build System**: Dual-format builds (ESM/CommonJS) with minification and tree-shaking
+The checked-in `tools-manifest.json` is generated from the same definitions used by the runtime. It is the authoritative machine-readable feature list.
 
-## Available Tools
+## Requirements
 
-### Entity Management
+- Node.js 24 or newer for development, release, and MCP Inspector workflows
+- Corepack and Yarn 4.4.0
+- A Backstage instance and catalog API credential
 
-- `get_entity_by_ref` - Get a single entity by reference
-- `get_entities` - Query entities with filters
-- `get_entities_by_query` - Advanced entity querying with ordering
-- `get_entities_by_refs` - Get multiple entities by references
-- `get_entity_ancestors` - Get entity ancestry tree
-- `get_entity_facets` - Get entity facet statistics
+## Install and verify
 
-### Location Management
+```bash
+corepack enable
+corepack install --global yarn@4.4.0
+corepack yarn install --immutable
+corepack yarn typecheck
+corepack yarn lint
+corepack yarn architecture:check
+corepack yarn knip
+corepack yarn test
+corepack yarn test:shell
+corepack yarn build
+corepack yarn test:cli
+corepack yarn test:inspector
+corepack yarn manifest:check
+```
 
-- `get_location_by_ref` - Get location by reference
-- `get_location_by_entity` - Get location associated with an entity
-- `add_location` - Create a new location
-- `remove_location_by_id` - Delete a location
+After changing feature definitions, run `corepack yarn build` followed by `corepack yarn manifest:generate` to refresh the checked-in manifest.
 
-### Entity Operations
-
-- `refresh_entity` - Trigger entity refresh
-- `remove_entity_by_uid` - Delete entity by UID
-- `validate_entity` - Validate entity structure
-
-## Installation
-
-### Prerequisites
-
-- Node.js 18+
-- Yarn 4.4.0+ (configured as packageManager)
-- Access to a Backstage instance
-- Cross-platform support: Windows (with MSYS/Cygwin), macOS, or Linux
-
-### Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Coderrob/backstage-mcp-server.git
-   cd backstage-mcp-server
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   yarn install
-   ```
-
-3. Build and validate the project:
-
-   ```bash
-   yarn build:validate
-   ```
-
-   Or build manually:
-
-   ```bash
-   yarn build
-   ```
-
-4. (Optional) Run dependency analysis:
-
-   ```bash
-   yarn deps:analyze
-   ```
+The build produces side-effect-free library bundles at `dist/index.mjs` and `dist/index.cjs`, CLI bundles at `dist/cli.mjs` and `dist/cli.cjs`, and declarations at `dist/index.d.ts`.
 
 ## Configuration
 
-The server requires environment variables for Backstage API access:
+Set `BACKSTAGE_BASE_URL` to the Backstage backend root (or the full `/api/catalog` URL) and provide `BACKSTAGE_TOKEN`.
 
-### Required Environment Variables
+The token is sent verbatim as a bearer credential. For a standalone external caller, use a sufficiently strong static token configured under Backstage `backend.auth.externalAccess`, or a JWT accepted by a configured JWKS external-access provider. Restrict the credential to the `catalog` plugin and the necessary permission actions where possible. Backstage's automatic plugin-to-plugin token flow is not available to an external standalone process.
 
-- `BACKSTAGE_BASE_URL` - Base URL of your Backstage instance (e.g., `https://backstage.example.com`)
+Optional `LOG_LEVEL=debug` enables debug logging. All application logs go to stderr because stdout is reserved for stdio MCP protocol traffic.
 
-### Authentication Configuration
+See the [Backstage Catalog integration guide](docs/integrations/backstage-catalog.md) for endpoint mappings, token configuration, query semantics, and links to the current official documentation.
 
-Choose one of the following authentication methods:
-
-- `BACKSTAGE_TOKEN` - Bearer token for API access
-- `BACKSTAGE_CLIENT_ID`, `BACKSTAGE_CLIENT_SECRET`, `BACKSTAGE_TOKEN_URL` - OAuth credentials
-- `BACKSTAGE_API_KEY` - API key authentication
-- `BACKSTAGE_SERVICE_ACCOUNT_KEY` - Service account key
-
-### Example Configuration
+Example:
 
 ```bash
 export BACKSTAGE_BASE_URL=https://backstage.example.com
-export BACKSTAGE_TOKEN=your-auth-token-here
+export BACKSTAGE_TOKEN=your-token
+corepack yarn start
 ```
 
-## Usage
+## MCP client configuration
 
-### Starting the Server
-
-```bash
-yarn start
-```
-
-The server will start and listen for MCP protocol messages on stdin/stdout.
-
-### Integration with MCP Clients
-
-This server is designed to work with MCP-compatible clients. Configure your MCP client to use this server:
+After building:
 
 ```json
 {
   "mcpServers": {
     "backstage": {
       "command": "node",
-      "args": ["dist/index.js"],
+      "args": ["/absolute/path/to/backstage-mcp-server/dist/cli.cjs"],
       "env": {
-        "BACKSTAGE_BASE_URL": "https://your-backstage-instance.com",
-        "BACKSTAGE_TOKEN": "your-backstage-token"
+        "BACKSTAGE_BASE_URL": "https://backstage.example.com",
+        "BACKSTAGE_TOKEN": "your-token"
       }
     }
   }
 }
 ```
 
-For global installation after NPM publishing:
+After global installation, use `backstage-mcp-server` as the command.
 
-```json
-{
-  "mcpServers": {
-    "backstage": {
-      "command": "backstage-mcp-server",
-      "env": {
-        "BACKSTAGE_BASE_URL": "https://your-backstage-instance.com",
-        "BACKSTAGE_TOKEN": "your-backstage-token"
-      }
-    }
-  }
+## Generic harness
+
+The package exports a Backstage-independent MCP application kernel. Definitions are immutable, application instances do not share registries, and importing the library does not start a process.
+
+```typescript
+import { z } from 'zod';
+import {
+  connectTestClient,
+  createMcpServer,
+  definePlugin,
+  defineTool,
+  jsonResult,
+  stdioTransport,
+} from '@coderrob/backstage-mcp-server';
+
+interface AppContext {
+  greeting: string;
 }
+
+const hello = defineTool<AppContext>()({
+  name: 'hello_user',
+  description: 'Create a greeting.',
+  inputSchema: z.object({ name: z.string().min(1) }),
+  outputSchema: z.object({ message: z.string() }),
+  annotations: { readOnlyHint: true },
+  policy: { timeoutMs: 5_000 },
+  handler({ input, context }) {
+    return jsonResult({ message: `${context.greeting}, ${input.name}` });
+  },
+});
+
+const plugin = definePlugin<AppContext>({
+  name: 'greetings',
+  version: '1.0.0',
+  features: [hello],
+});
+
+const app = createMcpServer<AppContext>({
+  identity: { name: 'example-server', version: '1.0.0' },
+  plugins: [plugin],
+  createContext: () => ({ greeting: 'Hello' }),
+});
+
+await app.start(stdioTransport());
 ```
 
-### Example Usage with LLMs
+### Supported primitives
 
-Once connected, LLMs can use natural language to interact with Backstage:
+- `defineTool<TContext>()`
+- `defineResource<TContext>()`
+- `defineResourceTemplate<TContext>()`
+- `definePrompt<TContext>()`
+- `definePlugin<TContext>()`
 
-```text
-User: "Show me all the services in the catalog"
+Tool and prompt handler inputs are inferred from their Zod schemas. Tools can declare timeout, caller-scope authorization, per-principal rate limiting, tagged caching, and tagged cache invalidation policies. Cached tools must declare the MCP `readOnlyHint` annotation or application creation fails.
 
-LLM: Uses get_entities tool with appropriate filters
+### Results and errors
 
-User: "What's the location for the user-service entity?"
+Use `textResult`, `jsonResult`, or `errorResult` for MCP-native results. `jsonResult` returns both text and `structuredContent`. Typed harness errors become results with `isError: true`, a stable code, and safe details; unexpected errors expose only a request identifier.
 
-LLM: Uses get_location_by_entity tool
-```
+### Lifecycle
 
-## API Reference
-
-### Tool Parameters
-
-All tools accept parameters as defined by their Zod schemas. Entity references can be provided as:
-
-- String: `"component:default/user-service"`
-- Object: `{ kind: "component", namespace: "default", name: "user-service" }`
-
-### Response Format
-
-All tools return JSON responses with the following structure:
-
-```json
-{
-  "status": "success" | "error",
-  "data": <result>
-}
-```
-
-## Development
-
-### Project Structure
-
-```text
-src/
-├── api/           # Backstage API client
-├── auth/          # Authentication and security
-├── cache/         # Caching layer
-├── decorators/    # Tool decorators
-├── tools/         # MCP tool implementations
-├── types/         # Type definitions and constants
-├── utils/         # Utility functions
-└── index.ts       # Main server entry point
-
-scripts/
-├── validate-build.sh    # Build validation with operational transparency
-├── dependency-manager.sh # Dependency analysis with cross-platform support
-├── deps-crossplatform.sh         # Cross-platform dependency operations
-├── monitor.sh                    # System monitoring and health checks
-└── deps.sh                       # Legacy dependency scripts
-
-docs/
-├── OPERATIONAL_TRANSPARENCY.md   # Operational transparency documentation
-├── DEPENDENCY_GUIDE.md          # Dependency management guide
-├── EDGE_CASES_SUMMARY.md        # Edge cases and cross-platform considerations
-└── BUILD_SETUP.md               # Build system documentation
-```
-
-### Building
-
-```bash
-yarn build
-```
-
-The build system uses Rollup to create optimized bundles for both CommonJS and ESM formats:
-
-- `dist/index.cjs` - CommonJS bundle with shebang for CLI usage
-- `dist/index.mjs` - ESM bundle
-- `dist/index.d.ts` - TypeScript declarations
-
-#### Build Features
-
-- **Dual Format Support**: Generates both CommonJS and ESM outputs for maximum compatibility
-- **Minification**: All outputs are minified for production use with Terser
-- **Source Maps**: Includes source maps for debugging
-- **TypeScript Declarations**: Bundled .d.ts files for type safety
-- **Global Installation**: The CommonJS build includes a shebang for global npm installation
-- **Tree Shaking**: Removes unused code for smaller bundle sizes
-- **Cross-Platform Builds**: Consistent builds across Windows, macOS, and Linux
-- **Build Validation**: Automated validation with operational transparency
-- **Error Recovery**: Automatic rollback on build failures
-
-#### NPM Publishing
-
-The package is configured for publishing to NPM with:
-
-```bash
-npm publish
-```
-
-After publishing, the server can be installed globally:
-
-```bash
-npm install -g @coderrob/backstage-mcp-server
-backstage-mcp-server
-```
-
-## Operational Transparency & Enterprise Features
-
-This MCP server includes comprehensive operational transparency and enterprise-grade features:
-
-### Monitoring & Health Checks
-
-- **Real-time Health Monitoring**: Continuous system health tracking
-- **Resource Usage Tracking**: Memory, disk, and CPU monitoring
-- **SLA Tracking**: Service Level Agreement monitoring and reporting
-- **Automated Alerts**: Configurable alerting for critical conditions
-
-### Build & Dependency Management
-
-- **Cross-Platform Compatibility**: Consistent operation across Windows, macOS, and Linux
-- **Dependency Analysis**: Comprehensive dependency conflict detection and resolution
-- **Build Validation**: Automated build verification with rollback capabilities
-- **Audit Trails**: Complete audit logging for all operations
-
-### Error Recovery & Resilience
-
-- **Network Resilience**: Automatic retry logic for network operations
-- **Build Rollback**: Automatic rollback on build failures
-- **Dependency Backup/Restore**: Backup and restore capabilities for dependencies
-- **Structured Logging**: JSON-formatted logs with full context
-
-### Usage Examples
-
-#### Health Monitoring
-
-```bash
-# Check system health
-yarn monitor:health
-
-# View monitoring dashboard
-yarn monitor:dashboard
-
-# Check alerts
-yarn monitor:alerts
-```
-
-#### Dependency Management
-
-```bash
-# Analyze dependencies
-yarn deps:analyze
-
-# Validate dependency health
-yarn deps:validate
-
-# Cross-platform dependency operations
-yarn deps:crossplatform
-```
-
-#### Build Validation
-
-```bash
-# Comprehensive build validation
-yarn build:validate
-
-# Development build
-yarn build:dev
-
-# Watch mode
-yarn build:watch
-```
+`createMcpServer` returns an application with `start`, `stop`, `state`, `listFeatures`, and `manifest`. Startup initializes the context and plugins before connecting the transport. Shutdown is idempotent and disposes the SDK server, plugins, and context in reverse ownership order.
 
 ### Testing
 
-```bash
-yarn test
-```
-
-### Linting
-
-```bash
-yarn lint
-```
-
-### Adding New Tools
-
-1. Create a new tool file in `src/tools/`
-2. Implement the tool class with `@Tool` decorator
-3. Export from `src/tools/index.ts`
-4. Define Zod schema for parameters
-
-Example:
+`connectTestClient(app)` connects an official MCP SDK client to the application using linked in-memory transports:
 
 ```typescript
-@Tool({
-  name: 'my_tool',
-  description: 'Description of my tool',
-  paramsSchema: z.object({ param: z.string() }),
-})
-export class MyTool {
-  static async execute({ param }, context) {
-    // Implementation
-    return JsonToTextResponse({ status: 'success', data: result });
-  }
+const connection = await connectTestClient(app);
+try {
+  const result = await connection.client.callTool({
+    name: 'hello_user',
+    arguments: { name: 'Ada' },
+  });
+} finally {
+  await connection.close();
 }
 ```
 
-## Contributing
+The repository's colocated Vitest suite tests every behavioral source module, including tools, static resources, resource templates, prompts, structured results, errors, caching, Backstage argument forwarding, and application shutdown. Test files use `<module>.test.ts` beside `<module>.ts`; `architecture:check` enforces that relationship, and Vitest enforces 95% statements, branches, functions, and lines per production file. Type-only modules are excluded from runtime coverage. The same architecture gate requires a same-name `.bats` suite beside every `.sh` script; run them with `corepack yarn test:shell`. Knip rejects unused files, exports, dependencies, and unlisted dependencies through `corepack yarn knip`. The CLI smoke test launches the built CommonJS executable over stdio using the official SDK client.
 
-We welcome contributions! Please see our contribution guidelines and ensure all changes include appropriate tests.
+For an independent black-box check, the repository pins the official open-source MCP Inspector. After building, run:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with comprehensive testing
-4. Run the full validation suite: `yarn build:validate && yarn deps:analyze`
-5. Submit a pull request
+```bash
+corepack yarn test:inspector
+```
+
+This launches the packaged stdio server through Inspector's CLI, validates `tools/list` with strict schema-portability checks, and calls `get_entities` against a deterministic authenticated Backstage stub. Run the complete MCP-specific gate with `corepack yarn test:mcp`. The [MCP end-to-end testing guide](docs/testing/mcp-end-to-end-testing.md) documents the complete process boundary, assertions, expected output, and current limitations.
+
+For interactive inspection of a configured build, use:
+
+```bash
+corepack yarn mcp-inspector --tui node dist/cli.cjs
+```
+
+## Architecture
+
+The generic implementation is under `src/mcp`. Only `sdk-adapter.ts` translates definitions into the installed MCP SDK registration API. `src/backstage/backstage.plugin.ts` contains the application-specific schemas and handlers, while `server.ts` creates the Backstage context and application. `cli.ts` alone owns process signals and stdio startup.
+
+Source is grouped by ownership: `mcp/` contains the generic protocol kernel and its in-memory test support, `backstage/` contains the catalog adapter and domain features, `shared/` owns the canonical logging/error/validation concerns, and `types/` contains type-only adapter contracts. See [`src/README.md`](src/README.md) for the dependency boundaries.
+
+The [documentation index](docs/README.md) links the baseline analysis, implementation plan, and architecture decision records.
 
 ## License
 
-This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
-
-## Support & Documentation
-
-- [Operational Transparency Guide](OPERATIONAL_TRANSPARENCY.md)
-- [Dependency Management Guide](DEPENDENCY_GUIDE.md)
-- [Build System Documentation](BUILD_SETUP.md)
-- [Edge Cases & Cross-Platform](EDGE_CASES_SUMMARY.md)
-
-## Related Projects
-
-- [Backstage](https://backstage.io/) - The platform this server integrates with
-- [Model Context Protocol](https://modelcontextprotocol.io/) - The protocol specification
-- [Backstage Catalog Client](https://github.com/backstage/backstage/tree/master/packages/catalog-client) - Official Backstage client library
-
-```typescript
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-
-const client = new Client(
-  {
-    name: 'example-client',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {},
-  }
-);
-
-// Connect to the Backstage MCP server
-await client.connect(new StdioServerTransport(process));
-
-// List available tools
-const tools = await client.request({ method: 'tools/list' });
-console.log('Available tools:', tools);
-
-// Call a tool
-const result = await client.request({
-  method: 'tools/call',
-  params: {
-    name: 'get_entity_by_ref',
-    arguments: {
-      entityRef: 'component:default/my-component',
-    },
-  },
-});
-console.log('Tool result:', result);
-```
+GPL-3.0. See `LICENSE`.
