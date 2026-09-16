@@ -12,6 +12,7 @@ import { connectTestClient } from '../mcp/testing.js';
 import { createBackstageServer } from '../server.js';
 import { noopLogger } from '../shared/logging/logger.js';
 import type { IBackstageCatalogApi } from '../types/index.js';
+import { getEntitiesInputSchema } from './backstage.plugin.js';
 
 const METADATA_NAME_FIELD = 'metadata.name';
 
@@ -44,6 +45,13 @@ function createCatalogFake(): {
 }
 
 describe('Backstage MCP plugin', () => {
+  it('should reject empty Catalog filter sets and values', () => {
+    expect(getEntitiesInputSchema.safeParse({ filter: [] }).success).toBe(false);
+    expect(getEntitiesInputSchema.safeParse({ filter: {} }).success).toBe(false);
+    expect(getEntitiesInputSchema.safeParse({ filter: { kind: [] } }).success).toBe(false);
+    expect(getEntitiesInputSchema.safeParse({ filter: { kind: '' } }).success).toBe(false);
+  });
+
   it('should publish only implemented tools and forward validated arguments', async () => {
     const fake = createCatalogFake();
     const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });

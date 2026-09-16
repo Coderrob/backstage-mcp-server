@@ -10,6 +10,21 @@ A type-safe Model Context Protocol server for the Backstage Catalog API, built o
 
 The checked-in `tools-manifest.json` is generated from the same definitions used by the runtime. It is the authoritative machine-readable feature list.
 
+### Catalog filter semantics
+
+`get_entities.filter` follows the official Backstage key-value filter model. Keys in one record are combined with AND, multiple values for one key are combined with OR, and an array of records combines those complete records with OR. Empty records and empty values are rejected before calling Backstage.
+
+```json
+{
+  "filter": {
+    "kind": ["Component", "API"],
+    "metadata.namespace": "default"
+  }
+}
+```
+
+This example selects Components or APIs in the `default` namespace.
+
 ## Requirements
 
 - Node.js 24 or newer for development, release, and MCP Inspector workflows

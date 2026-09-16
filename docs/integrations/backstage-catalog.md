@@ -50,7 +50,7 @@ Backstage HTTP statuses are preserved at the MCP boundary: 401 becomes `AUTHENTI
 
 `get_entities` accepts:
 
-- `filter`: one filter record or an array of records; records are AND groups and the array represents OR groups;
+- `filter`: one non-empty filter record or a non-empty array of records; keys within a record are AND conditions, values within one key are OR conditions, and multiple records are OR groups;
 - `fields`: dot-separated entity field paths to retain;
 - `orderFields`: one or more `{ field, order }` directives;
 - `fullTextFilter`: a term and optional field paths;
@@ -59,6 +59,8 @@ Backstage HTTP statuses are preserved at the MCP boundary: 401 becomes `AUTHENTI
 - `cursor`: the opaque next or previous cursor returned in `pageInfo`.
 
 When `cursor` is supplied, the adapter sends a cursor request containing only `cursor`, `fields`, and `limit`. Filters, ordering, full-text terms, offsets, and total-count behavior belong to the initial query and are encoded in the cursor by Backstage.
+
+For example, `{ "kind": ["Component", "API"], "metadata.namespace": "default" }` means `(kind = Component OR kind = API) AND metadata.namespace = default`. Supplying that record alongside `{ "metadata.name": "payments" }` in an array makes the two complete records alternatives. Empty records, empty string values, and empty value arrays are rejected before a request is sent.
 
 Catalog relations use `targetRef`. The removed legacy `relation.target` representation is not supported. Entity inputs and outputs use JSON entity descriptors, and external references should use canonical string entity references such as `component:default/payments`.
 
@@ -75,7 +77,7 @@ Use `add_location` only with a credential and Backstage permission policy author
 
 ## Verification
 
-The colocated [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts) verifies URL normalization, modern entity-query serialization, canonical entity-reference routing, external bearer authentication, and location query/body separation. [`auth-manager.test.ts`](../../src/backstage/auth/auth-manager.test.ts) verifies file-backed token loading, rotation, and safe failures.
+The colocated [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts) verifies URL normalization, modern entity-query serialization, filter AND/OR semantics, reference-batch projection and chunking, missing-reference normalization, canonical ancestry/facet/location paths, validation request bodies, external bearer authentication, and location query/body separation. [`auth-manager.test.ts`](../../src/backstage/auth/auth-manager.test.ts) verifies file-backed token loading, rotation, and safe failures.
 
 There is no active request path to Backstage's deprecated `GET /entities` endpoint; the unreachable legacy compatibility implementation has been removed.
 

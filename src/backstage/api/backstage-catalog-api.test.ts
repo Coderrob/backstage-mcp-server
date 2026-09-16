@@ -9,6 +9,11 @@ import { describe, expect, it } from 'vitest';
 import { BackstageCatalogApi, createCatalogDiscoveryApi, normalizeCatalogBaseUrl } from './backstage-catalog-api.js';
 
 const TEST_ENTITY_REF = 'component:default/api';
+const TEST_BASE_URL = 'https://backstage.example.com';
+const TEST_CATALOG_URL = `${TEST_BASE_URL}/api/catalog`;
+const TEST_TOKEN = 'external-token';
+const METADATA_NAME_FIELD = 'metadata.name';
+const LARGE_REF_COUNT = 1001;
 
 /**
  * Creates a JSON response suitable for the official Catalog client.
@@ -25,15 +30,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('BackstageCatalogApi', () => {
   it('should normalize discovery URLs and reject non-Catalog plugin discovery', async () => {
-    expect(normalizeCatalogBaseUrl('https://backstage.example.com///')).toBe(
-      'https://backstage.example.com/api/catalog'
-    );
-    const discovery = createCatalogDiscoveryApi('https://backstage.example.com/api/catalog');
-    await expect(discovery.getBaseUrl('catalog')).resolves.toBe('https://backstage.example.com/api/catalog');
+    expect(normalizeCatalogBaseUrl(`${TEST_BASE_URL}///`)).toBe(TEST_CATALOG_URL);
+    const discovery = createCatalogDiscoveryApi(TEST_CATALOG_URL);
+    await expect(discovery.getBaseUrl('catalog')).resolves.toBe(TEST_CATALOG_URL);
     await expect(discovery.getBaseUrl('auth')).rejects.toThrow(/Unsupported Backstage plugin/);
     expect(
       new BackstageCatalogApi({
-        baseUrl: 'https://backstage.example.com',
+        baseUrl: TEST_BASE_URL,
         auth: { type: 'bearer', token: 'token' },
       })
     ).toBeInstanceOf(BackstageCatalogApi);
@@ -45,16 +48,16 @@ describe('BackstageCatalogApi', () => {
       return jsonResponse({ items: [], totalItems: 0, pageInfo: {} });
     };
     const api = new BackstageCatalogApi({
-      baseUrl: 'https://backstage.example.com/',
-      auth: { type: 'bearer', token: 'external-token' },
+      baseUrl: `${TEST_BASE_URL}/`,
+      auth: { type: 'bearer', token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
     await api.queryEntities({
-      filter: { kind: 'Component' },
-      fields: ['kind', 'metadata.name'],
-      orderFields: { field: 'metadata.name', order: 'asc' },
-      fullTextFilter: { term: 'payments', fields: ['metadata.name'] },
+      filter: [{ kind: ['Component', 'API'], 'metadata.namespace': 'default' }, { [METADATA_NAME_FIELD]: 'payments' }],
+      fields: ['kind', METADATA_NAME_FIELD],
+      orderFields: { field: METADATA_NAME_FIELD, order: 'asc' },
+      fullTextFilter: { term: 'payments', fields: [METADATA_NAME_FIELD] },
       totalItems: 'exclude',
       limit: 20,
     });
@@ -62,14 +65,17 @@ describe('BackstageCatalogApi', () => {
     expect(observedRequest).toBeDefined();
     const requestUrl = new URL(observedRequest?.url ?? '');
     expect(requestUrl.pathname).toBe('/api/catalog/entities/by-query');
-    expect(requestUrl.searchParams.getAll('filter')).toEqual(['kind=Component']);
-    expect(requestUrl.searchParams.get('fields')).toBe('kind,metadata.name');
-    expect(requestUrl.searchParams.getAll('orderField')).toEqual(['metadata.name,asc']);
+    expect(requestUrl.searchParams.getAll('filter')).toEqual([
+      'kind=Component,kind=API,metadata.namespace=default',
+      `${METADATA_NAME_FIELD}=payments`,
+    ]);
+    expect(requestUrl.searchParams.get('fields')).toBe(`kind,${METADATA_NAME_FIELD}`);
+    expect(requestUrl.searchParams.getAll('orderField')).toEqual([`${METADATA_NAME_FIELD},asc`]);
     expect(requestUrl.searchParams.get('fullTextFilterTerm')).toBe('payments');
-    expect(requestUrl.searchParams.get('fullTextFilterFields')).toBe('metadata.name');
+    expect(requestUrl.searchParams.get('fullTextFilterFields')).toBe(METADATA_NAME_FIELD);
     expect(requestUrl.searchParams.get('totalItems')).toBe('exclude');
     expect(requestUrl.searchParams.get('limit')).toBe('20');
-    expect(observedRequest?.headers.get('authorization')).toBe('Bearer external-token');
+    expect(observedRequest?.headers.get('authorization')).toBe(`Bearer ${TEST_TOKEN}`);
   });
 
   it('should resolve entity references through the current by-name endpoint', async () => {
@@ -83,8 +89,8 @@ describe('BackstageCatalogApi', () => {
       });
     };
     const api = new BackstageCatalogApi({
-      baseUrl: 'https://backstage.example.com/api/catalog',
-      auth: { type: 'bearer', token: 'external-token' },
+      baseUrl: TEST_CATALOG_URL,
+      auth: { type: 'bearer', token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
@@ -110,8 +116,8 @@ describe('BackstageCatalogApi', () => {
       );
     };
     const api = new BackstageCatalogApi({
-      baseUrl: 'https://backstage.example.com',
-      auth: { type: 'bearer', token: 'external-token' },
+      baseUrl: TEST_BASE_URL,
+      auth: { type: 'bearer', token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
@@ -133,6 +139,72 @@ describe('BackstageCatalogApi', () => {
     });
   });
 
+  it('should project, filter, chunk, and normalize entity-reference batches', async () => {
+    const requests: Request[] = [];
+    const fetchImplementation: typeof globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      requests.push(request);
+      const body = (await request.clone().json()) as { entityRefs: string[] };
+      return jsonResponse({ items: body.entityRefs.map(() => null) });
+    };
+    const api = new BackstageCatalogApi({
+      baseUrl: TEST_BASE_URL,
+      auth: { type: 'bearer', token: TEST_TOKEN },
+      fetch: fetchImplementation,
+    });
+    const entityRefs = Array.from({ length: LARGE_REF_COUNT }, (_, index) => `component:default/entity-${index}`);
+
+    const response = await api.getEntitiesByRefs({
+      entityRefs,
+      fields: ['kind', METADATA_NAME_FIELD],
+      filter: { kind: 'Component' },
+    });
+
+    expect(requests).toHaveLength(2);
+    expect(response.items).toHaveLength(LARGE_REF_COUNT);
+    expect(response.items.every((entity) => entity === undefined)).toBe(true);
+    const firstRequest = requests[0];
+    const firstBody = (await firstRequest.clone().json()) as Record<string, unknown>;
+    expect(new URL(firstRequest.url).searchParams.getAll('filter')).toEqual(['kind=Component']);
+    expect(firstBody).toMatchObject({ fields: ['kind', METADATA_NAME_FIELD] });
+  });
+
+  it('should use canonical ancestry, facet, location, and validation wire shapes', async () => {
+    const requests: Request[] = [];
+    const location = { id: 'location-1', type: 'url', target: 'https://example.test/catalog-info.yaml' };
+    const fetchImplementation: typeof globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      requests.push(request);
+      if (new URL(request.url).pathname.endsWith('/locations')) return jsonResponse([{ data: location }]);
+      return jsonResponse({ facets: {}, rootEntityRef: TEST_ENTITY_REF, items: [] });
+    };
+    const api = new BackstageCatalogApi({
+      baseUrl: TEST_BASE_URL,
+      auth: { type: 'bearer', token: TEST_TOKEN },
+      fetch: fetchImplementation,
+    });
+    const entity = { apiVersion: 'backstage.io/v1alpha1', kind: 'Component', metadata: { name: 'api' } };
+
+    await api.getEntityAncestors({ entityRef: TEST_ENTITY_REF });
+    await api.getEntityFacets({ facets: ['kind', 'spec.type'], filter: { kind: 'Component' } });
+    await api.getLocationByEntity(TEST_ENTITY_REF);
+    await expect(api.getLocationByRef(`url:${location.target}`)).resolves.toEqual(location);
+    await expect(api.validateEntity(entity, `url:${location.target}`)).resolves.toEqual({ valid: true });
+
+    const urls = requests.map((request) => new URL(request.url));
+    expect(urls.map(({ pathname }) => pathname)).toEqual([
+      '/api/catalog/entities/by-name/component/default/api/ancestry',
+      '/api/catalog/entity-facets',
+      '/api/catalog/locations/by-entity/component/default/api',
+      '/api/catalog/locations',
+      '/api/catalog/validate-entity',
+    ]);
+    expect(urls[1].searchParams.getAll('facet')).toEqual(['kind', 'spec.type']);
+    expect(urls[1].searchParams.getAll('filter')).toEqual(['kind=Component']);
+    const validationBody = await requests[4].clone().json();
+    expect(validationBody).toEqual({ entity, location: `url:${location.target}` });
+  });
+
   it('should delegate the complete supported Catalog client surface', async () => {
     const requests: Request[] = [];
     const fetchImplementation: typeof globalThis.fetch = async (input, init) => {
@@ -145,7 +217,7 @@ describe('BackstageCatalogApi', () => {
       return jsonResponse({ items: [], facets: {}, rootEntityRef: TEST_ENTITY_REF });
     };
     const api = new BackstageCatalogApi({
-      baseUrl: 'https://backstage.example.com',
+      baseUrl: TEST_BASE_URL,
       auth: { type: 'bearer', token: 'default-token' },
       fetch: fetchImplementation,
     });

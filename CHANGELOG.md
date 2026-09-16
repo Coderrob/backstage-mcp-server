@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- **Catalog API correctness**: retained the official `@backstage/catalog-client` as the single owner of canonical query serialization, entity-reference chunking, missing-reference normalization, ancestry/facet/location paths, validation bodies, and location dry-run behavior; expanded adapter contract tests to pin those behaviors.
 - **Authentication and Security**: Implemented comprehensive authentication system with AuthManager supporting multiple auth methods (Bearer, OAuth, API keys, Service accounts), automatic token refresh, rate limiting, security auditing, and input sanitization. Added security interceptors to API client and audit logging for all operations.
 - **Response Format Optimization**: Added FormattedTextResponse and MultiContentResponse utilities with specific formatters for entities, entity lists, and locations. Updated key tools to use formatted responses for better LLM interaction while maintaining JSON fallback.
 - **Error Handling**: Added comprehensive error handling to all 13 tools with try-catch blocks, proper error logging, and MCP-formatted error responses using ApiStatus.ERROR.
@@ -22,6 +23,7 @@
 
 ### Changed
 
+- Empty Catalog filter records, string values, and value arrays are rejected during MCP input validation instead of becoming silent no-op filters.
 - Updated tool metadata storage to use a global Map instead of Reflect metadata for better compatibility.
 - Modified tool factory to properly extract tool classes from ES modules.
 - Refactored test suite to use inheritance-based mocking for better isolation.

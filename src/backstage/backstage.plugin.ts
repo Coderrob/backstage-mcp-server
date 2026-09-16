@@ -17,14 +17,27 @@ export interface BackstageMcpContext {
   catalogClient: IBackstageCatalogApi;
 }
 
-const filterValueSchema = z.union([z.string(), z.array(z.string())]);
+const filterValueSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
+
+/**
+ * Reports whether a Catalog filter record contains at least one condition.
+ * @param filter - Parsed key-value filter record.
+ * @returns Whether the record has a filter key.
+ */
+function hasFilterEntries(filter: Readonly<Record<string, unknown>>): boolean {
+  return Object.keys(filter).length > 0;
+}
+
+const filterRecordSchema = z
+  .record(filterValueSchema)
+  .refine(hasFilterEntries, 'Catalog filter records cannot be empty');
 
 const fieldsSchema = z.array(z.string().min(1)).optional();
 const limitSchema = z.number().int().positive().max(1000).optional();
 const orderFieldSchema = z.object({ field: z.string().min(1), order: z.enum(['asc', 'desc']) });
 
 export const getEntitiesInputSchema = z.object({
-  filter: z.union([z.record(filterValueSchema), z.array(z.record(filterValueSchema))]).optional(),
+  filter: z.union([filterRecordSchema, z.array(filterRecordSchema).min(1)]).optional(),
   fields: fieldsSchema,
   orderFields: z.union([orderFieldSchema, z.array(orderFieldSchema)]).optional(),
   limit: limitSchema,
