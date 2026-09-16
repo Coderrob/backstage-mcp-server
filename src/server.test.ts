@@ -5,9 +5,11 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defineTransport } from './mcp/transports.js';
+import { buildAuthConfig, createBackstageServer, startServer } from './server.js';
+import { AuthType, BackstageToolName } from './shared/constants/backstage-catalog.js';
+import { McpApplicationState } from './shared/constants/mcp-protocol.js';
 import { ConfigurationError } from './shared/errors/error-handling.js';
 import { noopLogger } from './shared/logging/logger.js';
-import { buildAuthConfig, createBackstageServer, startServer } from './server.js';
 import type { IBackstageCatalogApi } from './types/index.js';
 
 const catalogClient = {} as IBackstageCatalogApi;
@@ -18,26 +20,28 @@ afterEach(() => {
 
 describe('Backstage server composition', () => {
   it('should validate external-access authentication configuration', () => {
-    expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'token' })).toEqual({ type: 'bearer', token: 'token' });
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'token' })).toEqual({ type: AuthType.BEARER, token: 'token' });
     expect(buildAuthConfig({ BACKSTAGE_TOKEN_FILE: '/run/secrets/backstage-token' })).toEqual({
-      type: 'bearer',
+      type: AuthType.BEARER,
       tokenFile: '/run/secrets/backstage-token',
     });
     expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'static-token', BACKSTAGE_TOKEN_FILE: '/run/secrets/token' })).toEqual({
-      type: 'bearer',
+      type: AuthType.BEARER,
       tokenFile: '/run/secrets/token',
     });
     expect(() => buildAuthConfig({})).toThrow(ConfigurationError);
     vi.stubEnv('BACKSTAGE_TOKEN', 'process-token');
-    expect(buildAuthConfig()).toEqual({ type: 'bearer', token: 'process-token' });
+    expect(buildAuthConfig()).toEqual({ type: AuthType.BEARER, token: 'process-token' });
   });
 
   it('should create a side-effect-free application with injected dependencies', () => {
     const app = createBackstageServer({ catalogClient, logger: noopLogger, env: {} });
-    expect(app.state).toBe('created');
-    expect(app.manifest().features).toHaveLength(13);
-    expect(createBackstageServer({ catalogClient, env: { LOG_LEVEL: 'debug' } }).state).toBe('created');
-    expect(createBackstageServer({ catalogClient, logger: noopLogger }).state).toBe('created');
+    expect(app.state).toBe(McpApplicationState.CREATED);
+    expect(app.manifest().features).toHaveLength(Object.values(BackstageToolName).length);
+    expect(createBackstageServer({ catalogClient, env: { LOG_LEVEL: 'debug' } }).state).toBe(
+      McpApplicationState.CREATED
+    );
+    expect(createBackstageServer({ catalogClient, logger: noopLogger }).state).toBe(McpApplicationState.CREATED);
   });
 
   it('should reject missing URL and token when constructing the runtime context', async () => {
@@ -67,14 +71,14 @@ describe('Backstage server composition', () => {
     });
     const client = new Client({ name: 'server-test', version: '1.0.0' });
     await client.connect(clientTransport);
-    expect((await client.listTools()).tools).toHaveLength(13);
+    expect((await client.listTools()).tools).toHaveLength(Object.values(BackstageToolName).length);
     await client.close();
     await app.stop('test-complete');
   });
 
   it('should default to the stdio transport when no factory is injected', async () => {
     const app = await startServer({ catalogClient, logger: noopLogger, env: {} });
-    expect(app.state).toBe('running');
+    expect(app.state).toBe(McpApplicationState.RUNNING);
     await app.stop('stdio-test-complete');
   });
 });

@@ -12,17 +12,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { resolve } from 'path';
-import { fileURLToPath, URL } from 'url';
-import { readFileSync } from 'fs';
-import process from 'process';
-import typescript from '@rollup/plugin-typescript';
-import nodeResolve from '@rollup/plugin-node-resolve';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import process from 'node:process';
+import { fileURLToPath, URL } from 'node:url';
+
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
-import terser from '@rollup/plugin-terser';
+import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
-import preserveShebang from 'rollup-plugin-preserve-shebang';
+import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
 import dts from 'rollup-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -186,7 +186,6 @@ export default [
     external,
     onwarn,
     plugins: [
-      preserveShebang(),
       ...commonPlugins,
       terser({
         format: {
@@ -208,7 +207,6 @@ export default [
     external,
     onwarn,
     plugins: [
-      preserveShebang(),
       ...commonPlugins,
       terser({
         format: {

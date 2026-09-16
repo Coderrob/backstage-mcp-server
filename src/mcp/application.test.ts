@@ -8,6 +8,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
+import { McpApplicationState, McpFeatureKind } from '../shared/constants/mcp-protocol.js';
+import type { Logger } from '../shared/logging/logger.js';
 import type { McpApplication } from './application.js';
 import { createMcpServer } from './application.js';
 import type { CompiledFeature, ToolDefinition } from './definitions.js';
@@ -17,7 +19,6 @@ import { jsonResult } from './results.js';
 import type { SdkRequestExtra } from './sdk-adapter.js';
 import { connectTestClient } from './testing.js';
 import { defineTransport } from './transports.js';
-import type { Logger } from '../shared/logging/logger.js';
 
 interface TestContext {
   prefix: string;
@@ -123,7 +124,7 @@ function findTool(
   name: string
 ): CompiledFeature<TestContext> & { feature: ToolDefinition<TestContext> } {
   const compiled = app.listFeatures().find((entry) => entry.feature.name === name);
-  if (!compiled || compiled.feature.kind !== 'tool') throw new Error(`Missing test tool '${name}'`);
+  if (!compiled || compiled.feature.kind !== McpFeatureKind.TOOL) throw new Error(`Missing test tool '${name}'`);
   return compiled as CompiledFeature<TestContext> & { feature: ToolDefinition<TestContext> };
 }
 
@@ -158,7 +159,7 @@ describe('MCP generic harness', () => {
     const app = createTestApplication();
     expect(app.listFeatures()).toHaveLength(5);
     await app.stop();
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
     const [, serverTransport] = InMemoryTransport.createLinkedPair();
     await expect(app.start(defineTransport('invalid-restart', () => serverTransport))).rejects.toThrow(
       /Cannot start an application/
@@ -193,7 +194,7 @@ describe('MCP generic harness', () => {
     } finally {
       await connection.close();
     }
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
   });
 
   it('should map typed failures to MCP error results', async () => {
@@ -366,6 +367,7 @@ describe('MCP generic harness', () => {
       description: 'Throw a non-Error value.',
       inputSchema: z.object({}),
       handler() {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies safe handling of foreign throws.
         throw 'string failure';
       },
     });
@@ -465,7 +467,10 @@ describe('MCP generic harness', () => {
       createContext: () => ({ prefix: '' }),
     });
     const [template, compiledTool] = app.listFeatures();
-    if (template?.feature.kind !== 'resource-template' || compiledTool?.feature.kind !== 'tool') {
+    if (
+      template.feature.kind !== McpFeatureKind.RESOURCE_TEMPLATE ||
+      compiledTool.feature.kind !== McpFeatureKind.TOOL
+    ) {
       throw new Error('Expected test features were not compiled');
     }
     await expect(
@@ -484,7 +489,7 @@ describe('MCP generic harness', () => {
       inputSchema: z.object({}),
       handler: ({ request }) =>
         new Promise((resolve) => {
-          request.signal.addEventListener('abort', () => resolve(jsonResult({ aborted: true })), { once: true });
+          request.signal.addEventListener('abort', () => { resolve(jsonResult({ aborted: true })); }, { once: true });
         }),
     });
     const app = createMcpServer<TestContext>({
@@ -498,7 +503,7 @@ describe('MCP generic harness', () => {
     const secondStop = app.stop('second-stop');
     await Promise.all([firstStop, secondStop, invocation]);
     await connection.close();
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
   });
 
   it('should cancel and clean up startup before stop resolves', async () => {
@@ -514,13 +519,13 @@ describe('MCP generic harness', () => {
     const startTransport = vi.spyOn(serverTransport, 'start');
 
     const starting = app.start(defineTransport('delayed-start', () => serverTransport));
-    expect(app.state).toBe('starting');
+    expect(app.state).toBe(McpApplicationState.STARTING);
     const stopping = app.stop('cancel-startup');
     context.resolve({ prefix: '' });
 
     await expect(starting).rejects.toThrow('startup was cancelled');
     await expect(stopping).resolves.toBeUndefined();
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
     expect(startTransport).toHaveBeenCalledTimes(0);
     expect(disposeContext).toHaveBeenCalledTimes(1);
   });
@@ -575,6 +580,7 @@ describe('MCP generic harness', () => {
       version: '1.0.0',
       features: [],
       dispose() {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies cleanup after foreign throws.
         throw 'second dispose failed';
       },
     });
@@ -584,6 +590,7 @@ describe('MCP generic harness', () => {
       logger: createRecordingLogger(errors),
       createContext: () => ({ prefix: '' }),
       disposeContext() {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies cleanup after foreign throws.
         throw 'context dispose failed';
       },
     });
@@ -674,7 +681,7 @@ describe('MCP generic harness', () => {
     const [, serverTransport] = InMemoryTransport.createLinkedPair();
 
     await expect(app.start(defineTransport('unused', () => serverTransport))).rejects.toThrow('setup failed');
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
     expect(events).toEqual(['context:create', 'setup:first', 'setup:second', 'dispose:first', 'context:dispose']);
   });
 });

@@ -9,19 +9,37 @@ import { createServer } from 'node:http';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
+import {
+  BACKSTAGE_ENVIRONMENT_VARIABLE,
+  CATALOG_QUERY_PATH,
+  EXPECTED_MCP_TOOL_NAMES,
+  HTTP_AUTHORIZATION_SCHEME,
+  HTTP_HEADER,
+  HTTP_STATUS,
+  LOOPBACK_HOST,
+  MCP_TOOL_NAME,
+  MIME_TYPE,
+  PACKAGED_SERVER_ENTRY,
+  PROCESS_LOG_LEVEL,
+  SMOKE_CLIENT_VERSION,
+  STDERR_MODE,
+} from './mcp-smoke-constants.mjs';
+
+const TEST_TOKEN = 'smoke-test-token';
+
 let requestVerified = false;
 const upstream = createServer(
   /** Serves the deterministic Catalog API response expected by the CLI. */ (request, response) => {
     if (
-      request.url !== '/api/catalog/entities/by-query?limit=1' ||
-      request.headers.authorization !== 'Bearer smoke-test-token'
+      request.url !== CATALOG_QUERY_PATH ||
+      request.headers[HTTP_HEADER.AUTHORIZATION] !== `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${TEST_TOKEN}`
     ) {
-      response.writeHead(400, { 'content-type': 'application/json' });
+      response.writeHead(HTTP_STATUS.BAD_REQUEST, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
       response.end(JSON.stringify({ error: 'Unexpected request' }));
       return;
     }
     requestVerified = true;
-    response.writeHead(200, { 'content-type': 'application/json' });
+    response.writeHead(HTTP_STATUS.OK, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
     response.end(
       JSON.stringify({
         items: [{ kind: 'Component', metadata: { name: 'smoke-test' } }],
@@ -35,7 +53,7 @@ const upstream = createServer(
 await new Promise(
   /** Starts the deterministic Catalog API stub. */ (resolve, reject) => {
     upstream.once('error', reject);
-    upstream.listen(0, '127.0.0.1', resolve);
+    upstream.listen(0, LOOPBACK_HOST, resolve);
   }
 );
 const address = upstream.address();
@@ -43,42 +61,27 @@ if (!address || typeof address === 'string') throw new Error('Could not determin
 
 const transport = new StdioClientTransport({
   command: process.execPath,
-  args: ['dist/cli.cjs'],
+  args: [PACKAGED_SERVER_ENTRY],
   cwd: process.cwd(),
   env: {
     ...getDefaultEnvironment(),
-    BACKSTAGE_BASE_URL: `http://127.0.0.1:${address.port}`,
-    BACKSTAGE_TOKEN: 'smoke-test-token',
-    LOG_LEVEL: 'info',
+    [BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL]: `http://${LOOPBACK_HOST}:${address.port}`,
+    [BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN]: TEST_TOKEN,
+    [BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL]: PROCESS_LOG_LEVEL.INFO,
   },
-  stderr: 'pipe',
+  stderr: STDERR_MODE,
 });
 
-const client = new Client({ name: 'cli-smoke-test', version: '1.0.0' });
+const client = new Client({ name: 'cli-smoke-test', version: SMOKE_CLIENT_VERSION });
 
 try {
   await client.connect(transport);
   const result = await client.listTools();
   const names = result.tools.map(/** Selects an advertised tool name. */ ({ name }) => name);
-  const expected = [
-    'add_location',
-    'get_entities',
-    'get_entities_by_query',
-    'get_entities_by_refs',
-    'get_entity_ancestors',
-    'get_entity_by_ref',
-    'get_entity_facets',
-    'get_location_by_entity',
-    'get_location_by_ref',
-    'refresh_entity',
-    'remove_entity_by_uid',
-    'remove_location_by_id',
-    'validate_entity',
-  ];
-  if (JSON.stringify(names) !== JSON.stringify(expected)) {
+  if (JSON.stringify(names) !== JSON.stringify(EXPECTED_MCP_TOOL_NAMES)) {
     throw new Error(`Unexpected CLI tool list: ${JSON.stringify(names)}`);
   }
-  const called = await client.callTool({ name: 'get_entities', arguments: { limit: 1 } });
+  const called = await client.callTool({ name: MCP_TOOL_NAME.GET_ENTITIES, arguments: { limit: 1 } });
   if (called.isError || called.structuredContent?.data?.items?.[0]?.metadata?.name !== 'smoke-test') {
     throw new Error(`Unexpected CLI tool result: ${JSON.stringify(called)}`);
   }

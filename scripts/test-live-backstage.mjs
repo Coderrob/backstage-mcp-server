@@ -3,21 +3,16 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-const EXPECTED_TOOLS = [
-  'add_location',
-  'get_entities',
-  'get_entities_by_query',
-  'get_entities_by_refs',
-  'get_entity_ancestors',
-  'get_entity_by_ref',
-  'get_entity_facets',
-  'get_location_by_entity',
-  'get_location_by_ref',
-  'refresh_entity',
-  'remove_entity_by_uid',
-  'remove_location_by_id',
-  'validate_entity',
-];
+import {
+  BACKSTAGE_ENVIRONMENT_VARIABLE,
+  EXPECTED_MCP_TOOL_NAMES,
+  MCP_RESULT_STATUS,
+  MCP_TOOL_NAME,
+  PACKAGED_SERVER_ENTRY,
+  PROCESS_LOG_LEVEL,
+  SMOKE_CLIENT_VERSION,
+  STDERR_MODE,
+} from './mcp-smoke-constants.mjs';
 
 /**
  * Reads the required live Backstage base URL.
@@ -25,8 +20,10 @@ const EXPECTED_TOOLS = [
  * @throws {Error} When the URL is not configured.
  */
 function backstageBaseUrl() {
-  const baseUrl = process.env.BACKSTAGE_BASE_URL;
-  if (!baseUrl) throw new Error('BACKSTAGE_BASE_URL is required for the live integration test');
+  const baseUrl = process.env[BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL];
+  if (!baseUrl) {
+    throw new Error(`${BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL} is required for the live integration test`);
+  }
   return baseUrl;
 }
 
@@ -36,11 +33,13 @@ function backstageBaseUrl() {
  * @throws {Error} When neither supported credential source is configured.
  */
 function credentialEnvironment() {
-  const token = process.env.BACKSTAGE_TOKEN;
-  if (token) return { BACKSTAGE_TOKEN: token };
-  const tokenFile = process.env.BACKSTAGE_TOKEN_FILE;
-  if (tokenFile) return { BACKSTAGE_TOKEN_FILE: tokenFile };
-  throw new Error('BACKSTAGE_TOKEN or BACKSTAGE_TOKEN_FILE is required for the live test');
+  const token = process.env[BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN];
+  if (token) return { [BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN]: token };
+  const tokenFile = process.env[BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN_FILE];
+  if (tokenFile) return { [BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN_FILE]: tokenFile };
+  throw new Error(
+    `${BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN} or ${BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN_FILE} is required for the live test`
+  );
 }
 
 /**
@@ -50,9 +49,9 @@ function credentialEnvironment() {
 function liveEnvironment() {
   return {
     ...getDefaultEnvironment(),
-    BACKSTAGE_BASE_URL: backstageBaseUrl(),
+    [BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL]: backstageBaseUrl(),
     ...credentialEnvironment(),
-    LOG_LEVEL: 'warn',
+    [BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL]: PROCESS_LOG_LEVEL.WARN,
   };
 }
 
@@ -62,7 +61,7 @@ function liveEnvironment() {
  * @throws {Error} When the tool list differs from the supported surface.
  */
 function assertExpectedTools(names) {
-  if (JSON.stringify(names) !== JSON.stringify(EXPECTED_TOOLS)) {
+  if (JSON.stringify(names) !== JSON.stringify(EXPECTED_MCP_TOOL_NAMES)) {
     throw new Error(`Unexpected live MCP tool list: ${JSON.stringify(names)}`);
   }
 }
@@ -73,7 +72,7 @@ function assertExpectedTools(names) {
  * @returns Whether the result is successful.
  */
 function isSuccessfulRead(result) {
-  return result.isError !== true && result.structuredContent?.status === 'success';
+  return result.isError !== true && result.structuredContent?.status === MCP_RESULT_STATUS.SUCCESS;
 }
 
 /**
@@ -94,18 +93,18 @@ function assertSuccessfulRead(result) {
 async function main() {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: ['dist/cli.cjs'],
+    args: [PACKAGED_SERVER_ENTRY],
     cwd: process.cwd(),
     env: liveEnvironment(),
-    stderr: 'pipe',
+    stderr: STDERR_MODE,
   });
-  const client = new Client({ name: 'live-backstage-test', version: '1.0.0' });
+  const client = new Client({ name: 'live-backstage-test', version: SMOKE_CLIENT_VERSION });
   try {
     await client.connect(transport);
     const listed = await client.listTools();
     const names = listed.tools.map(/** Selects one advertised tool name. */ ({ name }) => name);
     assertExpectedTools(names);
-    const result = await client.callTool({ name: 'get_entities', arguments: { limit: 1 } });
+    const result = await client.callTool({ name: MCP_TOOL_NAME.GET_ENTITIES, arguments: { limit: 1 } });
     assertSuccessfulRead(result);
     process.stdout.write(`Live Backstage MCP test passed (${names.length} tools, one read-only call)\n`);
   } finally {

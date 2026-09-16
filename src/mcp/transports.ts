@@ -7,11 +7,10 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
-/** Lazily creates a named SDK transport for an application instance. */
-export interface McpTransportFactory {
-  readonly name: string;
-  create(): Transport;
-}
+import { McpTransportName } from '../shared/constants/mcp-protocol.js';
+import type { McpTransportFactory } from '../types/mcp.js';
+
+export type { McpTransportFactory } from '../types/mcp.js';
 
 /**
  * Creates an immutable transport factory.
@@ -28,5 +27,8 @@ export function defineTransport(name: string, create: () => Transport): McpTrans
  * @returns A stdio transport factory suitable for CLI execution.
  */
 export function stdioTransport(): McpTransportFactory {
-  return defineTransport('stdio', /** Creates the transport instance. */ () => new StdioServerTransport());
+  return defineTransport(
+    McpTransportName.STDIO,
+    /** Creates the transport instance. */ () => new StdioServerTransport()
+  );
 }

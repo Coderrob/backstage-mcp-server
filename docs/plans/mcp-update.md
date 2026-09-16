@@ -1,5 +1,7 @@
 # MCP Generic Harness Implementation Plan
 
+> **Implementation record:** Most phases in this plan are delivered. Use the [current architecture overview](../architecture/overview.md), [tool-authoring guide](../development/adding-tools.md), and [repository tooling guide](../development/repository-tooling.md) for current instructions.
+
 ## Objective
 
 Create a small, type-safe harness that makes an MCP server simple to define, compose, start, test, and stop. The harness will support tools, resources, resource templates, and prompts without depending on Backstage. The existing Backstage catalog behavior will become a plugin built on the harness.
@@ -276,7 +278,7 @@ src/
     index.ts                # side-effect-free public exports
   shared/
     errors/ logging/ validation/
-  types/                    # type-only Backstage adapter contracts
+  types/                    # reusable MCP, Backstage, logging, CLI, and auth contracts
   cli.ts                    # env loading, signals, stderr logger, app.start
   server.ts                 # Backstage composition root
   generate-manifest.ts      # deterministic manifest entrypoint

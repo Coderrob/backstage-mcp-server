@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogFilterSchema,
@@ -16,7 +17,7 @@ const inputSchema = z.object({ filter: catalogFilterSchema.optional(), facets: z
 
 /** Retrieves aggregate facet values for Catalog entity fields. */
 export const getEntityFacetsTool = defineTool<BackstageMcpContext>()({
-  name: 'get_entity_facets',
+  name: BackstageToolName.GET_ENTITY_FACETS,
   title: 'Get catalog entity facets',
   description: 'Retrieve facet counts for one or more Backstage Catalog entity fields.',
   inputSchema,

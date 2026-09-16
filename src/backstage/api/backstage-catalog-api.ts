@@ -5,9 +5,9 @@
  */
 
 import {
-  CatalogClient,
   type AddLocationRequest,
   type AddLocationResponse,
+  CatalogClient,
   type CatalogRequestOptions,
   type GetEntitiesByRefsRequest,
   type GetEntitiesByRefsResponse,
@@ -22,19 +22,16 @@ import {
 } from '@backstage/catalog-client';
 import type { CompoundEntityRef, Entity } from '@backstage/catalog-model';
 
+import {
+  AUTHORIZATION_HEADER_NAME,
+  BACKSTAGE_CATALOG_PATH,
+  BACKSTAGE_CATALOG_PLUGIN_ID,
+} from '../../shared/constants/backstage-catalog.js';
 import { ConfigurationError } from '../../shared/errors/error-handling.js';
-import type { IAuthConfig, IBackstageCatalogApi } from '../../types/index.js';
+import type { IBackstageCatalogApi, IBackstageCatalogApiOptions, ICatalogDiscoveryApi } from '../../types/index.js';
 import { AuthManager } from '../auth/auth-manager.js';
 
-const CATALOG_PLUGIN_ID = 'catalog';
-const CATALOG_PATH = '/api/catalog';
-
-/** Options for the official Backstage Catalog client adapter. */
-export interface IBackstageCatalogApiOptions {
-  baseUrl: string;
-  auth: IAuthConfig;
-  fetch?: typeof globalThis.fetch;
-}
+export type { IBackstageCatalogApiOptions, ICatalogDiscoveryApi } from '../../types/backstage.js';
 
 /**
  * Converts a Backstage backend URL into the Catalog plugin base URL.
@@ -43,12 +40,7 @@ export interface IBackstageCatalogApiOptions {
  */
 export function normalizeCatalogBaseUrl(baseUrl: string): string {
   const normalized = baseUrl.replace(/\/+$/, '');
-  return normalized.endsWith(CATALOG_PATH) ? normalized : `${normalized}${CATALOG_PATH}`;
-}
-
-/** Minimal discovery contract consumed by the official Catalog client. */
-export interface ICatalogDiscoveryApi {
-  getBaseUrl(pluginId: string): Promise<string>;
+  return normalized.endsWith(BACKSTAGE_CATALOG_PATH) ? normalized : `${normalized}${BACKSTAGE_CATALOG_PATH}`;
 }
 
 /**
@@ -65,7 +57,7 @@ export function createCatalogDiscoveryApi(catalogBaseUrl: string): ICatalogDisco
      * @throws {ConfigurationError} When a non-Catalog plugin is requested.
      */
     async getBaseUrl(pluginId: string): Promise<string> {
-      if (pluginId !== CATALOG_PLUGIN_ID) {
+      if (pluginId !== BACKSTAGE_CATALOG_PLUGIN_ID) {
         throw new ConfigurationError(`Unsupported Backstage plugin discovery request: ${pluginId}`);
       }
       return catalogBaseUrl;
@@ -91,9 +83,9 @@ function createAuthenticatedFetch(
    */
   async function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const request = new Request(input, init);
-    if (request.headers.has('authorization')) return fetchImplementation(request);
+    if (request.headers.has(AUTHORIZATION_HEADER_NAME)) return fetchImplementation(request);
     const headers = new Headers(request.headers);
-    headers.set('authorization', await authManager.getAuthorizationHeader());
+    headers.set(AUTHORIZATION_HEADER_NAME, await authManager.getAuthorizationHeader());
     return fetchImplementation(new Request(request, { headers }));
   }
 

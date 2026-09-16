@@ -13,7 +13,7 @@ Dependency updates were grouped across npm/Yarn and GitHub Actions with a unifor
 
 - Require Node.js 24 or newer through package metadata and developer version files.
 - Exercise Node.js 24 in CI and release automation and emit ES2024 output.
-- Pin Yarn 4.4.0 exactly and use immutable installs.
+- Pin Yarn exactly through `packageManager` and use immutable installs.
 - Pin every GitHub Action to a full commit SHA while retaining a readable release comment.
 - Run the complete repository and packaged MCP verification suite before publication.
 - Require the release tag to match the package version, publish npm provenance, and create GitHub releases with the preinstalled GitHub CLI.

@@ -6,7 +6,10 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
+import { McpContentType } from '../shared/constants/mcp-protocol.js';
 import { McpErrorCode, McpHarnessError } from './errors.js';
+
+const JSON_INDENT_SPACES = 2;
 
 /**
  * Creates an MCP error result with structured error metadata.
@@ -23,7 +26,7 @@ export function errorResult(
   const body = { error: { code, message, ...(details ? { details } : {}) } };
   return {
     isError: true,
-    content: [{ type: 'text', text: stringify(body) }],
+    content: [{ type: McpContentType.TEXT, text: stringify(body) }],
     structuredContent: body,
   };
 }
@@ -35,8 +38,8 @@ export function errorResult(
  */
 export function jsonResult<T extends object>(value: Readonly<T>): CallToolResult {
   return {
-    content: [{ type: 'text', text: stringify(value) }],
-    structuredContent: value as Record<string, unknown>,
+    content: [{ type: McpContentType.TEXT, text: stringify(value) }],
+    structuredContent: value,
   };
 }
 
@@ -61,9 +64,9 @@ export function mapToolError(error: unknown, requestId: string): CallToolResult 
 function stringify(value: unknown): string {
   return JSON.stringify(
     value,
-    /** Serializes bigint values without losing precision. */ (_key, nested) =>
+    /** Serializes bigint values without losing precision. */ (_key: string, nested: unknown): unknown =>
       typeof nested === 'bigint' ? nested.toString() : nested,
-    2
+    JSON_INDENT_SPACES
   );
 }
 
@@ -73,5 +76,5 @@ function stringify(value: unknown): string {
  * @returns An MCP tool result containing one text content block.
  */
 export function textResult(text: string): CallToolResult {
-  return { content: [{ type: 'text', text }] };
+  return { content: [{ type: McpContentType.TEXT, text }] };
 }

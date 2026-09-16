@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogReadPolicy,
@@ -18,7 +19,7 @@ const inputSchema = z.object({ entityRefs: z.array(entityRefSchema).min(1), fiel
 
 /** Retrieves multiple Catalog entities by reference. */
 export const getEntitiesByRefsTool = defineTool<BackstageMcpContext>()({
-  name: 'get_entities_by_refs',
+  name: BackstageToolName.GET_ENTITIES_BY_REFS,
   title: 'Get catalog entities by references',
   description: 'Retrieve multiple Backstage Catalog entities by string or structured compound references.',
   inputSchema,

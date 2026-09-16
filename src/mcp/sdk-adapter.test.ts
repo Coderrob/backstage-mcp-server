@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { definePlugin, definePrompt, defineResource, defineResourceTemplate, defineTool } from './definitions.js';
 import { McpRegistry } from './registry.js';
 import { jsonResult } from './results.js';
-import { registerSdkFeatures, type McpFeatureRuntime } from './sdk-adapter.js';
+import { type McpFeatureRuntime,registerSdkFeatures } from './sdk-adapter.js';
 
 describe('registerSdkFeatures', () => {
   it('should register every feature kind with the SDK server', () => {

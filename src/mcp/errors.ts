@@ -19,6 +19,7 @@ export enum McpErrorCode {
   INVALID_LIFECYCLE = 'INVALID_LIFECYCLE',
 }
 
+/** Base error carrying a stable MCP harness error code and safe details. */
 export class McpHarnessError extends Error {
   /**
    * Creates an error raised by the generic MCP harness.
@@ -38,6 +39,7 @@ export class McpHarnessError extends Error {
   }
 }
 
+/** Reports invalid input received by an MCP feature. */
 export class McpInputError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -49,6 +51,7 @@ export class McpInputError extends McpHarnessError {
   }
 }
 
+/** Reports output that does not satisfy a feature's declared schema. */
 export class McpOutputError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -59,6 +62,7 @@ export class McpOutputError extends McpHarnessError {
   }
 }
 
+/** Reports that a request requires an authenticated principal. */
 export class McpAuthenticationError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -69,6 +73,7 @@ export class McpAuthenticationError extends McpHarnessError {
   }
 }
 
+/** Reports that a principal lacks one or more required scopes. */
 export class McpAuthorizationError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -79,6 +84,7 @@ export class McpAuthorizationError extends McpHarnessError {
   }
 }
 
+/** Reports that a requested MCP or upstream resource does not exist. */
 export class McpNotFoundError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -90,6 +96,7 @@ export class McpNotFoundError extends McpHarnessError {
   }
 }
 
+/** Reports that an invocation exceeded its configured request allowance. */
 export class McpRateLimitError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -100,16 +107,18 @@ export class McpRateLimitError extends McpHarnessError {
   }
 }
 
+/** Reports that an invocation exceeded its configured timeout. */
 export class McpTimeoutError extends McpHarnessError {
   /**
    * Creates a new application instance.
    * @param timeoutMs - The timeout ms.
    */
   constructor(timeoutMs: number) {
-    super(McpErrorCode.TIMEOUT, `Operation timed out after ${timeoutMs}ms`, { timeoutMs });
+    super(McpErrorCode.TIMEOUT, `Operation timed out after ${String(timeoutMs)}ms`, { timeoutMs });
   }
 }
 
+/** Reports a sanitized failure returned by an upstream service. */
 export class McpUpstreamError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -121,6 +130,7 @@ export class McpUpstreamError extends McpHarnessError {
   }
 }
 
+/** Reports invalid harness, plugin, or feature configuration. */
 export class McpConfigurationError extends McpHarnessError {
   /**
    * Creates a new application instance.
@@ -132,6 +142,7 @@ export class McpConfigurationError extends McpHarnessError {
   }
 }
 
+/** Reports an operation that is invalid for the application's current state. */
 export class McpLifecycleError extends McpHarnessError {
   /**
    * Creates a new application instance.

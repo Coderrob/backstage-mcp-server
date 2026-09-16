@@ -5,7 +5,7 @@
 
 ## Context
 
-Repository automation and protocol verification are implemented as `.mjs` modules. These scripts participate in builds, architecture checks, manifest validation, and end-to-end MCP tests, but previously used the repository's broad complexity limit and advisory function-size rules. The zero-tolerance plugin documents functions but does not enforce class documentation in version 1.2.4.
+Repository automation and protocol verification are implemented as `.mjs` modules. These scripts participate in builds, architecture checks, manifest validation, and end-to-end MCP tests, but previously used the repository's broad complexity limit and advisory function-size rules. The zero-tolerance plugin documents functions, while the repository supplies its own explicit class-documentation rule.
 
 ## Decision
 

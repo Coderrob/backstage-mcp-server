@@ -31,7 +31,7 @@ Each helper has a colocated BATS suite that verifies entrypoint isolation, argum
 
 ## Current limitations
 
-The helper scripts predate the repository's Yarn 4 configuration. Some paths still invoke Yarn 1 commands that Yarn 4.4.0 does not provide:
+The helper scripts predate the repository's Yarn 4 configuration. Some paths still invoke Yarn 1 commands that the pinned Yarn release does not provide:
 
 - `deps:update` calls `yarn upgrade`;
 - `deps:audit` calls `yarn audit`; and

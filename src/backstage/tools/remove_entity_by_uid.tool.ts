@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import { catalogResult, catalogWritePolicy, destructiveAnnotations, successOutputSchema } from './shared.js';
 
@@ -10,7 +11,7 @@ const inputSchema = z.object({ uid: z.string().uuid() });
 
 /** Permanently removes one Catalog entity by UID. */
 export const removeEntityByUidTool = defineTool<BackstageMcpContext>()({
-  name: 'remove_entity_by_uid',
+  name: BackstageToolName.REMOVE_ENTITY_BY_UID,
   title: 'Remove a catalog entity',
   description: 'Permanently remove a Backstage Catalog entity by its unique identifier.',
   inputSchema,

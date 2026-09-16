@@ -13,16 +13,18 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { AuthType } from '../shared/constants/backstage-catalog.js';
+
 /** Bearer authentication backed by an immutable token value. */
 interface IStaticBearerAuthConfig {
-  type: 'bearer';
+  type: AuthType.BEARER;
   token: string;
   tokenFile?: never;
 }
 
 /** Bearer authentication backed by an externally managed token file. */
 export interface IFileBearerAuthConfig {
-  type: 'bearer';
+  type: AuthType.BEARER;
   token?: never;
   tokenFile: string;
 }

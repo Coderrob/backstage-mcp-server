@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import { catalogResult, catalogWritePolicy, destructiveAnnotations, successOutputSchema } from './shared.js';
 
@@ -10,7 +11,7 @@ const inputSchema = z.object({ locationId: z.string().min(1) });
 
 /** Permanently removes one Catalog location by identifier. */
 export const removeLocationByIdTool = defineTool<BackstageMcpContext>()({
-  name: 'remove_location_by_id',
+  name: BackstageToolName.REMOVE_LOCATION_BY_ID,
   title: 'Remove a catalog location',
   description: 'Permanently remove a Backstage Catalog location by its identifier.',
   inputSchema,

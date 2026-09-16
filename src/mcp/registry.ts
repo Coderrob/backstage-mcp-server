@@ -4,42 +4,28 @@
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
  */
 
+import type { ZodTypeAny } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
+import { McpFeatureKind } from '../shared/constants/mcp-protocol.js';
 import type {
   CompiledFeature,
   McpFeature,
+  McpManifest,
+  McpManifestFeature,
   McpToolCachePolicy,
   McpToolPolicy,
   McpToolRateLimitPolicy,
   PluginDefinition,
   ToolDefinition,
-} from './definitions.js';
+} from '../types/mcp.js';
 import { McpConfigurationError } from './errors.js';
 
-/** Serializable manifest metadata for one registered feature. */
-export interface McpManifestFeature {
-  kind: McpFeature<unknown>['kind'];
-  name: string;
-  plugin: string;
-  title?: string;
-  description?: string;
-  uri?: string;
-  uriTemplate?: string;
-  inputSchema?: Record<string, unknown>;
-  outputSchema?: Record<string, unknown>;
-  annotations?: Record<string, unknown>;
-  policy?: Record<string, unknown>;
-}
-
-/** Deterministic description of a server and all registered plugin features. */
-export interface McpManifest {
-  server: { name: string; version: string };
-  plugins: Array<{ name: string; version: string; description?: string }>;
-  features: McpManifestFeature[];
-}
+export type { McpManifest, McpManifestFeature } from '../types/mcp.js';
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{1,127}$/;
+const JSON_SCHEMA_REFERENCE_STRATEGY = 'none' as const;
+const PLUGIN_DEFINITION_KIND = 'plugin';
 
 /**
  * Asserts optional positive.
@@ -75,7 +61,7 @@ function compileFeature<TContext>(
   state: Readonly<CompilationState>
 ): CompiledFeature<TContext> {
   validateName(feature.kind, feature.name);
-  const namespace = feature.kind === 'resource-template' ? 'resource' : feature.kind;
+  const namespace = feature.kind === McpFeatureKind.RESOURCE_TEMPLATE ? McpFeatureKind.RESOURCE : feature.kind;
   const key = `${namespace}:${feature.name}`;
   const owner = state.featureNames.get(key);
   if (owner) {
@@ -85,7 +71,7 @@ function compileFeature<TContext>(
     });
   }
   state.featureNames.set(key, plugin.name);
-  if (feature.kind === 'tool') validateToolPolicy(feature as unknown as ToolDefinition<unknown>);
+  if (feature.kind === McpFeatureKind.TOOL) validateToolPolicy(feature as unknown as ToolDefinition<unknown>);
   return Object.freeze({ plugin, feature });
 }
 
@@ -100,7 +86,7 @@ function compilePlugin<TContext>(
   plugin: Readonly<PluginDefinition<TContext>>,
   state: Readonly<CompilationState>
 ): CompiledFeature<TContext>[] {
-  validateName('plugin', plugin.name);
+  validateName(PLUGIN_DEFINITION_KIND, plugin.name);
   if (!plugin.version.trim()) throw new McpConfigurationError(`Plugin '${plugin.name}' must declare a version`);
   if (state.pluginNames.has(plugin.name)) throw new McpConfigurationError(`Duplicate plugin '${plugin.name}'`);
   state.pluginNames.add(plugin.name);
@@ -173,6 +159,56 @@ function validateToolPolicy(tool: Readonly<ToolDefinition<unknown>>): void {
   if (tool.policy) validatePolicyFields(tool, tool.policy);
 }
 
+/**
+ * Converts a Zod schema into the inline JSON Schema stored in the manifest.
+ * @param schema - Runtime schema to serialize.
+ * @returns JSON Schema without the redundant draft declaration.
+ */
+function serializeSchema(schema: Readonly<ZodTypeAny>): Record<string, unknown> {
+  const { $schema: _schemaDeclaration, ...document } = zodToJsonSchema(schema, {
+    $refStrategy: JSON_SCHEMA_REFERENCE_STRATEGY,
+  }) as Record<string, unknown>;
+  return document;
+}
+
+/**
+ * Creates metadata shared by every serialized MCP feature.
+ * @param compiled - Feature and owning plugin metadata.
+ * @returns Common manifest feature fields.
+ */
+function manifestFeatureBase<TContext>(compiled: Readonly<CompiledFeature<TContext>>): McpManifestFeature {
+  const { feature, plugin } = compiled;
+  return {
+    kind: feature.kind,
+    name: feature.name,
+    plugin: plugin.name,
+    title: feature.title,
+    description: feature.description,
+  };
+}
+
+/**
+ * Serializes one compiled feature for the deterministic manifest.
+ * @param compiled - Feature and owning plugin metadata.
+ * @returns Manifest representation of the feature.
+ */
+function manifestFeature<TContext>(compiled: Readonly<CompiledFeature<TContext>>): McpManifestFeature {
+  const { feature } = compiled;
+  const common = manifestFeatureBase(compiled);
+  if (feature.kind === McpFeatureKind.TOOL) {
+    return {
+      ...common,
+      inputSchema: serializeSchema(feature.inputSchema),
+      outputSchema: feature.outputSchema ? serializeSchema(feature.outputSchema) : undefined,
+      annotations: feature.annotations,
+      policy: feature.policy,
+    };
+  }
+  if (feature.kind === McpFeatureKind.RESOURCE) return { ...common, uri: feature.uri };
+  if (feature.kind === McpFeatureKind.RESOURCE_TEMPLATE) return { ...common, uriTemplate: feature.uriTemplate };
+  return { ...common, inputSchema: serializeSchema(feature.argsSchema) };
+}
+
 /** Validates plugins, detects collisions, and exposes compiled features and manifests. */
 export class McpRegistry<TContext> {
   private readonly compiled: CompiledFeature<TContext>[];
@@ -212,40 +248,7 @@ export class McpRegistry<TContext> {
           description,
         })
       ),
-      features: this.compiled.map(
-        /** Maps each item to its transformed value. */ ({ plugin, feature }) => {
-          const common = {
-            kind: feature.kind,
-            name: feature.name,
-            plugin: plugin.name,
-            title: feature.title,
-            description: feature.description,
-          };
-          if (feature.kind === 'tool') {
-            const inputSchema = zodToJsonSchema(feature.inputSchema, { $refStrategy: 'none' }) as Record<
-              string,
-              unknown
-            >;
-            delete inputSchema.$schema;
-            const outputSchema = feature.outputSchema
-              ? (zodToJsonSchema(feature.outputSchema, { $refStrategy: 'none' }) as Record<string, unknown>)
-              : undefined;
-            if (outputSchema) delete outputSchema.$schema;
-            return {
-              ...common,
-              inputSchema,
-              outputSchema,
-              annotations: feature.annotations as Record<string, unknown> | undefined,
-              policy: feature.policy as Record<string, unknown> | undefined,
-            };
-          }
-          if (feature.kind === 'resource') return { ...common, uri: feature.uri };
-          if (feature.kind === 'resource-template') return { ...common, uriTemplate: feature.uriTemplate };
-          const schema = zodToJsonSchema(feature.argsSchema, { $refStrategy: 'none' }) as Record<string, unknown>;
-          delete schema.$schema;
-          return { ...common, inputSchema: schema };
-        }
-      ),
+      features: this.compiled.map(manifestFeature),
     };
   }
 }

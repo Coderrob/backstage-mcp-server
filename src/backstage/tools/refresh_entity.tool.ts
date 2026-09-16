@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogResult,
@@ -17,7 +18,7 @@ const inputSchema = z.object({ entityRef: entityRefSchema });
 
 /** Requests a refresh of one Catalog entity. */
 export const refreshEntityTool = defineTool<BackstageMcpContext>()({
-  name: 'refresh_entity',
+  name: BackstageToolName.REFRESH_ENTITY,
   title: 'Refresh a catalog entity',
   description: 'Request immediate refresh processing for a Backstage Catalog entity.',
   inputSchema,

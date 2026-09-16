@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { McpApplicationState } from '../shared/constants/mcp-protocol.js';
 import { createMcpServer } from './application.js';
 import { definePlugin, defineTool } from './definitions.js';
 import { jsonResult } from './results.js';
@@ -25,6 +26,6 @@ describe('connectTestClient', () => {
     expect((await connection.client.listTools()).tools).toHaveLength(1);
     await connection.close();
     await connection.close();
-    expect(app.state).toBe('stopped');
+    expect(app.state).toBe(McpApplicationState.STOPPED);
   });
 });

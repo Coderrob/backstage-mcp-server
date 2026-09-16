@@ -7,16 +7,17 @@
 
 import { pathToFileURL } from 'node:url';
 
-import { createStderrLogger, type Logger, LogLevel } from './shared/logging/logger.js';
 import { startServer } from './server.js';
+import { BackstageEnvironmentVariable } from './shared/constants/backstage-catalog.js';
+import { createStderrLogger, type Logger, LogLevel } from './shared/logging/logger.js';
+import type { CliRuntime } from './types/cli.js';
 
-type SignalHandler = (signal: NodeJS.Signals) => void;
+export type { CliRuntime } from './types/cli.js';
 
-/** Dependencies that isolate process integration from the testable CLI lifecycle. */
-export interface CliRuntime {
-  env: Readonly<NodeJS.ProcessEnv>;
-  start: typeof startServer;
-  registerSignal(signal: NodeJS.Signals, handler: SignalHandler): void;
+/** Process signals that trigger graceful MCP server shutdown. */
+export enum CliShutdownSignal {
+  INTERRUPT = 'SIGINT',
+  TERMINATE = 'SIGTERM',
 }
 
 /**
@@ -25,7 +26,7 @@ export interface CliRuntime {
  * @returns Debug when explicitly requested, otherwise info.
  */
 export function resolveLogLevel(env: Readonly<NodeJS.ProcessEnv>): LogLevel {
-  return env.LOG_LEVEL === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO;
+  return env[BackstageEnvironmentVariable.LOG_LEVEL] === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO;
 }
 
 /**
@@ -77,8 +78,8 @@ export async function runCli(runtime: Readonly<CliRuntime> = createCliRuntime())
     stopping = true;
     void app.stop(signal);
   };
-  runtime.registerSignal('SIGINT', stop);
-  runtime.registerSignal('SIGTERM', stop);
+  runtime.registerSignal(CliShutdownSignal.INTERRUPT, stop);
+  runtime.registerSignal(CliShutdownSignal.TERMINATE, stop);
 }
 
 /**

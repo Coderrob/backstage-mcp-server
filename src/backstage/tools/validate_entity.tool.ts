@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import { catalogOperationPolicy, catalogResult, readAnnotations, successOutputSchema } from './shared.js';
 
@@ -20,7 +21,7 @@ const inputSchema = z.object({ entity: entitySchema, locationRef: z.string().min
 
 /** Validates an entity using Backstage Catalog processing rules. */
 export const validateEntityTool = defineTool<BackstageMcpContext>()({
-  name: 'validate_entity',
+  name: BackstageToolName.VALIDATE_ENTITY,
   title: 'Validate a catalog entity',
   description: 'Validate a Backstage entity descriptor in the context of its source location.',
   inputSchema,

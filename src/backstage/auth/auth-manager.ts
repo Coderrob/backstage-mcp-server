@@ -6,9 +6,12 @@
 
 import { readFile } from 'node:fs/promises';
 
+import { BackstageAuthorizationScheme } from '../../shared/constants/backstage-catalog.js';
 import { AuthenticationError } from '../../shared/errors/error-handling.js';
 import { isNonEmptyString } from '../../shared/validation/guards.js';
 import type { IAuthConfig, IFileBearerAuthConfig } from '../../types/index.js';
+
+const TOKEN_FILE_ENCODING = 'utf8';
 
 /**
  * Reports whether authentication uses an externally managed token file.
@@ -16,7 +19,7 @@ import type { IAuthConfig, IFileBearerAuthConfig } from '../../types/index.js';
  * @returns Whether the configuration names a token file.
  */
 function isFileBearerAuth(config: Readonly<IAuthConfig>): config is Readonly<IFileBearerAuthConfig> {
-  return 'tokenFile' in config;
+  return config.tokenFile !== undefined;
 }
 
 /**
@@ -51,7 +54,7 @@ export class AuthManager {
    */
   async getAuthorizationHeader(): Promise<string> {
     const token = isFileBearerAuth(this.config) ? await this.readTokenFile(this.config.tokenFile) : this.config.token;
-    return `Bearer ${token}`;
+    return `${BackstageAuthorizationScheme.BEARER} ${token}`;
   }
 
   /**
@@ -63,7 +66,7 @@ export class AuthManager {
   private async readTokenFile(tokenFile: string): Promise<string> {
     let token: string;
     try {
-      token = (await readFile(tokenFile, 'utf8')).trim();
+      token = (await readFile(tokenFile, TOKEN_FILE_ENCODING)).trim();
     } catch {
       throw new AuthenticationError('Unable to read the Backstage bearer token file');
     }

@@ -8,5 +8,6 @@ export * from './backstage/backstage.plugin.js';
 export * from './generate-manifest.js';
 export * from './mcp/index.js';
 export * from './server.js';
-export { createStderrLogger, LogLevel, noopLogger, redact, type Logger } from './shared/logging/logger.js';
-export type { IBackstageCatalogApi } from './types/index.js';
+export * from './shared/constants/backstage-catalog.js';
+export { createStderrLogger, LogLevel, noopLogger, redact } from './shared/logging/logger.js';
+export type * from './types/index.js';

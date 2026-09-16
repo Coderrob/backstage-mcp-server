@@ -5,13 +5,18 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 
 const SOURCE_ROOT = 'src';
 const SCRIPT_ROOT = 'scripts';
 const MCP_ROOT = join(SOURCE_ROOT, 'mcp');
-const ALLOWED_MCP_PARENT_IMPORTS = new Set(['../shared/logging/logger.js']);
+const ALLOWED_MCP_PARENT_IMPORTS = new Set([
+  '../shared/constants/mcp-protocol.js',
+  '../shared/logging/logger.js',
+  '../types/logging.js',
+  '../types/mcp.js',
+]);
 const ALLOWED_ROOT_TYPESCRIPT = new Set(['cli.ts', 'generate-manifest.ts', 'index.ts', 'server.ts']);
 const SOURCE_FILE_PATTERN = /\.(?:cjs|js|mjs|ts)$/;
 const TEST_FILE_PATTERN = /\.(?:spec|test)\.(cjs|js|mjs|ts)$/;

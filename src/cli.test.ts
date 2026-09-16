@@ -4,7 +4,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createCliRuntime, isCliEntrypoint, reportStartupFailure, resolveLogLevel, runCli } from './cli.js';
+import {
+  CliShutdownSignal,
+  createCliRuntime,
+  isCliEntrypoint,
+  reportStartupFailure,
+  resolveLogLevel,
+  runCli,
+} from './cli.js';
 import type { Logger } from './shared/logging/logger.js';
 import { LogLevel } from './shared/logging/logger.js';
 
@@ -27,10 +34,10 @@ describe('CLI lifecycle', () => {
     const once = vi.spyOn(process, 'once').mockImplementation(() => process);
     const runtime = createCliRuntime();
     const handler = vi.fn();
-    runtime.registerSignal('SIGINT', handler);
+    runtime.registerSignal(CliShutdownSignal.INTERRUPT, handler);
     expect(runtime.env).toBe(process.env);
     expect(runtime.start).toBeTypeOf('function');
-    expect(once).toHaveBeenCalledWith('SIGINT', handler);
+    expect(once).toHaveBeenCalledWith(CliShutdownSignal.INTERRUPT, handler);
     once.mockRestore();
   });
 
@@ -42,10 +49,10 @@ describe('CLI lifecycle', () => {
       start: vi.fn(async () => ({ stop }) as never),
       registerSignal: (signal, handler) => handlers.set(signal, handler),
     });
-    handlers.get('SIGINT')?.('SIGINT');
-    handlers.get('SIGTERM')?.('SIGTERM');
+    handlers.get(CliShutdownSignal.INTERRUPT)?.(CliShutdownSignal.INTERRUPT);
+    handlers.get(CliShutdownSignal.TERMINATE)?.(CliShutdownSignal.TERMINATE);
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(stop).toHaveBeenCalledWith('SIGINT');
+    expect(stop).toHaveBeenCalledWith(CliShutdownSignal.INTERRUPT);
   });
 
   it('should report Error and non-Error startup failures safely', () => {

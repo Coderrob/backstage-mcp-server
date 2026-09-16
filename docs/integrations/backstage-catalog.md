@@ -10,7 +10,7 @@ This integration was reviewed on 2026-09-15 against the current stable Backstage
 - [Entity descriptor format](https://backstage.io/docs/features/software-catalog/descriptor-format/)
 - [Backstage documentation landing page](https://backstage.io/docs/landing-page/doc-landing-page)
 
-The runtime pins `@backstage/catalog-client` 1.16.2 and `@backstage/catalog-model` 1.10.1. Review the official release notes and rerun all adapter and black-box tests before upgrading them.
+The supported Backstage dependency ranges and exact lockfile resolutions live in [`package.json`](../../package.json) and [`yarn.lock`](../../yarn.lock). Review the official release notes and rerun all adapter and black-box tests before upgrading them.
 
 ## Runtime boundary
 

@@ -1,5 +1,9 @@
 # MCP End-to-End Testing
 
+The verification strategy moves from fast static feedback to the real packaged process boundary. Use the complete gate for MCP, tool, adapter, packaging, or dependency changes.
+
+![Verification layers from static quality checks through packaged black-box MCP Inspector validation.](../assets/verification-layers.png)
+
 ## Canonical command
 
 Run the complete MCP-specific verification gate from the repository root:
@@ -103,10 +107,9 @@ MCP Inspector test passed (13 portable tools, one tool call)
 
 ## Scope and limitations
 
-The automated gate proves that the packaged stdio server works end to end against a deterministic Backstage-compatible HTTP endpoint. It does not claim all of the following:
+The automated gate proves that the packaged stdio server discovers and invokes all 13 tools end to end against a deterministic Backstage-compatible HTTP endpoint. It does not claim all of the following:
 
 - connectivity, permissions, TLS, or entity behavior for a particular Backstage deployment;
-- black-box stdio invocation of every individual tool—the complete surface is discovered through stdio, while every handler is invoked through the in-memory MCP contract suite;
 - interoperability with every MCP client implementation; or
 - an HTTP MCP transport, because the shipped transport is stdio.
 

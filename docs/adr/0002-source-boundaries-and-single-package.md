@@ -18,10 +18,11 @@ Keep one Yarn package and organize `src` into cohesive folders:
 - `core/` for the class-based compatibility framework;
 - `health/` for probes and HTTP health middleware;
 - `shared/` for cross-cutting infrastructure;
+- `types/` for reusable type-only contracts grouped by concern;
 - `testing/` for reusable test support; and
 - root source files only for package, composition, manifest, and CLI entrypoints.
 
-Enforce dependency direction and root-file constraints with [`architecture:check`](../../scripts/check-source-layout.mjs). Keep `mcp/` independent of Backstage and compatibility modules so it can be extracted later without first untangling domain dependencies. The kernel may depend on narrowly allowlisted, domain-neutral shared infrastructure; logging contracts, redaction, and stderr-safe sinks are owned solely by `shared/logging`.
+Enforce dependency direction and root-file constraints with [`architecture:check`](../../scripts/check-source-layout.mjs). Keep `mcp/` independent of Backstage and compatibility modules so it can be extracted later without first untangling domain dependencies. The kernel may depend on narrowly allowlisted, domain-neutral shared infrastructure and type contracts. Reusable logging contracts are owned by `types/logging.ts`; redaction and stderr-safe sinks are owned solely by `shared/logging`.
 
 Reconsider Yarn workspaces when at least one concrete need appears: the kernel is published independently, another application consumes it, components require separate release cadences, or dependency/runtime requirements materially diverge.
 

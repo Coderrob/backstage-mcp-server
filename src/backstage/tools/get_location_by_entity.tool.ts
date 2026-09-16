@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogOptionalResult,
@@ -17,7 +18,7 @@ const inputSchema = z.object({ entityRef: entityRefSchema });
 
 /** Retrieves the Catalog location associated with an entity. */
 export const getLocationByEntityTool = defineTool<BackstageMcpContext>()({
-  name: 'get_location_by_entity',
+  name: BackstageToolName.GET_LOCATION_BY_ENTITY,
   title: 'Get catalog location by entity',
   description: 'Retrieve the Backstage Catalog location associated with an entity.',
   inputSchema,

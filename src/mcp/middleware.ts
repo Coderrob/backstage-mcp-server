@@ -4,22 +4,10 @@
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
  */
 
-import type { McpRequestContext } from './definitions.js';
-import type { Logger } from '../shared/logging/logger.js';
+import type { Logger } from '../types/logging.js';
+import type { McpMiddleware, McpMiddlewareInvocation } from '../types/mcp.js';
 
-/** Data visible to middleware for the current feature invocation. */
-export interface McpMiddlewareInvocation<TContext> {
-  input: unknown;
-  context: TContext;
-  request: McpRequestContext;
-  kind: 'tool' | 'resource' | 'resource-template' | 'prompt';
-}
-
-/** Onion-style middleware that may observe, transform, short-circuit, or delegate an invocation. */
-export type McpMiddleware<TContext> = (
-  invocation: McpMiddlewareInvocation<TContext>,
-  next: () => Promise<unknown>
-) => Promise<unknown>;
+export type { McpMiddleware, McpMiddlewareInvocation } from '../types/mcp.js';
 
 /**
  * Composes middleware in declaration order around a terminal feature handler.

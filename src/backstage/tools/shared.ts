@@ -7,9 +7,25 @@ import { z } from 'zod';
 import type { McpToolPolicy } from '../../mcp/definitions.js';
 import { McpErrorCode, McpHarnessError, McpNotFoundError, McpUpstreamError } from '../../mcp/errors.js';
 import { jsonResult } from '../../mcp/results.js';
+import {
+  BACKSTAGE_STATUS_CODE_PROPERTY,
+  CATALOG_CACHE_TAG,
+  CATALOG_CACHE_TTL_MS,
+  CATALOG_OPERATION_TIMEOUT_MS,
+  CATALOG_QUERY_LIMIT_MAXIMUM,
+  CATALOG_RATE_LIMIT_MAXIMUM,
+  CATALOG_RATE_LIMIT_WINDOW_MS,
+  CatalogHttpStatus,
+  CatalogResultStatus,
+  CatalogSortOrder,
+  CatalogTotalItemsMode,
+} from '../../shared/constants/backstage-catalog.js';
 
 /** Common success envelope emitted by Catalog tools. */
-export const successOutputSchema = z.object({ status: z.literal('success'), data: z.unknown().optional() });
+export const successOutputSchema = z.object({
+  status: z.literal(CatalogResultStatus.SUCCESS),
+  data: z.unknown().optional(),
+});
 
 /** String or structured compound entity reference accepted by Catalog tools. */
 export const entityRefSchema = z.union([
@@ -39,20 +55,20 @@ export const catalogFilterSchema = z.union([filterRecordSchema, z.array(filterRe
 /** Optional response-field projection. */
 export const fieldsSchema = z.array(z.string().min(1)).min(1).optional();
 
-const orderFieldSchema = z.object({ field: z.string().min(1), order: z.enum(['asc', 'desc']) });
+const orderFieldSchema = z.object({ field: z.string().min(1), order: z.nativeEnum(CatalogSortOrder) });
 
 /** Query input shared by the modern and compatibility entity-query tools. */
 export const queryEntitiesInputSchema = z.object({
   filter: catalogFilterSchema.optional(),
   fields: fieldsSchema,
-  order: z.object({ field: z.string().min(1), order: z.enum(['asc', 'desc']).optional() }).optional(),
+  order: z.object({ field: z.string().min(1), order: z.nativeEnum(CatalogSortOrder).optional() }).optional(),
   orderFields: z.union([orderFieldSchema, z.array(orderFieldSchema).min(1)]).optional(),
-  limit: z.number().int().positive().max(1000).optional(),
+  limit: z.number().int().positive().max(CATALOG_QUERY_LIMIT_MAXIMUM).optional(),
   offset: z.number().int().nonnegative().optional(),
   fullTextFilter: z
     .object({ term: z.string().trim().min(1), fields: z.array(z.string().min(1)).min(1).optional() })
     .optional(),
-  totalItems: z.enum(['include', 'exclude']).optional(),
+  totalItems: z.nativeEnum(CatalogTotalItemsMode).optional(),
   cursor: z.string().min(1).optional(),
 });
 
@@ -82,19 +98,19 @@ export const destructiveAnnotations: ToolAnnotations = {
 
 /** Standard policy for cacheable Catalog reads. */
 export const catalogReadPolicy: McpToolPolicy = {
-  timeoutMs: 30_000,
-  cache: { ttlMs: 120_000, tags: ['catalog'] },
+  timeoutMs: CATALOG_OPERATION_TIMEOUT_MS,
+  cache: { ttlMs: CATALOG_CACHE_TTL_MS, tags: [CATALOG_CACHE_TAG] },
 };
 
 /** Standard policy for Catalog mutations. */
 export const catalogWritePolicy: McpToolPolicy = {
-  timeoutMs: 30_000,
-  rateLimit: { maxRequests: 50, windowMs: 60_000 },
-  invalidates: ['catalog'],
+  timeoutMs: CATALOG_OPERATION_TIMEOUT_MS,
+  rateLimit: { maxRequests: CATALOG_RATE_LIMIT_MAXIMUM, windowMs: CATALOG_RATE_LIMIT_WINDOW_MS },
+  invalidates: [CATALOG_CACHE_TAG],
 };
 
 /** Standard policy for uncached Catalog operations. */
-export const catalogOperationPolicy: McpToolPolicy = { timeoutMs: 30_000 };
+export const catalogOperationPolicy: McpToolPolicy = { timeoutMs: CATALOG_OPERATION_TIMEOUT_MS };
 
 /**
  * Executes an optional Catalog lookup and converts absence to NOT_FOUND.
@@ -115,7 +131,7 @@ export async function catalogOptionalResult<T>(
   try {
     const data = await operation;
     if (data === undefined) throw new McpNotFoundError(kind, reference);
-    return jsonResult({ status: 'success' as const, data });
+    return jsonResult({ status: CatalogResultStatus.SUCCESS, data });
   } catch (error) {
     if (error instanceof McpNotFoundError) throw error;
     throw toCatalogMcpError(error, fallbackMessage);
@@ -135,7 +151,7 @@ export async function catalogResult<T>(
 ): Promise<CallToolResult> {
   try {
     const data = await operation;
-    return jsonResult({ status: 'success' as const, ...(data === undefined ? {} : { data }) });
+    return jsonResult({ status: CatalogResultStatus.SUCCESS, data });
   } catch (error) {
     throw toCatalogMcpError(error, fallbackMessage);
   }
@@ -147,8 +163,8 @@ export async function catalogResult<T>(
  * @returns Numeric HTTP status when available.
  */
 function getUpstreamStatus(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null || !('statusCode' in error)) return undefined;
-  const statusCode = Reflect.get(error, 'statusCode');
+  if (typeof error !== 'object' || error === null || !(BACKSTAGE_STATUS_CODE_PROPERTY in error)) return undefined;
+  const statusCode = Reflect.get(error, BACKSTAGE_STATUS_CODE_PROPERTY);
   return typeof statusCode === 'number' ? statusCode : undefined;
 }
 
@@ -161,11 +177,20 @@ function getUpstreamStatus(error: unknown): number | undefined {
 export function toCatalogMcpError(error: unknown, fallbackMessage: string): McpHarnessError {
   const statusCode = getUpstreamStatus(error);
   const options = { cause: error };
-  const messages: Partial<Record<number, [McpErrorCode, string]>> = {
-    401: [McpErrorCode.AUTHENTICATION_REQUIRED, 'Backstage rejected the configured external-access token'],
-    403: [McpErrorCode.INSUFFICIENT_PERMISSIONS, 'The Backstage token is not permitted to perform this operation'],
-    409: [McpErrorCode.CONFLICT, 'The Backstage Catalog operation conflicts with existing state'],
-    429: [McpErrorCode.RATE_LIMITED, 'Backstage rate limited the Catalog operation'],
+  const messages: Readonly<Partial<Record<number, readonly [McpErrorCode, string]>>> = {
+    [CatalogHttpStatus.UNAUTHORIZED]: [
+      McpErrorCode.AUTHENTICATION_REQUIRED,
+      'Backstage rejected the configured external-access token',
+    ],
+    [CatalogHttpStatus.FORBIDDEN]: [
+      McpErrorCode.INSUFFICIENT_PERMISSIONS,
+      'The Backstage token is not permitted to perform this operation',
+    ],
+    [CatalogHttpStatus.CONFLICT]: [
+      McpErrorCode.CONFLICT,
+      'The Backstage Catalog operation conflicts with existing state',
+    ],
+    [CatalogHttpStatus.TOO_MANY_REQUESTS]: [McpErrorCode.RATE_LIMITED, 'Backstage rate limited the Catalog operation'],
   };
   const mapped = statusCode === undefined ? undefined : messages[statusCode];
   return mapped === undefined
@@ -192,7 +217,7 @@ export function toQueryEntitiesRequest(
 ): QueryEntitiesRequest {
   if (input.cursor) return { cursor: input.cursor, fields: input.fields, limit: input.limit };
   const legacyOrder = input.order
-    ? { field: input.order.field, order: input.order.order ?? ('asc' as const) }
+    ? { field: input.order.field, order: input.order.order ?? CatalogSortOrder.ASCENDING }
     : undefined;
   return {
     fields: input.fields,

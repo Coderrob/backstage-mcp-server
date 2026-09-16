@@ -3,6 +3,7 @@
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it } from 'vitest';
 
+import { McpTransportName } from '../shared/constants/mcp-protocol.js';
 import { defineTransport, stdioTransport } from './transports.js';
 
 describe('MCP transports', () => {
@@ -16,7 +17,7 @@ describe('MCP transports', () => {
 
   it('should create fresh stdio transports', () => {
     const factory = stdioTransport();
-    expect(factory.name).toBe('stdio');
+    expect(factory.name).toBe(McpTransportName.STDIO);
     expect(factory.create()).not.toBe(factory.create());
   });
 });

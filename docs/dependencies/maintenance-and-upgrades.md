@@ -10,13 +10,13 @@ The configuration lives in [`.github/dependabot.yml`](../../.github/dependabot.y
 
 Node.js 24 is the minimum supported runtime and the only major exercised by CI and release automation. The package `engines` field declares the consumer floor, while `.nvmrc` and `.node-version` select the same major for common development tools. TypeScript emits ES2024 syntax because older Node.js releases are outside the supported range.
 
-Yarn is pinned to 4.4.0 through `packageManager`. CI and release workflows activate that exact version with Corepack and install with `--immutable`; do not use floating `yarn@4` activation or the legacy `--frozen-lockfile` spelling.
+Yarn is pinned through the `packageManager` field. CI and release workflows activate that exact version with Corepack and install with `--immutable`; do not use floating `yarn@4` activation or the legacy `--frozen-lockfile` spelling.
 
 ## Version policy
 
 Choose dependency ranges deliberately:
 
-- Pin protocol and integration tooling when reproducibility is more important than automatic drift. The MCP SDK, MCP Inspector, and Backstage packages currently follow this policy in `package.json`.
+- Use explicit compatible ranges in `package.json` and let `yarn.lock` provide reproducible exact resolutions. Pin a direct dependency only when its compatibility or release behavior requires a narrower policy.
 - Use compatible ranges for mature build and utility dependencies when routine updates are expected.
 - Treat every major update as a compatibility change and review its migration guidance.
 - Do not apply security updates blindly. Assess whether the advisory affects a reachable production path, then upgrade or document a narrowly scoped exception.

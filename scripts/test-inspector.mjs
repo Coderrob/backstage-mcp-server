@@ -13,7 +13,40 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
+import {
+  BACKSTAGE_ENVIRONMENT_VARIABLE,
+  CATALOG_QUERY_PATH,
+  EXPECTED_MCP_TOOL_NAMES,
+  HTTP_AUTHORIZATION_SCHEME,
+  HTTP_HEADER,
+  HTTP_STATUS,
+  LOOPBACK_HOST,
+  MCP_TOOL_NAME,
+  MIME_TYPE,
+  NODE_EVENT,
+  PACKAGED_SERVER_ENTRY,
+  PROCESS_LOG_LEVEL,
+} from './mcp-smoke-constants.mjs';
+
 const execFileAsync = promisify(execFile);
+const CHILD_PROCESS_MAX_BUFFER_BYTES = 1024 * 1024;
+const CHILD_PROCESS_TIMEOUT_MS = 30_000;
+const INSPECTOR_METHOD = Object.freeze({ LIST_TOOLS: 'tools/list', CALL_TOOL: 'tools/call' });
+const INSPECTOR_ENVIRONMENT_VARIABLE = Object.freeze({
+  AUTO_OPEN_ENABLED: 'MCP_AUTO_OPEN_ENABLED',
+  CATALOG_PATH: 'MCP_CATALOG_PATH',
+  CLIENT_CONFIG_PATH: 'MCP_CLIENT_CONFIG_PATH',
+  STORAGE_DIRECTORY: 'MCP_STORAGE_DIR',
+});
+const TEST_TOKEN = 'inspector-test-token';
+const TOOL_CALL_ARGUMENTS = Object.freeze([
+  '--method',
+  INSPECTOR_METHOD.CALL_TOOL,
+  '--tool-name',
+  MCP_TOOL_NAME.GET_ENTITIES,
+  '--tool-args-json',
+  '{"limit":1}',
+]);
 const INSPECTOR_ENTRY = resolve(
   'node_modules',
   '@modelcontextprotocol',
@@ -23,22 +56,7 @@ const INSPECTOR_ENTRY = resolve(
   'build',
   'index.js'
 );
-const SERVER_ENTRY = resolve('dist', 'cli.cjs');
-const EXPECTED_TOOLS = [
-  'add_location',
-  'get_entities',
-  'get_entities_by_query',
-  'get_entities_by_refs',
-  'get_entity_ancestors',
-  'get_entity_by_ref',
-  'get_entity_facets',
-  'get_location_by_entity',
-  'get_location_by_ref',
-  'refresh_entity',
-  'remove_entity_by_uid',
-  'remove_location_by_id',
-  'validate_entity',
-];
+const SERVER_ENTRY = resolve(PACKAGED_SERVER_ENTRY);
 
 /**
  * Handles one request received by the deterministic Catalog stub.
@@ -48,16 +66,16 @@ const EXPECTED_TOOLS = [
  */
 function handleCatalogRequest(request, response, markVerified) {
   if (
-    request.url !== '/api/catalog/entities/by-query?limit=1' ||
-    request.headers.authorization !== 'Bearer inspector-test-token'
+    request.url !== CATALOG_QUERY_PATH ||
+    request.headers[HTTP_HEADER.AUTHORIZATION] !== `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${TEST_TOKEN}`
   ) {
-    response.writeHead(400, { 'content-type': 'application/json' });
+    response.writeHead(HTTP_STATUS.BAD_REQUEST, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
     response.end(JSON.stringify({ error: 'Unexpected request' }));
     return;
   }
 
   markVerified();
-  response.writeHead(200, { 'content-type': 'application/json' });
+  response.writeHead(HTTP_STATUS.OK, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
   response.end(
     JSON.stringify({
       items: [{ kind: 'Component', metadata: { name: 'inspector-test' } }],
@@ -73,7 +91,7 @@ function handleCatalogRequest(request, response, markVerified) {
  */
 async function closeServer(server) {
   server.close();
-  await once(server, 'close');
+  await once(server, NODE_EVENT.CLOSE);
 }
 
 /**
@@ -85,7 +103,7 @@ async function closeServer(server) {
  */
 function createStubHandle(server, port, wasRequestVerified) {
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://${LOOPBACK_HOST}:${port}`,
     wasRequestVerified,
     /** Stops the Backstage Catalog stub. */
     async close() {
@@ -111,8 +129,8 @@ async function startBackstageStub() {
       )
   );
 
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
+  server.listen(0, LOOPBACK_HOST);
+  await once(server, NODE_EVENT.LISTENING);
   const address = server.address();
   assert(address && typeof address !== 'string', 'Could not determine the Inspector test server address');
 
@@ -139,11 +157,11 @@ function inspectorArguments(baseUrl, methodArguments) {
     '--format',
     'json',
     '-e',
-    `BACKSTAGE_BASE_URL=${baseUrl}`,
+    `${BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL}=${baseUrl}`,
     '-e',
-    'BACKSTAGE_TOKEN=inspector-test-token',
+    `${BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN}=${TEST_TOKEN}`,
     '-e',
-    'LOG_LEVEL=info',
+    `${BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL}=${PROCESS_LOG_LEVEL.INFO}`,
   ];
 }
 
@@ -157,13 +175,13 @@ function inspectorOptions(stateDirectory) {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      MCP_AUTO_OPEN_ENABLED: 'false',
-      MCP_CATALOG_PATH: join(stateDirectory, 'catalog.json'),
-      MCP_CLIENT_CONFIG_PATH: join(stateDirectory, 'client.json'),
-      MCP_STORAGE_DIR: stateDirectory,
+      [INSPECTOR_ENVIRONMENT_VARIABLE.AUTO_OPEN_ENABLED]: 'false',
+      [INSPECTOR_ENVIRONMENT_VARIABLE.CATALOG_PATH]: join(stateDirectory, 'catalog.json'),
+      [INSPECTOR_ENVIRONMENT_VARIABLE.CLIENT_CONFIG_PATH]: join(stateDirectory, 'client.json'),
+      [INSPECTOR_ENVIRONMENT_VARIABLE.STORAGE_DIRECTORY]: stateDirectory,
     },
-    maxBuffer: 1024 * 1024,
-    timeout: 30_000,
+    maxBuffer: CHILD_PROCESS_MAX_BUFFER_BYTES,
+    timeout: CHILD_PROCESS_TIMEOUT_MS,
   };
 }
 
@@ -190,17 +208,13 @@ async function main() {
   const stub = await startBackstageStub();
   const stateDirectory = await mkdtemp(join(tmpdir(), 'backstage-mcp-inspector-'));
   try {
-    const listed = await runInspector(stub.url, ['--method', 'tools/list', '--strict'], stateDirectory);
+    const listed = await runInspector(stub.url, ['--method', INSPECTOR_METHOD.LIST_TOOLS, '--strict'], stateDirectory);
     assert.deepEqual(
       listed.tools.map(/** Selects each advertised tool name. */ (tool) => tool.name),
-      EXPECTED_TOOLS
+      EXPECTED_MCP_TOOL_NAMES
     );
 
-    const called = await runInspector(
-      stub.url,
-      ['--method', 'tools/call', '--tool-name', 'get_entities', '--tool-args-json', '{"limit":1}'],
-      stateDirectory
-    );
+    const called = await runInspector(stub.url, TOOL_CALL_ARGUMENTS, stateDirectory);
     assert.notEqual(called.isError, true, JSON.stringify(called));
     assert.equal(called.structuredContent.data.items[0].metadata.name, 'inspector-test');
     assert.equal(stub.wasRequestVerified(), true, 'Inspector tool call did not reach the authenticated catalog stub');

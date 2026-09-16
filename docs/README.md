@@ -1,45 +1,60 @@
-# Documentation
+# Documentation hub
 
-Repository documentation is separated by purpose so that observations, future work, and accepted decisions do not become indistinguishable.
+Use this page to choose the shortest path to the information you need. Current operational and development guides come first; historical analysis, plans, and decision records are kept separately so they do not masquerade as runtime instructions.
 
-## Architecture analysis
+## Start by role
 
-- [MCP architecture and implementation analysis](architecture/mcp-architecture-analysis.md) records the pre-harness baseline, evidence, risks, and recommended direction. It is historical context rather than a description of the current implementation.
+### I want to run or connect the server
 
-## Implementation plans
+1. Follow the root [quick start](../README.md#quick-start).
+2. Configure external access with the [Backstage Catalog integration guide](integrations/backstage-catalog.md).
+3. Use [MCP end-to-end testing](testing/mcp-end-to-end-testing.md) to validate the packaged process or a live deployment.
 
-- [MCP generic harness implementation plan](plans/mcp-update.md) records the target design, delivered phases, acceptance criteria, and future transport boundaries.
+### I want to add or change a tool
 
-## Testing
+1. Read [Adding a Backstage MCP tool](development/adding-tools.md).
+2. Follow the directory rules in [`src/backstage/tools/AGENTS.md`](../src/backstage/tools/AGENTS.md).
+3. Use [Repository tooling](development/repository-tooling.md) to select the required gates.
+4. Check the [code quality standards](development/code-quality.md) before handoff.
 
-- [MCP end-to-end testing](testing/mcp-end-to-end-testing.md) documents the canonical gate, the real process and protocol boundaries it exercises, expected results, and the distinction between deterministic black-box validation and testing a live Backstage deployment.
+### I want to understand the design
 
-## Dependencies
+1. Start with the present-tense [architecture overview](architecture/overview.md).
+2. Read the [ADR index](adr/README.md) for accepted trade-offs.
+3. Consult the historical [architecture analysis](architecture/mcp-architecture-analysis.md) and [generic harness plan](plans/mcp-update.md) when you need migration context.
 
-- [Dependency management](dependencies/README.md) is the entry point for installation verification and sources of truth.
-- [Maintenance and upgrades](dependencies/maintenance-and-upgrades.md) defines the version, security, lockfile-review, and verification policy.
-- [Dependency tooling reference](dependencies/tooling-reference.md) records supported Yarn 4 commands and the limitations of the repository's older Bash helpers.
+### I want to maintain dependencies or automation
 
-## Development
+1. Start with [Dependency management](dependencies/README.md).
+2. Follow [Maintenance and upgrades](dependencies/maintenance-and-upgrades.md).
+3. Use the [dependency tooling reference](dependencies/tooling-reference.md) for exact Yarn commands and legacy-helper limitations.
 
-- [Code quality standards](development/code-quality.md) records the enforced complexity, size, and documentation requirements for ECMAScript modules.
+## Current guides
 
-## Integrations
+| Topic               | Guide                                                       | Answers                                                                         |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Architecture        | [Architecture overview](architecture/overview.md)           | What runs, where it lives, how requests flow, and which boundaries are enforced |
+| Tool development    | [Adding a Backstage MCP tool](development/adding-tools.md)  | How to define, register, test, document, and verify a tool                      |
+| Repository commands | [Repository tooling](development/repository-tooling.md)     | What every gate proves, its side effects, and when to run it                    |
+| Quality policy      | [Code quality standards](development/code-quality.md)       | Which lint, JSDoc, complexity, size, test, and hygiene rules apply              |
+| Backstage           | [Catalog integration](integrations/backstage-catalog.md)    | Authentication, permissions, client mapping, queries, and errors                |
+| Verification        | [MCP end-to-end testing](testing/mcp-end-to-end-testing.md) | How SDK, CLI, every-tool, Inspector, and live checks prove behavior             |
+| Dependencies        | [Dependency management](dependencies/README.md)             | How versions, lockfiles, upgrades, and audits are managed                       |
 
-- [Backstage Catalog integration](integrations/backstage-catalog.md) records the supported Catalog API surface, external-access authentication model, current endpoint mappings, and upstream documentation baseline.
+## Documentation types
 
-## Architecture decision records
+- **Guides** describe the current supported way to operate or change the repository.
+- **Architecture overviews** explain the present system and its boundaries.
+- **Analyses** preserve evidence from a point-in-time assessment; they are not current instructions.
+- **Plans** record objectives, delivery phases, and deferred work.
+- **ADRs** capture durable decisions and trade-offs. Do not rewrite an accepted decision to make history look current; supersede it when the decision changes.
 
-The [ADR index](adr/README.md) contains the durable decisions extracted from the analysis and implementation work:
+## Architecture decisions
 
-- [ADR 0001: Adopt a generic MCP application kernel](adr/0001-generic-mcp-application-kernel.md)
-- [ADR 0002: Organize cohesive source boundaries in a single package](adr/0002-source-boundaries-and-single-package.md)
-- [ADR 0003: Verify MCP behavior at multiple boundaries](adr/0003-mcp-verification-strategy.md)
-- [ADR 0004: Delegate Catalog protocol behavior to the official Backstage client](adr/0004-official-backstage-catalog-client.md)
-- [ADR 0005: Remove unreachable compatibility code and enforce per-file verification](adr/0005-remove-unreachable-compatibility-and-enforce-coverage.md)
-- [ADR 0006: Enforce strict ECMAScript module quality limits](adr/0006-enforce-mjs-quality-limits.md)
-- [ADR 0007: Test shell automation with colocated BATS suites](adr/0007-test-shell-automation-with-bats.md)
-- [ADR 0008: Enforce unused-code and dependency analysis with Knip](adr/0008-enforce-unused-code-analysis-with-knip.md)
-- [ADR 0009: Standardize Node.js 24 and harden dependency automation](adr/0009-standardize-node-24-and-harden-automation.md)
+The [ADR index](adr/README.md) covers the generic MCP kernel, cohesive source boundaries, verification strategy, official Catalog client, per-file coverage, ECMAScript quality limits, BATS, Knip, and the Node.js/toolchain baseline.
 
-Use an analysis document to explain what exists, a plan to describe intended work, and an ADR to record a consequential decision and its tradeoffs.
+## Keeping docs accurate
+
+When behavior changes, update the nearest current guide in the same change. Tool-surface changes also require the generated manifest, integration mapping, contract fixtures, and smoke expectations to agree. Prefer links to `package.json` for pinned tool versions rather than copying version numbers into multiple guides.
+
+The [visual asset guide](assets/README.md) records the purpose and update trigger for each infographic. Images support the text and must not become the only source for operational information.

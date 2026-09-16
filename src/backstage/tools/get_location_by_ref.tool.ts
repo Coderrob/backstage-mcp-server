@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import { catalogOptionalResult, catalogReadPolicy, readAnnotations, successOutputSchema } from './shared.js';
 
@@ -10,7 +11,7 @@ const inputSchema = z.object({ locationRef: z.string().min(1) });
 
 /** Retrieves a Catalog location by reference. */
 export const getLocationByRefTool = defineTool<BackstageMcpContext>()({
-  name: 'get_location_by_ref',
+  name: BackstageToolName.GET_LOCATION_BY_REF,
   title: 'Get catalog location by reference',
   description: 'Retrieve a Backstage Catalog location by its location reference.',
   inputSchema,

@@ -1,6 +1,7 @@
 /** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogReadPolicy,
@@ -13,7 +14,7 @@ import {
 
 /** Compatibility alias for querying Catalog entities by filter. */
 export const getEntitiesByQueryTool = defineTool<BackstageMcpContext>()({
-  name: 'get_entities_by_query',
+  name: BackstageToolName.GET_ENTITIES_BY_QUERY,
   title: 'Get catalog entities by query',
   description: 'Query Catalog entities using the legacy name with current Backstage query capabilities.',
   inputSchema: queryEntitiesInputSchema,

@@ -6,25 +6,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { McpErrorCode } from '../mcp/errors.js';
 import { connectTestClient } from '../mcp/testing.js';
 import { createBackstageServer } from '../server.js';
+import { BackstageToolName } from '../shared/constants/backstage-catalog.js';
 import { noopLogger } from '../shared/logging/logger.js';
 import type { IBackstageCatalogApi } from '../types/index.js';
 import { getEntitiesInputSchema } from './backstage.plugin.js';
 
-const EXPECTED_TOOLS = [
-  'add_location',
-  'get_entities',
-  'get_entities_by_query',
-  'get_entities_by_refs',
-  'get_entity_ancestors',
-  'get_entity_by_ref',
-  'get_entity_facets',
-  'get_location_by_entity',
-  'get_location_by_ref',
-  'refresh_entity',
-  'remove_entity_by_uid',
-  'remove_location_by_id',
-  'validate_entity',
-];
+const EXPECTED_TOOLS = Object.values(BackstageToolName);
 const RESOLVED_ENTITY_REF = 'Component:default/api';
 const LOCATION_ID = 'location-1';
 const TEST_TARGET = 'test';

@@ -14,4 +14,7 @@
  */
 
 export * from './auth.js';
-export * from './plugins.js';
+export * from './backstage.js';
+export * from './cli.js';
+export * from './logging.js';
+export * from './mcp.js';

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName, CatalogLocationConflictMode } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import { catalogResult, catalogWritePolicy, successOutputSchema, writeAnnotations } from './shared.js';
 
@@ -11,12 +12,12 @@ const addLocationInputSchema = z.object({
   type: z.string().min(1).optional(),
   target: z.string().min(1),
   dryRun: z.boolean().optional(),
-  onConflict: z.enum(['reject', 'refresh']).optional(),
+  onConflict: z.nativeEnum(CatalogLocationConflictMode).optional(),
 });
 
 /** Adds a location to the Backstage Catalog. */
 export const addLocationTool = defineTool<BackstageMcpContext>()({
-  name: 'add_location',
+  name: BackstageToolName.ADD_LOCATION,
   title: 'Add a catalog location',
   description: 'Add a location to the Backstage Catalog, or validate it using dry-run mode.',
   inputSchema: addLocationInputSchema,

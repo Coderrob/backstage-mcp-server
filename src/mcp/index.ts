@@ -4,6 +4,7 @@
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
  */
 
+export * from '../shared/constants/mcp-protocol.js';
 export * from './application.js';
 export * from './definitions.js';
 export * from './errors.js';

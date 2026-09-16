@@ -8,8 +8,16 @@ import { randomUUID } from 'node:crypto';
 
 import { destination, type Logger as PinoLoggerInstance, type LoggerOptions, pino, stdTimeFunctions } from 'pino';
 
+import type { Logger, LoggerFields, OperationalLogger } from '../../types/logging.js';
+
+export type { Logger, LoggerFields, OperationalLogger } from '../../types/logging.js';
+
 const STDERR_FILE_DESCRIPTOR = 2;
 const SENSITIVE_KEY = /(authorization|cookie|password|secret|token|api[-_]?key)/i;
+const CIRCULAR_VALUE = '[Circular]';
+const DEFAULT_SERVICE_NAME = 'backstage-mcp-server';
+const OPERATION_ID_PREFIX = 'op_';
+const REDACTED_VALUE = '[REDACTED]';
 
 /** Supported severity levels for repository logging. */
 export enum LogLevel {
@@ -17,24 +25,6 @@ export enum LogLevel {
   INFO = 'info',
   WARN = 'warn',
   ERROR = 'error',
-}
-
-/** Structured, redacted context attached to a log record. */
-export type LoggerFields = Readonly<Record<string, unknown>>;
-
-/** Minimal logger contract shared by the MCP kernel and application modules. */
-export interface Logger {
-  debug(message: string, fields?: LoggerFields): void;
-  info(message: string, fields?: LoggerFields): void;
-  warn(message: string, fields?: LoggerFields): void;
-  error(message: string, fields?: LoggerFields): void;
-}
-
-/** Extended logger contract used by compatibility and operational modules. */
-export interface OperationalLogger extends Logger {
-  fatal(message: string, fields?: LoggerFields): void;
-  child(bindings: LoggerFields): OperationalLogger;
-  createOperationLogger(operation: string, additionalContext?: LoggerFields): OperationalLogger;
 }
 
 /** Logger that intentionally discards every record. */
@@ -154,8 +144,8 @@ class StructuredLogger implements OperationalLogger {
   createOperationLogger(operation: string, additionalContext: LoggerFields = {}): OperationalLogger {
     return this.child({
       operation,
-      correlationId: `op_${randomUUID()}`,
-      service: 'backstage-mcp-server',
+      correlationId: `${OPERATION_ID_PREFIX}${randomUUID()}`,
+      service: DEFAULT_SERVICE_NAME,
       ...additionalContext,
     });
   }
@@ -178,7 +168,7 @@ export function createStderrLogger(minimumLevel: LogLevel = LogLevel.INFO): Logg
  */
 export function redact(value: unknown, seen = new WeakSet<object>()): unknown {
   if (value === null || typeof value !== 'object') return value;
-  if (seen.has(value)) return '[Circular]';
+  if (seen.has(value)) return CIRCULAR_VALUE;
   seen.add(value);
   if (Array.isArray(value)) {
     return value.map(/** Redacts one array item. */ (item) => redact(item, seen));
@@ -187,7 +177,7 @@ export function redact(value: unknown, seen = new WeakSet<object>()): unknown {
     Object.entries(value).map(
       /** Redacts one structured field. */ ([key, nested]) => [
         key,
-        SENSITIVE_KEY.test(key) ? '[REDACTED]' : redact(nested, seen),
+        SENSITIVE_KEY.test(key) ? REDACTED_VALUE : redact(nested, seen),
       ]
     )
   );

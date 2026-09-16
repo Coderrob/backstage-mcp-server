@@ -1,5 +1,7 @@
 # MCP Architecture and Implementation Analysis
 
+> **Historical snapshot:** This analysis records the pre-harness repository state that motivated the current implementation. It is not an operational description. Start with the [current architecture overview](overview.md) for present-tense behavior.
+
 > Baseline note: this analysis captures the repository state before the generic harness implementation. See the [MCP update plan](../plans/mcp-update.md) for the delivered architecture and remaining migration boundary.
 
 ## Scope and snapshot

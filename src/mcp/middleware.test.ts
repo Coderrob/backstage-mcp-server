@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { McpFeatureKind } from '../shared/constants/mcp-protocol.js';
 import type { Logger } from '../shared/logging/logger.js';
 import type { McpMiddlewareInvocation } from './middleware.js';
 import { composeMiddleware, requestLogging } from './middleware.js';
@@ -9,7 +10,7 @@ import { composeMiddleware, requestLogging } from './middleware.js';
 const invocation: McpMiddlewareInvocation<object> = {
   input: {},
   context: {},
-  kind: 'tool',
+  kind: McpFeatureKind.TOOL,
   request: {
     id: 'request-one',
     feature: 'read_value',

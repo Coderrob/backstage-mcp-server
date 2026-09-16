@@ -7,6 +7,23 @@ import { createServer } from 'node:http';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
+import {
+  BACKSTAGE_ENVIRONMENT_VARIABLE,
+  EXPECTED_MCP_TOOL_NAMES,
+  HTTP_AUTHORIZATION_SCHEME,
+  HTTP_HEADER,
+  HTTP_STATUS,
+  LOOPBACK_HOST,
+  MCP_RESULT_STATUS,
+  MCP_TOOL_NAME,
+  MIME_TYPE,
+  NODE_EVENT,
+  PACKAGED_SERVER_ENTRY,
+  PROCESS_LOG_LEVEL,
+  SMOKE_CLIENT_VERSION,
+  STDERR_MODE,
+} from './mcp-smoke-constants.mjs';
+
 const TEST_TOKEN = 'all-tools-smoke-token';
 const ENTITY_REF = 'component:default/smoke-service';
 const ENTITY_UID = '123e4567-e89b-12d3-a456-426614174000';
@@ -20,52 +37,60 @@ const ENTITY = {
   spec: { type: 'service', lifecycle: 'test', owner: 'testing' },
 };
 const LOCATION = { id: LOCATION_ID, type: 'url', target: LOCATION_TARGET };
-const EXPECTED_TOOLS = [
-  'add_location',
-  'get_entities',
-  'get_entities_by_query',
-  'get_entities_by_refs',
-  'get_entity_ancestors',
-  'get_entity_by_ref',
-  'get_entity_facets',
-  'get_location_by_entity',
-  'get_location_by_ref',
-  'refresh_entity',
-  'remove_entity_by_uid',
-  'remove_location_by_id',
-  'validate_entity',
-];
+const CATALOG_REQUEST = Object.freeze({
+  ADD_LOCATION: 'POST /api/catalog/locations',
+  GET_ENTITIES: 'GET /api/catalog/entities/by-query',
+  GET_ENTITIES_BY_REFS: 'POST /api/catalog/entities/by-refs',
+  GET_ENTITY_ANCESTORS: 'GET /api/catalog/entities/by-name/component/default/smoke-service/ancestry',
+  GET_ENTITY_BY_REF: 'GET /api/catalog/entities/by-name/component/default/smoke-service',
+  GET_ENTITY_FACETS: 'GET /api/catalog/entity-facets',
+  GET_LOCATION_BY_ENTITY: 'GET /api/catalog/locations/by-entity/component/default/smoke-service',
+  GET_LOCATION_BY_REF: 'GET /api/catalog/locations',
+  REFRESH_ENTITY: 'POST /api/catalog/refresh',
+  REMOVE_ENTITY_BY_UID: `DELETE /api/catalog/entities/by-uid/${ENTITY_UID}`,
+  REMOVE_LOCATION_BY_ID: `DELETE /api/catalog/locations/${LOCATION_ID}`,
+  VALIDATE_ENTITY: 'POST /api/catalog/validate-entity',
+});
 const EXPECTED_REQUESTS = [
-  'POST /api/catalog/locations',
-  'GET /api/catalog/entities/by-query',
-  'GET /api/catalog/entities/by-query',
-  'POST /api/catalog/entities/by-refs',
-  'GET /api/catalog/entities/by-name/component/default/smoke-service/ancestry',
-  'GET /api/catalog/entities/by-name/component/default/smoke-service',
-  'GET /api/catalog/entity-facets',
-  'GET /api/catalog/locations/by-entity/component/default/smoke-service',
-  'GET /api/catalog/locations',
-  'POST /api/catalog/refresh',
-  `DELETE /api/catalog/entities/by-uid/${ENTITY_UID}`,
-  `DELETE /api/catalog/locations/${LOCATION_ID}`,
-  'POST /api/catalog/validate-entity',
+  CATALOG_REQUEST.ADD_LOCATION,
+  CATALOG_REQUEST.GET_ENTITIES,
+  CATALOG_REQUEST.GET_ENTITIES,
+  CATALOG_REQUEST.GET_ENTITIES_BY_REFS,
+  CATALOG_REQUEST.GET_ENTITY_ANCESTORS,
+  CATALOG_REQUEST.GET_ENTITY_BY_REF,
+  CATALOG_REQUEST.GET_ENTITY_FACETS,
+  CATALOG_REQUEST.GET_LOCATION_BY_ENTITY,
+  CATALOG_REQUEST.GET_LOCATION_BY_REF,
+  CATALOG_REQUEST.REFRESH_ENTITY,
+  CATALOG_REQUEST.REMOVE_ENTITY_BY_UID,
+  CATALOG_REQUEST.REMOVE_LOCATION_BY_ID,
+  CATALOG_REQUEST.VALIDATE_ENTITY,
 ];
 const ROUTES = new Map([
-  ['POST /api/catalog/locations', { status: 201, body: { location: LOCATION, entities: [ENTITY], exists: false } }],
-  ['GET /api/catalog/entities/by-query', { status: 200, body: { items: [ENTITY], totalItems: 1, pageInfo: {} } }],
-  ['POST /api/catalog/entities/by-refs', { status: 200, body: { items: [ENTITY] } }],
   [
-    'GET /api/catalog/entities/by-name/component/default/smoke-service/ancestry',
-    { status: 200, body: { rootEntityRef: ENTITY_REF, items: [{ entity: ENTITY, parentEntityRefs: [] }] } },
+    CATALOG_REQUEST.ADD_LOCATION,
+    { status: HTTP_STATUS.CREATED, body: { location: LOCATION, entities: [ENTITY], exists: false } },
   ],
-  ['GET /api/catalog/entities/by-name/component/default/smoke-service', { status: 200, body: ENTITY }],
-  ['GET /api/catalog/entity-facets', { status: 200, body: { facets: { kind: [{ value: 'Component', count: 1 }] } } }],
-  ['GET /api/catalog/locations/by-entity/component/default/smoke-service', { status: 200, body: LOCATION }],
-  ['GET /api/catalog/locations', { status: 200, body: [{ data: LOCATION }] }],
-  ['POST /api/catalog/refresh', { status: 200, body: {} }],
-  [`DELETE /api/catalog/entities/by-uid/${ENTITY_UID}`, { status: 204 }],
-  [`DELETE /api/catalog/locations/${LOCATION_ID}`, { status: 204 }],
-  ['POST /api/catalog/validate-entity', { status: 200, body: {} }],
+  [CATALOG_REQUEST.GET_ENTITIES, { status: HTTP_STATUS.OK, body: { items: [ENTITY], totalItems: 1, pageInfo: {} } }],
+  [CATALOG_REQUEST.GET_ENTITIES_BY_REFS, { status: HTTP_STATUS.OK, body: { items: [ENTITY] } }],
+  [
+    CATALOG_REQUEST.GET_ENTITY_ANCESTORS,
+    {
+      status: HTTP_STATUS.OK,
+      body: { rootEntityRef: ENTITY_REF, items: [{ entity: ENTITY, parentEntityRefs: [] }] },
+    },
+  ],
+  [CATALOG_REQUEST.GET_ENTITY_BY_REF, { status: HTTP_STATUS.OK, body: ENTITY }],
+  [
+    CATALOG_REQUEST.GET_ENTITY_FACETS,
+    { status: HTTP_STATUS.OK, body: { facets: { kind: [{ value: 'Component', count: 1 }] } } },
+  ],
+  [CATALOG_REQUEST.GET_LOCATION_BY_ENTITY, { status: HTTP_STATUS.OK, body: LOCATION }],
+  [CATALOG_REQUEST.GET_LOCATION_BY_REF, { status: HTTP_STATUS.OK, body: [{ data: LOCATION }] }],
+  [CATALOG_REQUEST.REFRESH_ENTITY, { status: HTTP_STATUS.OK, body: {} }],
+  [CATALOG_REQUEST.REMOVE_ENTITY_BY_UID, { status: HTTP_STATUS.NO_CONTENT }],
+  [CATALOG_REQUEST.REMOVE_LOCATION_BY_ID, { status: HTTP_STATUS.NO_CONTENT }],
+  [CATALOG_REQUEST.VALIDATE_ENTITY, { status: HTTP_STATUS.OK, body: {} }],
 ]);
 
 /**
@@ -75,7 +100,7 @@ const ROUTES = new Map([
  * @param body - JSON-compatible response body.
  */
 function sendJson(response, status, body) {
-  response.writeHead(status, { 'content-type': 'application/json' });
+  response.writeHead(status, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
   response.end(JSON.stringify(body));
 }
 
@@ -86,7 +111,7 @@ function sendJson(response, status, body) {
  */
 function sendRoute(response, route) {
   if (!route) {
-    sendJson(response, 404, { error: 'Unexpected Catalog route' });
+    sendJson(response, HTTP_STATUS.NOT_FOUND, { error: 'Unexpected Catalog route' });
     return;
   }
   if (route.body === undefined) {
@@ -104,11 +129,11 @@ function sendRoute(response, route) {
  * @param requests - Mutable per-test request log.
  */
 function handleCatalogRequest(request, response, requests) {
-  const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+  const url = new URL(request.url ?? '/', `http://${LOOPBACK_HOST}`);
   const key = `${request.method} ${url.pathname}`;
-  requests.push({ key, url, authorization: request.headers.authorization });
-  if (request.headers.authorization !== `Bearer ${TEST_TOKEN}`) {
-    sendJson(response, 401, { error: 'Missing smoke-test credential' });
+  requests.push({ key, url, authorization: request.headers[HTTP_HEADER.AUTHORIZATION] });
+  if (request.headers[HTTP_HEADER.AUTHORIZATION] !== `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${TEST_TOKEN}`) {
+    sendJson(response, HTTP_STATUS.UNAUTHORIZED, { error: 'Missing smoke-test credential' });
     return;
   }
   sendRoute(response, ROUTES.get(key));
@@ -120,7 +145,7 @@ function handleCatalogRequest(request, response, requests) {
  */
 async function closeServer(server) {
   server.close();
-  await once(server, 'close');
+  await once(server, NODE_EVENT.CLOSE);
 }
 
 /**
@@ -133,12 +158,12 @@ async function startCatalogStub() {
     /** Routes one request from the built MCP server. */ (request, response) =>
       handleCatalogRequest(request, response, requests)
   );
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
+  server.listen(0, LOOPBACK_HOST);
+  await once(server, NODE_EVENT.LISTENING);
   const address = server.address();
   assert(address && typeof address !== 'string', 'Could not determine the Catalog stub address');
   return {
-    url: `http://127.0.0.1:${address.port}`,
+    url: `http://${LOOPBACK_HOST}:${address.port}`,
     requests,
     /** Stops the deterministic Catalog API boundary. */
     async close() {
@@ -155,15 +180,15 @@ async function startCatalogStub() {
 function createMcpTransport(baseUrl) {
   return new StdioClientTransport({
     command: process.execPath,
-    args: ['dist/cli.cjs'],
+    args: [PACKAGED_SERVER_ENTRY],
     cwd: process.cwd(),
     env: {
       ...getDefaultEnvironment(),
-      BACKSTAGE_BASE_URL: baseUrl,
-      BACKSTAGE_TOKEN: TEST_TOKEN,
-      LOG_LEVEL: 'warn',
+      [BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL]: baseUrl,
+      [BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN]: TEST_TOKEN,
+      [BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL]: PROCESS_LOG_LEVEL.WARN,
     },
-    stderr: 'pipe',
+    stderr: STDERR_MODE,
   });
 }
 
@@ -176,7 +201,11 @@ function createMcpTransport(baseUrl) {
 async function callTool(client, name, args) {
   const result = await client.callTool({ name, arguments: args });
   assert.notEqual(result.isError, true, `${name} returned ${JSON.stringify(result.structuredContent)}`);
-  assert.equal(result.structuredContent?.status, 'success', `${name} did not return structured success`);
+  assert.equal(
+    result.structuredContent?.status,
+    MCP_RESULT_STATUS.SUCCESS,
+    `${name} did not return structured success`
+  );
 }
 
 /**
@@ -184,19 +213,22 @@ async function callTool(client, name, args) {
  * @param client - Connected official MCP client.
  */
 async function callAllTools(client) {
-  await callTool(client, 'add_location', { type: 'url', target: LOCATION_TARGET, dryRun: true });
-  await callTool(client, 'get_entities', { limit: 1 });
-  await callTool(client, 'get_entities_by_query', { filter: { kind: 'Component' }, limit: 1 });
-  await callTool(client, 'get_entities_by_refs', { entityRefs: [ENTITY_REF] });
-  await callTool(client, 'get_entity_ancestors', { entityRef: ENTITY_REF });
-  await callTool(client, 'get_entity_by_ref', { entityRef: ENTITY_REF });
-  await callTool(client, 'get_entity_facets', { facets: ['kind'] });
-  await callTool(client, 'get_location_by_entity', { entityRef: ENTITY_REF });
-  await callTool(client, 'get_location_by_ref', { locationRef: LOCATION_REF });
-  await callTool(client, 'refresh_entity', { entityRef: ENTITY_REF });
-  await callTool(client, 'remove_entity_by_uid', { uid: ENTITY_UID });
-  await callTool(client, 'remove_location_by_id', { locationId: LOCATION_ID });
-  await callTool(client, 'validate_entity', { entity: ENTITY, locationRef: LOCATION_REF });
+  await callTool(client, MCP_TOOL_NAME.ADD_LOCATION, { type: 'url', target: LOCATION_TARGET, dryRun: true });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES, { limit: 1 });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_QUERY, {
+    filter: { kind: 'Component' },
+    limit: 1,
+  });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_REFS, { entityRefs: [ENTITY_REF] });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITY_ANCESTORS, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITY_BY_REF, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITY_FACETS, { facets: ['kind'] });
+  await callTool(client, MCP_TOOL_NAME.GET_LOCATION_BY_ENTITY, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_LOCATION_BY_REF, { locationRef: LOCATION_REF });
+  await callTool(client, MCP_TOOL_NAME.REFRESH_ENTITY, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.REMOVE_ENTITY_BY_UID, { uid: ENTITY_UID });
+  await callTool(client, MCP_TOOL_NAME.REMOVE_LOCATION_BY_ID, { locationId: LOCATION_ID });
+  await callTool(client, MCP_TOOL_NAME.VALIDATE_ENTITY, { entity: ENTITY, locationRef: LOCATION_REF });
 }
 
 /**
@@ -211,7 +243,7 @@ function assertCatalogRequests(requests) {
   assert.equal(
     requests.every(
       /** Confirms the child server authenticated every Catalog request. */ ({ authorization }) =>
-        authorization === `Bearer ${TEST_TOKEN}`
+        authorization === `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${TEST_TOKEN}`
     ),
     true
   );
@@ -224,13 +256,13 @@ function assertCatalogRequests(requests) {
  */
 async function main() {
   const stub = await startCatalogStub();
-  const client = new Client({ name: 'all-tools-smoke-test', version: '1.0.0' });
+  const client = new Client({ name: 'all-tools-smoke-test', version: SMOKE_CLIENT_VERSION });
   try {
     await client.connect(createMcpTransport(stub.url));
     const listed = await client.listTools();
     assert.deepEqual(
       listed.tools.map(/** Selects one advertised MCP tool name. */ ({ name }) => name),
-      EXPECTED_TOOLS
+      EXPECTED_MCP_TOOL_NAMES
     );
     await callAllTools(client);
     assertCatalogRequests(stub.requests);

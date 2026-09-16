@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { defineTool } from '../../mcp/definitions.js';
+import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {
   catalogReadPolicy,
@@ -17,7 +18,7 @@ const inputSchema = z.object({ entityRef: entityRefSchema });
 
 /** Retrieves the ancestry tree for one Catalog entity. */
 export const getEntityAncestorsTool = defineTool<BackstageMcpContext>()({
-  name: 'get_entity_ancestors',
+  name: BackstageToolName.GET_ENTITY_ANCESTORS,
   title: 'Get catalog entity ancestors',
   description: 'Retrieve the ancestry tree for a Backstage Catalog entity.',
   inputSchema,

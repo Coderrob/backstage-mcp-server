@@ -1,8 +1,21 @@
 # Code quality standards
 
+The repository applies strict, type-aware linting to production TypeScript and equivalent documentation and maintainability expectations to executable JavaScript modules. Unit tests keep correctness rules while relaxing only the constraints that would make test setup unnecessarily indirect.
+
+## TypeScript modules
+
+Every production `.ts` file under `src` is checked with TypeScript ESLint's strict type-aware rules, import validation and sorting, unused-import detection, SonarJS maintainability rules, JSDoc, and the zero-tolerance plugin.
+
+- Production functions are limited to 30 lines by both ESLint and zero-tolerance enforcement.
+- Functions, callbacks, and classes require JSDoc according to the configured repository rules.
+- Explicit `any`, missing modules, unused imports, and missing function return types are rejected by lint or TypeScript.
+- Production and test sources are typechecked through separate TypeScript projects.
+
+Colocated `.test.ts` and `.spec.ts` files retain strict typing, imports, class documentation, and maintainability checks. They intentionally disable result-return preference, anonymous-function JSDoc, and maximum function size so setup and assertions can remain readable.
+
 ## ECMAScript modules
 
-Every `.mjs` file is subject to hard ESLint limits:
+Every production `.mjs` file is subject to hard ESLint limits:
 
 - cyclomatic complexity must be less than 4 for each function;
 - each function body must be no longer than 30 lines;
@@ -10,9 +23,9 @@ Every `.mjs` file is subject to hard ESLint limits:
 - every named or anonymous function must have JSDoc documentation; and
 - every named or anonymous class must have an immediately preceding JSDoc block.
 
-The limits apply to all `.mjs` files, including test files. Generated dependencies, build output, and coverage reports are excluded by the repository-wide ESLint ignore policy.
+`.test.mjs` and `.spec.mjs` files retain the cyclomatic-complexity and named-function documentation rules but disable maximum file size, maximum function size, anonymous-function JSDoc, and result-return preference. Generated dependencies, build output, and coverage reports are excluded by the repository-wide ESLint ignore policy.
 
-The function documentation rules come from `@coderrob/eslint-plugin-zero-tolerance`. The repository ESLint configuration supplies the class-documentation rule because version 1.2.4 of that plugin does not include one. ESLint's `complexity`, `max-lines-per-function`, and `max-lines` rules provide independent enforcement of the numeric limits. [ADR 0006](../adr/0006-enforce-mjs-quality-limits.md) records this decision.
+The function documentation rules come from `@coderrob/eslint-plugin-zero-tolerance`. The repository ESLint configuration supplies an explicit class-documentation rule. ESLint's `complexity`, `max-lines-per-function`, and `max-lines` rules provide independent enforcement of the numeric limits. [ADR 0006](../adr/0006-enforce-mjs-quality-limits.md) records the ECMAScript-module decision.
 
 Run the focused check with:
 
@@ -20,7 +33,11 @@ Run the focused check with:
 corepack yarn eslint "**/*.mjs" --no-warn-ignored
 ```
 
-The normal `corepack yarn lint` command includes the same rules and is the CI gate.
+The normal `corepack yarn lint` command includes TypeScript, JavaScript, `.mjs`, and `.cjs` files and is the CI gate.
+
+## Tests and coverage
+
+Every behavioral production TypeScript module must have a side-by-side test with the same file stem. `architecture:check` enforces colocation, while Vitest and V8 require at least 95% statements, branches, functions, and lines for each production file. Type-only modules under `src/types` are exempt because they emit no runtime behavior.
 
 ## Refactoring guidance
 

@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { AuthType } from '../../shared/constants/backstage-catalog.js';
 import { BackstageCatalogApi, createCatalogDiscoveryApi, normalizeCatalogBaseUrl } from './backstage-catalog-api.js';
 
 const TEST_ENTITY_REF = 'component:default/api';
@@ -37,7 +38,7 @@ describe('BackstageCatalogApi', () => {
     expect(
       new BackstageCatalogApi({
         baseUrl: TEST_BASE_URL,
-        auth: { type: 'bearer', token: 'token' },
+        auth: { type: AuthType.BEARER, token: 'token' },
       })
     ).toBeInstanceOf(BackstageCatalogApi);
   });
@@ -49,7 +50,7 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: `${TEST_BASE_URL}/`,
-      auth: { type: 'bearer', token: TEST_TOKEN },
+      auth: { type: AuthType.BEARER, token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
@@ -90,7 +91,7 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: TEST_CATALOG_URL,
-      auth: { type: 'bearer', token: TEST_TOKEN },
+      auth: { type: AuthType.BEARER, token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
@@ -117,7 +118,7 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: TEST_BASE_URL,
-      auth: { type: 'bearer', token: TEST_TOKEN },
+      auth: { type: AuthType.BEARER, token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
 
@@ -149,10 +150,13 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: TEST_BASE_URL,
-      auth: { type: 'bearer', token: TEST_TOKEN },
+      auth: { type: AuthType.BEARER, token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
-    const entityRefs = Array.from({ length: LARGE_REF_COUNT }, (_, index) => `component:default/entity-${index}`);
+    const entityRefs = Array.from(
+      { length: LARGE_REF_COUNT },
+      (_, index) => `component:default/entity-${String(index)}`
+    );
 
     const response = await api.getEntitiesByRefs({
       entityRefs,
@@ -180,7 +184,7 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: TEST_BASE_URL,
-      auth: { type: 'bearer', token: TEST_TOKEN },
+      auth: { type: AuthType.BEARER, token: TEST_TOKEN },
       fetch: fetchImplementation,
     });
     const entity = { apiVersion: 'backstage.io/v1alpha1', kind: 'Component', metadata: { name: 'api' } };
@@ -218,7 +222,7 @@ describe('BackstageCatalogApi', () => {
     };
     const api = new BackstageCatalogApi({
       baseUrl: TEST_BASE_URL,
-      auth: { type: 'bearer', token: 'default-token' },
+      auth: { type: AuthType.BEARER, token: 'default-token' },
       fetch: fetchImplementation,
     });
 

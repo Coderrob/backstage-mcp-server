@@ -7,14 +7,16 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
+import { McpTransportName } from '../shared/constants/mcp-protocol.js';
+import type { McpTestConnection } from '../types/mcp.js';
 import type { McpApplication } from './application.js';
 import { defineTransport } from './transports.js';
 
-/** Official SDK client connection paired with an in-memory server transport. */
-export interface McpTestConnection {
-  client: Client;
-  close(): Promise<void>;
-}
+export type { McpTestConnection } from '../types/mcp.js';
+
+const MCP_TEST_CLIENT_NAME = 'mcp-harness-test-client';
+const MCP_TEST_CLIENT_VERSION = '1.0.0';
+const TEST_COMPLETE_STOP_REASON = 'test-complete';
 
 /**
  * Starts an application on linked in-memory transports and connects an SDK client.
@@ -23,9 +25,11 @@ export interface McpTestConnection {
  */
 export async function connectTestClient<TContext>(app: Readonly<McpApplication<TContext>>): Promise<McpTestConnection> {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await app.start(defineTransport('in-memory', /** Creates the transport instance. */ () => serverTransport));
+  await app.start(
+    defineTransport(McpTransportName.IN_MEMORY, /** Creates the transport instance. */ () => serverTransport)
+  );
 
-  const client = new Client({ name: 'mcp-harness-test-client', version: '1.0.0' });
+  const client = new Client({ name: MCP_TEST_CLIENT_NAME, version: MCP_TEST_CLIENT_VERSION });
   await client.connect(clientTransport);
 
   return {
@@ -35,7 +39,7 @@ export async function connectTestClient<TContext>(app: Readonly<McpApplication<T
      */
     async close(): Promise<void> {
       await client.close();
-      await app.stop('test-complete');
+      await app.stop(TEST_COMPLETE_STOP_REASON);
     },
   };
 }

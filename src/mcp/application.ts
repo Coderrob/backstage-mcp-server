@@ -13,17 +13,27 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { ZodError } from 'zod';
 
+import { McpApplicationState, McpFeatureKind } from '../shared/constants/mcp-protocol.js';
+import { noopLogger } from '../shared/logging/logger.js';
+import type { Logger } from '../types/logging.js';
 import type {
   CompiledFeature,
+  CreateMcpServerOptions,
+  MaybePromise,
+  McpFeatureRuntime,
+  McpManifest,
+  McpMiddlewareInvocation,
   McpPluginLifecycle,
   McpPrincipal,
   McpRequestContext,
+  McpTransportFactory,
   PluginDefinition,
   PromptDefinition,
   ResourceDefinition,
   ResourceTemplateDefinition,
+  SdkRequestExtra,
   ToolDefinition,
-} from './definitions.js';
+} from '../types/mcp.js';
 import {
   McpAuthenticationError,
   McpAuthorizationError,
@@ -34,34 +44,19 @@ import {
   McpRateLimitError,
   McpTimeoutError,
 } from './errors.js';
-import type { Logger } from '../shared/logging/logger.js';
-import { noopLogger } from '../shared/logging/logger.js';
-import { composeMiddleware, type McpMiddleware, type McpMiddlewareInvocation } from './middleware.js';
-import { type McpManifest, McpRegistry } from './registry.js';
+import { composeMiddleware } from './middleware.js';
+import { McpRegistry } from './registry.js';
 import { mapToolError } from './results.js';
-import { type McpFeatureRuntime, registerSdkFeatures, type SdkRequestExtra } from './sdk-adapter.js';
-import type { McpTransportFactory } from './transports.js';
+import { registerSdkFeatures } from './sdk-adapter.js';
 
-/** Lifecycle states exposed by an MCP application instance. */
-export type McpApplicationState = 'created' | 'starting' | 'running' | 'stopping' | 'stopped';
+export type { CreateMcpServerOptions, McpRuntimeContext } from '../types/mcp.js';
 
-/** Services available while the application context is being created. */
-export interface McpRuntimeContext {
-  signal: AbortSignal;
-  logger: Logger;
-}
-
-/** Configuration used to construct an isolated MCP application. */
-export interface CreateMcpServerOptions<TContext> {
-  identity: { name: string; version: string };
-  instructions?: string;
-  plugins: readonly PluginDefinition<TContext>[];
-  createContext(runtime: McpRuntimeContext): TContext | Promise<TContext>;
-  disposeContext?(context: TContext): void | Promise<void>;
-  middleware?: readonly McpMiddleware<TContext>[];
-  logger?: Logger;
-  defaultTimeoutMs?: number;
-}
+const ABORT_EVENT_NAME = 'abort';
+const ANONYMOUS_PRINCIPAL_ID = 'anonymous';
+const DEFAULT_STOP_REASON = 'requested';
+const SHARED_CACHE_PRINCIPAL_ID = 'shared';
+const STARTUP_FAILURE_REASON = 'startup-failure';
+const UNSTARTED_TRANSPORT_NAME = 'not-started';
 
 interface CacheEntry {
   expiresAt: number;
@@ -72,6 +67,11 @@ interface CacheEntry {
 interface RateLimitEntry {
   count: number;
   resetsAt: number;
+}
+
+interface InvocationCancellation {
+  controller: AbortController;
+  dispose(): void;
 }
 
 /**
@@ -108,7 +108,7 @@ function stableValue(value: unknown): unknown {
 
 /** Owns an MCP registry, SDK server, context, policies, and transport lifecycle. */
 export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
-  private currentState: McpApplicationState = 'created';
+  private currentState = McpApplicationState.CREATED;
   private readonly registry: McpRegistry<TContext>;
   private readonly logger: Logger;
   private readonly rootController = new AbortController();
@@ -118,7 +118,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
   private server?: McpServer;
   private startPromise?: Promise<void>;
   private stopPromise?: Promise<void>;
-  private transportName = 'not-started';
+  private transportName = UNSTARTED_TRANSPORT_NAME;
   private initializedPlugins: PluginDefinition<TContext>[] = [];
 
   /**
@@ -170,11 +170,11 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @throws {McpLifecycleError} When the application has already been started or stopped.
    */
   async start(transportFactory: Readonly<McpTransportFactory>): Promise<void> {
-    if (this.currentState !== 'created') {
+    if (this.currentState !== McpApplicationState.CREATED) {
       throw new McpLifecycleError(`Cannot start an application in state '${this.currentState}'`);
     }
 
-    this.currentState = 'starting';
+    this.currentState = McpApplicationState.STARTING;
     this.transportName = transportFactory.name;
     const startup = this.initialize(transportFactory);
     this.startPromise = startup;
@@ -189,25 +189,25 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * Stops the transport and disposes plugins and context in reverse ownership order.
    * @param reason - Diagnostic shutdown reason written to the logger.
    */
-  async stop(reason = 'requested'): Promise<void> {
-    if (this.currentState === 'stopped') return;
-    if (this.currentState === 'created') {
-      this.currentState = 'stopped';
+  async stop(reason = DEFAULT_STOP_REASON): Promise<void> {
+    if (this.currentState === McpApplicationState.STOPPED) return;
+    if (this.currentState === McpApplicationState.CREATED) {
+      this.currentState = McpApplicationState.STOPPED;
       return;
     }
-    if (this.currentState === 'stopping') {
+    if (this.currentState === McpApplicationState.STOPPING) {
       await this.stopPromise;
       return;
     }
 
-    const startup = this.currentState === 'starting' ? this.startPromise : undefined;
-    this.currentState = 'stopping';
+    const startup = this.currentState === McpApplicationState.STARTING ? this.startPromise : undefined;
+    this.currentState = McpApplicationState.STOPPING;
     this.rootController.abort(reason);
     this.stopPromise = startup ? this.cleanupAfterStartup(startup, reason) : this.cleanup(reason);
     try {
       await this.stopPromise;
     } finally {
-      this.currentState = 'stopped';
+      this.currentState = McpApplicationState.STOPPED;
       this.stopPromise = undefined;
       this.logger.info('MCP application stopped', { reason });
     }
@@ -267,14 +267,14 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
       registerSdkFeatures(this.server, this.registry.list(), this);
       await this.server.connect(transportFactory.create());
       this.assertStartupActive();
-      this.currentState = 'running';
+      this.currentState = McpApplicationState.RUNNING;
       this.logger.info('MCP application started', {
         transport: this.transportName,
         features: this.registry.list().length,
       });
     } catch (error) {
-      await this.cleanup('startup-failure');
-      this.currentState = 'stopped';
+      await this.cleanup(STARTUP_FAILURE_REASON);
+      this.currentState = McpApplicationState.STOPPED;
       throw error;
     }
   }
@@ -284,7 +284,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @throws {McpLifecycleError} When startup has been cancelled.
    */
   private assertStartupActive(): void {
-    if (this.currentState !== 'starting' || this.rootController.signal.aborted) {
+    if (this.currentState !== McpApplicationState.STARTING || this.rootController.signal.aborted) {
       throw new McpLifecycleError('MCP application startup was cancelled');
     }
   }
@@ -301,7 +301,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     input: Readonly<Record<string, unknown>>
   ): Record<string, unknown> {
     try {
-      return feature.inputSchema.parse(input) as Record<string, unknown>;
+      return feature.inputSchema.parse(input);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new McpInputError('Input validation failed', { issues: error.issues });
@@ -368,13 +368,14 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     compiled: CompiledFeature<TContext> & { feature: ResourceTemplateDefinition<TContext> },
     extra: Readonly<SdkRequestExtra>
   ): Promise<ListResourcesResult> {
-    if (!compiled.feature.list) return { resources: [] };
+    const list = compiled.feature.list;
+    if (!list) return { resources: [] };
     return (await this.executeFeature(
       compiled,
       {},
       extra,
       /** Invokes the compiled feature implementation. */ (invocation) =>
-        compiled.feature.list!({ input: {}, context: invocation.context, request: invocation.request })
+        list({ input: {}, context: invocation.context, request: invocation.request })
     )) as ListResourcesResult;
   }
 
@@ -413,26 +414,82 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     compiled: Readonly<CompiledFeature<TContext>>,
     input: unknown,
     extra: Readonly<SdkRequestExtra>,
-    handler: (invocation: McpMiddlewareInvocation<TContext>) => unknown | Promise<unknown>
+    handler: (invocation: McpMiddlewareInvocation<TContext>) => MaybePromise<unknown>
   ): Promise<unknown> {
-    if ((this.currentState !== 'running' && this.currentState !== 'starting') || this.context === undefined) {
+    const context = this.requireRunningContext();
+    const cancellation = this.createInvocationCancellation(extra);
+    const timeoutMs = compiled.feature.kind === McpFeatureKind.TOOL ? compiled.feature.policy?.timeoutMs : undefined;
+    const effectiveTimeout = timeoutMs ?? this.options.defaultTimeoutMs;
+    const invocation: McpMiddlewareInvocation<TContext> = {
+      input,
+      context,
+      request: this.createRequestContext(compiled, extra, cancellation.controller),
+      kind: compiled.feature.kind,
+    };
+    try {
+      const operation = composeMiddleware(
+        this.options.middleware ?? [],
+        invocation,
+        /** Invokes the feature after middleware processing. */ () => Promise.resolve(handler(invocation))
+      );
+      return await this.executeWithTimeout(operation, cancellation.controller, effectiveTimeout);
+    } finally {
+      cancellation.dispose();
+    }
+  }
+
+  /**
+   * Returns the initialized context while the application accepts invocations.
+   * @returns Active application context.
+   * @throws {McpLifecycleError} When the application is not running or starting.
+   */
+  private requireRunningContext(): TContext {
+    const acceptsRequests =
+      this.currentState === McpApplicationState.RUNNING || this.currentState === McpApplicationState.STARTING;
+    if (!acceptsRequests || this.context === undefined) {
       throw new McpLifecycleError('The MCP application is not running');
     }
+    return this.context;
+  }
 
+  /**
+   * Links application and SDK cancellation to one invocation controller.
+   * @param extra - SDK request metadata containing its cancellation signal.
+   * @returns Invocation controller and listener cleanup boundary.
+   */
+  private createInvocationCancellation(extra: Readonly<SdkRequestExtra>): InvocationCancellation {
     const controller = new AbortController();
     /**
-     * Performs the abort operation.
-     * @returns The operation result.
+     * Aborts the linked invocation controller.
      */
-    const abort = (): void => controller.abort();
-    this.rootController.signal.addEventListener('abort', abort, { once: true });
-    extra.signal.addEventListener('abort', abort, { once: true });
+    const abort = (): void => {
+      controller.abort();
+    };
+    this.rootController.signal.addEventListener(ABORT_EVENT_NAME, abort, { once: true });
+    extra.signal.addEventListener(ABORT_EVENT_NAME, abort, { once: true });
+    return {
+      controller,
+      /** Removes cancellation listeners owned by this invocation. */
+      dispose: (): void => {
+        this.rootController.signal.removeEventListener(ABORT_EVENT_NAME, abort);
+        extra.signal.removeEventListener(ABORT_EVENT_NAME, abort);
+      },
+    };
+  }
 
-    const timeoutMs = compiled.feature.kind === 'tool' ? compiled.feature.policy?.timeoutMs : undefined;
-    const effectiveTimeout = timeoutMs ?? this.options.defaultTimeoutMs;
-    let timer: NodeJS.Timeout | undefined;
-
-    const request: McpRequestContext = {
+  /**
+   * Builds request metadata shared with middleware and feature handlers.
+   * @param compiled - Feature and owning plugin metadata.
+   * @param extra - SDK request metadata.
+   * @param controller - Invocation cancellation controller.
+   * @returns Harness request context.
+   */
+  private createRequestContext(
+    compiled: Readonly<CompiledFeature<TContext>>,
+    extra: Readonly<SdkRequestExtra>,
+    controller: Readonly<AbortController>
+  ): McpRequestContext {
+    return {
       id: String(extra.requestId),
       feature: compiled.feature.name,
       plugin: compiled.plugin.name,
@@ -441,36 +498,37 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
       startedAt: new Date(),
       principal: buildPrincipal(extra),
     };
-    const invocation: McpMiddlewareInvocation<TContext> = {
-      input,
-      context: this.context,
-      request,
-      kind: compiled.feature.kind,
-    };
+  }
 
+  /**
+   * Races an invocation against its configured timeout.
+   * @param operation - Pending middleware and handler execution.
+   * @param controller - Invocation cancellation controller.
+   * @param timeoutMs - Effective timeout, or undefined when disabled.
+   * @returns First settled invocation or timeout result.
+   */
+  private async executeWithTimeout(
+    operation: Readonly<Promise<unknown>>,
+    controller: Readonly<AbortController>,
+    timeoutMs: number | undefined
+  ): Promise<unknown> {
+    if (!timeoutMs) return operation;
+    let timer: NodeJS.Timeout | undefined;
     try {
-      const operation = composeMiddleware(
-        this.options.middleware ?? [],
-        invocation,
-        /** Invokes the feature after middleware processing. */ () => Promise.resolve(handler(invocation))
-      );
-      if (!effectiveTimeout) return await operation;
       const timeout = new Promise<never>(
-        /** Runs the asynchronous operation and settles its promise. */ (_resolve, reject) => {
+        /** Rejects when the invocation timeout elapses. */ (_resolve, reject) => {
           timer = globalThis.setTimeout(
-            /** Handles the scheduled timeout. */ () => {
+            /** Cancels and rejects the timed-out invocation. */ () => {
               controller.abort();
-              reject(new McpTimeoutError(effectiveTimeout));
+              reject(new McpTimeoutError(timeoutMs));
             },
-            effectiveTimeout
+            timeoutMs
           );
         }
       );
       return await Promise.race([operation, timeout]);
     } finally {
       if (timer) globalThis.clearTimeout(timer);
-      this.rootController.signal.removeEventListener('abort', abort);
-      extra.signal.removeEventListener('abort', abort);
     }
   }
 
@@ -579,7 +637,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     const policy = tool.policy?.rateLimit;
     if (!policy) return;
     const now = Date.now();
-    const key = `${tool.name}:${principal?.id ?? 'anonymous'}`;
+    const key = `${tool.name}:${principal?.id ?? ANONYMOUS_PRINCIPAL_ID}`;
     const existing = this.rateLimits.get(key);
     if (!existing || existing.resetsAt <= now) {
       this.rateLimits.set(key, { count: 1, resetsAt: now + policy.windowMs });
@@ -604,7 +662,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     const policy = tool.policy?.cache;
     if (!policy) return undefined;
     const isolateByPrincipal = policy.varyByPrincipal ?? true;
-    const principalKey = isolateByPrincipal ? (principal?.id ?? 'anonymous') : 'shared';
+    const principalKey = isolateByPrincipal ? (principal?.id ?? ANONYMOUS_PRINCIPAL_ID) : SHARED_CACHE_PRINCIPAL_ID;
     return `${tool.name}:${principalKey}:${JSON.stringify(stableValue(input))}`;
   }
 

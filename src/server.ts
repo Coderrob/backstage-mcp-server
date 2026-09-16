@@ -4,23 +4,24 @@
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
  */
 
-import { backstageCatalogPlugin, type BackstageMcpContext } from './backstage/backstage.plugin.js';
 import { BackstageCatalogApi } from './backstage/api/backstage-catalog-api.js';
+import { backstageCatalogPlugin, type BackstageMcpContext } from './backstage/backstage.plugin.js';
 import { createMcpServer, type McpApplication } from './mcp/application.js';
 import { requestLogging } from './mcp/middleware.js';
-import { type McpTransportFactory, stdioTransport } from './mcp/transports.js';
+import { stdioTransport } from './mcp/transports.js';
+import {
+  AuthType,
+  BACKSTAGE_MCP_SERVER_NAME,
+  BACKSTAGE_MCP_SERVER_VERSION,
+  BackstageEnvironmentVariable,
+  CATALOG_OPERATION_TIMEOUT_MS,
+} from './shared/constants/backstage-catalog.js';
 import { ConfigurationError } from './shared/errors/error-handling.js';
-import { createStderrLogger, type Logger, LogLevel } from './shared/logging/logger.js';
+import { createStderrLogger, LogLevel } from './shared/logging/logger.js';
 import { isNonEmptyString } from './shared/validation/guards.js';
-import type { IAuthConfig, IBackstageCatalogApi } from './types/index.js';
+import type { BackstageServerOptions, IAuthConfig, IBackstageCatalogApi } from './types/index.js';
 
-/** Optional dependency and environment overrides for a Backstage MCP application. */
-export interface BackstageServerOptions {
-  env?: NodeJS.ProcessEnv;
-  logger?: Logger;
-  catalogClient?: IBackstageCatalogApi;
-  transport?: McpTransportFactory;
-}
+export type { BackstageServerOptions } from './types/backstage.js';
 
 /**
  * Resolves the bearer credential used for Backstage external access.
@@ -29,11 +30,13 @@ export interface BackstageServerOptions {
  * @throws {ConfigurationError} When no Backstage token source is configured.
  */
 export function buildAuthConfig(env: Readonly<NodeJS.ProcessEnv> = process.env): IAuthConfig {
-  const tokenFile = env.BACKSTAGE_TOKEN_FILE;
-  if (isNonEmptyString(tokenFile)) return { type: 'bearer', tokenFile };
-  const token = env.BACKSTAGE_TOKEN;
-  if (isNonEmptyString(token)) return { type: 'bearer', token };
-  throw new ConfigurationError('BACKSTAGE_TOKEN or BACKSTAGE_TOKEN_FILE is required for Backstage external access');
+  const tokenFile = env[BackstageEnvironmentVariable.TOKEN_FILE];
+  if (isNonEmptyString(tokenFile)) return { type: AuthType.BEARER, tokenFile };
+  const token = env[BackstageEnvironmentVariable.TOKEN];
+  if (isNonEmptyString(token)) return { type: AuthType.BEARER, token };
+  throw new ConfigurationError(
+    `${BackstageEnvironmentVariable.TOKEN} or ${BackstageEnvironmentVariable.TOKEN_FILE} is required for Backstage external access`
+  );
 }
 
 /**
@@ -46,15 +49,16 @@ export function createBackstageServer(
 ): McpApplication<BackstageMcpContext> {
   const env = options.env ?? process.env;
   const logger =
-    options.logger ?? createStderrLogger(env.LOG_LEVEL === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO);
+    options.logger ??
+    createStderrLogger(env[BackstageEnvironmentVariable.LOG_LEVEL] === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO);
 
   return createMcpServer<BackstageMcpContext>({
-    identity: { name: 'backstage-mcp-server', version: '2.0.0' },
+    identity: { name: BACKSTAGE_MCP_SERVER_NAME, version: BACKSTAGE_MCP_SERVER_VERSION },
     instructions: 'Use these tools to inspect and update the configured Backstage software catalog.',
     plugins: [backstageCatalogPlugin],
     logger,
     middleware: [requestLogging(logger)],
-    defaultTimeoutMs: 30_000,
+    defaultTimeoutMs: CATALOG_OPERATION_TIMEOUT_MS,
     /**
      * Creates the typed Backstage context when the application starts.
      * @returns The catalog dependency used by tool handlers.
@@ -70,9 +74,9 @@ export function createBackstageServer(
  * @throws {ConfigurationError} When the Backstage base URL is missing.
  */
 function createCatalogClient(env: Readonly<NodeJS.ProcessEnv>): IBackstageCatalogApi {
-  const baseUrl = env.BACKSTAGE_BASE_URL;
+  const baseUrl = env[BackstageEnvironmentVariable.BASE_URL];
   if (!isNonEmptyString(baseUrl)) {
-    throw new ConfigurationError('BACKSTAGE_BASE_URL environment variable is required');
+    throw new ConfigurationError(`${BackstageEnvironmentVariable.BASE_URL} environment variable is required`);
   }
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
   return new BackstageCatalogApi({ baseUrl: normalizedBaseUrl, auth: buildAuthConfig(env) });
