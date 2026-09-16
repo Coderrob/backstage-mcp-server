@@ -45,7 +45,7 @@ This is intentionally different from importing a handler and calling it directly
 
 The generic application suite connects the official MCP SDK client through linked in-memory transports. It covers tools, resources, resource templates, prompts, structured results, typed errors, policy enforcement, authenticated and anonymous cache isolation, expiry and invalidation, cancellation, deterministic manifests, lifecycle rollback, concurrent shutdown, and cleanup failures.
 
-The Backstage plugin suite verifies the advertised three-tool surface and argument forwarding for `get_entities`, `get_entity_by_ref`, and `add_location` using a typed catalog client fake.
+The Backstage plugin suite verifies the complete 13-tool surface and invokes every tool through an official MCP SDK client using a typed Catalog client fake. It checks argument forwarding, compound-reference normalization, cursor semantics, upstream error mapping, and optional lookup behavior.
 
 The Backstage adapter suite runs the official `CatalogClient` against an injected fetch boundary. It verifies backend URL normalization, the current `/entities/by-query` contract, bearer authentication, canonical entity-reference routing, and location mutation parameters without requiring a live deployment.
 
@@ -89,9 +89,8 @@ The final stages should report equivalent results to:
 
 ```text
 Test Files  3 passed (3)
-Tests       24 passed (24)
-CLI smoke test passed (3 tools, one authenticated call)
-MCP Inspector test passed (3 portable tools, one tool call)
+CLI smoke test passed (13 tools, one authenticated call)
+MCP Inspector test passed (13 portable tools, one tool call)
 ```
 
 ## Scope and limitations
@@ -99,24 +98,23 @@ MCP Inspector test passed (3 portable tools, one tool call)
 The automated gate proves that the packaged stdio server works end to end against a deterministic Backstage-compatible HTTP endpoint. It does not claim all of the following:
 
 - connectivity, permissions, TLS, or entity behavior for a particular Backstage deployment;
-- black-box stdio invocation of `get_entity_by_ref` or `add_location`—those are currently exercised through the in-memory contract suite;
+- black-box stdio invocation of every individual tool—the complete surface is discovered through stdio, while every handler is invoked through the in-memory MCP contract suite;
 - interoperability with every MCP client implementation; or
 - an HTTP MCP transport, because the shipped transport is stdio.
 
-An exhaustive black-box feature suite should add built-process calls for the remaining two tools. A real-environment integration test should remain opt-in because it requires external credentials and may mutate a catalog through `add_location`.
+A real-environment integration test remains opt-in because it requires external credentials. Its default check should call only `get_entities`; mutation tools require separate authorization and an expendable catalog target.
 
 ## Testing a real Backstage deployment
 
-Build the package, provide credentials through the environment, and start the Inspector interactively:
+Provide credentials through the environment and run the opt-in read-only live test:
 
 ```powershell
-corepack yarn build
-$env:BACKSTAGE_BASE_URL = 'https://backstage.example.com'
+$env:BACKSTAGE_BASE_URL = 'http://localhost:7007'
 $env:BACKSTAGE_TOKEN = '<token>'
-corepack yarn mcp-inspector --tui node dist/cli.cjs
+corepack yarn test:live
 ```
 
-Do not commit credentials or place them in command arguments. Begin with the read-only tools. Invoke `add_location` only against an environment where catalog mutation is explicitly authorized.
+The test builds the distribution, launches `dist/cli.cjs` over stdio with the official SDK client, asserts all 13 tool definitions, and calls `get_entities` with `limit: 1` against the configured deployment. It never prints the credential. Do not commit credentials or place them in command arguments. Invoke mutations only where catalog changes are explicitly authorized.
 
 ## Complete repository verification
 

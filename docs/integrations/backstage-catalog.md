@@ -38,11 +38,21 @@ Backstage's standard plugin-to-plugin flow obtains target-specific tokens from t
 
 ## MCP-to-Catalog mapping
 
-| MCP tool            | Official client method | Catalog API behavior                                                                                      |
-| ------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `get_entities`      | `queryEntities`        | `GET /entities/by-query` for key-value queries and cursor continuation                                    |
-| `get_entity_by_ref` | `getEntityByRef`       | `GET /entities/by-name/{kind}/{namespace}/{name}`; 404 becomes an MCP `NOT_FOUND` result                  |
-| `add_location`      | `addLocation`          | `POST /locations`; `dryRun` and `onConflict` are query parameters while `type` and `target` form the body |
+| MCP tool                 | Official client method | Catalog behavior                                                                                        |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `add_location`           | `addLocation`          | Adds or dry-runs a location; `dryRun` and `onConflict` retain official-client semantics                 |
+| `get_entities`           | `queryEntities`        | Current entity query with filters, fields, ordering, full-text search, totals, and cursor continuation  |
+| `get_entities_by_query`  | `queryEntities`        | Compatibility tool name using the same current query API; legacy `order` is normalized to `orderFields` |
+| `get_entities_by_refs`   | `getEntitiesByRefs`    | Batch entity lookup with optional field projection                                                      |
+| `get_entity_ancestors`   | `getEntityAncestors`   | Retrieves the entity ancestry graph                                                                     |
+| `get_entity_by_ref`      | `getEntityByRef`       | Retrieves one entity; absence becomes MCP `NOT_FOUND`                                                   |
+| `get_entity_facets`      | `getEntityFacets`      | Retrieves facet counts for requested fields and optional filters                                        |
+| `get_location_by_entity` | `getLocationByEntity`  | Retrieves an entity's source location; absence becomes MCP `NOT_FOUND`                                  |
+| `get_location_by_ref`    | `getLocationByRef`     | Retrieves a location by reference; absence becomes MCP `NOT_FOUND`                                      |
+| `refresh_entity`         | `refreshEntity`        | Requests refresh processing and invalidates the local `catalog` cache tag                               |
+| `remove_entity_by_uid`   | `removeEntityByUid`    | Permanently removes an entity and is advertised as destructive                                          |
+| `remove_location_by_id`  | `removeLocationById`   | Permanently removes a location and is advertised as destructive                                         |
+| `validate_entity`        | `validateEntity`       | Validates an entity descriptor in a source-location context without mutating Catalog state              |
 
 Backstage HTTP statuses are preserved at the MCP boundary: 401 becomes `AUTHENTICATION_REQUIRED`, 403 becomes `INSUFFICIENT_PERMISSIONS`, 409 becomes `CONFLICT`, and 429 becomes `RATE_LIMITED`. Other HTTP and connectivity failures become `UPSTREAM_ERROR` without exposing credentials or upstream response bodies.
 

@@ -4,9 +4,12 @@ A type-safe Model Context Protocol server for the Backstage Catalog API, built o
 
 ## Implemented tools
 
-- `get_entities` — query catalog entities with filters, full-text search, field selection, ordering, and cursor pagination.
-- `get_entity_by_ref` — retrieve one entity from a string or compound entity reference.
-- `add_location` — add or dry-run a catalog location.
+- Query entities: `get_entities`, `get_entities_by_query`, `get_entities_by_refs`, `get_entity_by_ref`, `get_entity_ancestors`, and `get_entity_facets`.
+- Query locations: `get_location_by_entity` and `get_location_by_ref`.
+- Mutate the catalog: `add_location`, `refresh_entity`, `remove_entity_by_uid`, and `remove_location_by_id`.
+- Validate descriptors: `validate_entity`.
+
+Each tool is a schema-first `defineTool<BackstageMcpContext>()` definition under `src/backstage/tools`, with a side-by-side unit test. The Backstage plugin only composes these definitions. Directory-scoped contribution requirements are documented in [`src/backstage/tools/AGENTS.md`](src/backstage/tools/AGENTS.md).
 
 The checked-in `tools-manifest.json` is generated from the same definitions used by the runtime. It is the authoritative machine-readable feature list.
 

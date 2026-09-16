@@ -1,8 +1,4 @@
-/**
- * Copyright (C) 2025 Robert Lindley
- *
- * This file is part of the project and is licensed under the GNU General Public License v3.0.
- */
+/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
 
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
@@ -14,157 +10,136 @@ import { noopLogger } from '../shared/logging/logger.js';
 import type { IBackstageCatalogApi } from '../types/index.js';
 import { getEntitiesInputSchema } from './backstage.plugin.js';
 
-const METADATA_NAME_FIELD = 'metadata.name';
+const EXPECTED_TOOLS = [
+  'add_location',
+  'get_entities',
+  'get_entities_by_query',
+  'get_entities_by_refs',
+  'get_entity_ancestors',
+  'get_entity_by_ref',
+  'get_entity_facets',
+  'get_location_by_entity',
+  'get_location_by_ref',
+  'refresh_entity',
+  'remove_entity_by_uid',
+  'remove_location_by_id',
+  'validate_entity',
+];
+const RESOLVED_ENTITY_REF = 'Component:default/api';
+const LOCATION_ID = 'location-1';
+const TEST_TARGET = 'test';
 
-/**
- * Creates a typed Backstage client fake and exposes its spies for assertions.
- * @returns A catalog client and its operation spies.
- */
-function createCatalogFake(): {
+type CatalogFake = {
   client: IBackstageCatalogApi;
-  queryEntities: Mock;
-  getEntityByRef: Mock;
-  addLocation: Mock;
-} {
-  const queryEntities = vi.fn(async () => ({ items: [], totalItems: 0, pageInfo: {} }));
-  const getEntityByRef = vi.fn(async () => ({
-    apiVersion: 'backstage.io/v1alpha1',
-    kind: 'Component',
-    metadata: { name: 'example', namespace: 'default' },
-  }));
-  const addLocation = vi.fn(async () => ({
-    location: { id: 'location-1', type: 'url', target: 'https://example.test/catalog-info.yaml' },
-    entities: [],
-  }));
-  return {
-    client: { queryEntities, getEntityByRef, addLocation } as unknown as IBackstageCatalogApi,
-    queryEntities,
-    getEntityByRef,
-    addLocation,
+  operations: Readonly<Record<string, Mock>>;
+};
+
+/** Creates a complete official Catalog client test double. */
+function createCatalogFake(): CatalogFake {
+  const operations = {
+    addLocation: vi.fn(async () => ({
+      location: { id: LOCATION_ID, type: 'url', target: TEST_TARGET },
+      entities: [],
+    })),
+    getEntitiesByRefs: vi.fn(async () => ({ items: [] })),
+    getEntityAncestors: vi.fn(async () => ({ rootEntityRef: 'component:default/api', items: [] })),
+    getEntityByRef: vi.fn(async () => ({ apiVersion: 'v1', kind: 'Component', metadata: { name: 'api' } })),
+    getEntityFacets: vi.fn(async () => ({ facets: {} })),
+    getLocationByEntity: vi.fn(async () => ({ id: LOCATION_ID, type: 'url', target: TEST_TARGET })),
+    getLocationById: vi.fn(async () => undefined),
+    getLocationByRef: vi.fn(async () => ({ id: LOCATION_ID, type: 'url', target: TEST_TARGET })),
+    queryEntities: vi.fn(async () => ({ items: [], totalItems: 0, pageInfo: {} })),
+    refreshEntity: vi.fn(async () => undefined),
+    removeEntityByUid: vi.fn(async () => undefined),
+    removeLocationById: vi.fn(async () => undefined),
+    validateEntity: vi.fn(async () => ({ valid: true })),
   };
+  return { client: operations as unknown as IBackstageCatalogApi, operations };
 }
 
 describe('Backstage MCP plugin', () => {
-  it('should reject empty Catalog filter sets and values', () => {
-    expect(getEntitiesInputSchema.safeParse({ filter: [] }).success).toBe(false);
+  it('publishes the complete historical tool surface', async () => {
+    const fake = createCatalogFake();
+    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
+    expect(app.manifest().features.map(({ name }) => name)).toEqual(EXPECTED_TOOLS);
+    const connection = await connectTestClient(app);
+    try {
+      expect((await connection.client.listTools()).tools.map(({ name }) => name)).toEqual(EXPECTED_TOOLS);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('forwards every tool through the typed Catalog context', async () => {
+    const fake = createCatalogFake();
+    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
+    const connection = await connectTestClient(app);
+    const entityRef = { kind: 'Component', namespace: 'default', name: 'api' };
+    try {
+      await connection.client.callTool({ name: 'add_location', arguments: { target: TEST_TARGET, dryRun: true } });
+      await connection.client.callTool({ name: 'get_entities', arguments: { limit: 10 } });
+      await connection.client.callTool({
+        name: 'get_entities_by_query',
+        arguments: { order: { field: 'metadata.name' } },
+      });
+      await connection.client.callTool({ name: 'get_entities_by_refs', arguments: { entityRefs: [entityRef] } });
+      await connection.client.callTool({ name: 'get_entity_ancestors', arguments: { entityRef } });
+      await connection.client.callTool({ name: 'get_entity_by_ref', arguments: { entityRef } });
+      await connection.client.callTool({ name: 'get_entity_facets', arguments: { facets: ['kind'] } });
+      await connection.client.callTool({ name: 'get_location_by_entity', arguments: { entityRef } });
+      await connection.client.callTool({ name: 'get_location_by_ref', arguments: { locationRef: 'url:test' } });
+      await connection.client.callTool({ name: 'refresh_entity', arguments: { entityRef } });
+      await connection.client.callTool({
+        name: 'remove_entity_by_uid',
+        arguments: { uid: '123e4567-e89b-12d3-a456-426614174000' },
+      });
+      await connection.client.callTool({ name: 'remove_location_by_id', arguments: { locationId: LOCATION_ID } });
+      await connection.client.callTool({
+        name: 'validate_entity',
+        arguments: {
+          entity: { apiVersion: 'v1', kind: 'Component', metadata: { name: 'api' } },
+          locationRef: 'url:test',
+        },
+      });
+
+      expect(fake.operations.addLocation).toHaveBeenCalledWith({ target: TEST_TARGET, dryRun: true });
+      expect(fake.operations.queryEntities).toHaveBeenNthCalledWith(1, { limit: 10 });
+      expect(fake.operations.queryEntities).toHaveBeenNthCalledWith(2, {
+        orderFields: { field: 'metadata.name', order: 'asc' },
+      });
+      expect(fake.operations.getEntitiesByRefs).toHaveBeenCalledWith({
+        entityRefs: [RESOLVED_ENTITY_REF],
+      });
+      expect(fake.operations.getEntityAncestors).toHaveBeenCalledWith({ entityRef: RESOLVED_ENTITY_REF });
+      expect(fake.operations.getEntityByRef).toHaveBeenCalledWith(RESOLVED_ENTITY_REF);
+      expect(fake.operations.getEntityFacets).toHaveBeenCalledWith({ facets: ['kind'] });
+      expect(fake.operations.getLocationByEntity).toHaveBeenCalledWith(RESOLVED_ENTITY_REF);
+      expect(fake.operations.getLocationByRef).toHaveBeenCalledWith('url:test');
+      expect(fake.operations.refreshEntity).toHaveBeenCalledWith(RESOLVED_ENTITY_REF);
+      expect(fake.operations.removeEntityByUid).toHaveBeenCalledOnce();
+      expect(fake.operations.removeLocationById).toHaveBeenCalledWith(LOCATION_ID);
+      expect(fake.operations.validateEntity).toHaveBeenCalledOnce();
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('preserves cursor semantics and rejects empty filters', async () => {
     expect(getEntitiesInputSchema.safeParse({ filter: {} }).success).toBe(false);
-    expect(getEntitiesInputSchema.safeParse({ filter: { kind: [] } }).success).toBe(false);
-    expect(getEntitiesInputSchema.safeParse({ filter: { kind: '' } }).success).toBe(false);
-  });
-
-  it('should publish only implemented tools and forward validated arguments', async () => {
+    expect(getEntitiesInputSchema.safeParse({ filter: [] }).success).toBe(false);
     const fake = createCatalogFake();
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    expect(app.manifest().features.map(({ name }) => name)).toEqual([
-      'add_location',
-      'get_entities',
-      'get_entity_by_ref',
-    ]);
-
-    const connection = await connectTestClient(app);
-    try {
-      const listed = await connection.client.listTools();
-      expect(listed.tools.map(({ name }) => name)).toEqual(['add_location', 'get_entities', 'get_entity_by_ref']);
-
-      await connection.client.callTool({
-        name: 'get_entities',
-        arguments: {
-          filter: { kind: 'Component' },
-          orderFields: { field: METADATA_NAME_FIELD, order: 'asc' },
-          fullTextFilter: { term: 'example', fields: [METADATA_NAME_FIELD] },
-          limit: 10,
-        },
-      });
-      expect(fake.queryEntities).toHaveBeenCalledWith({
-        filter: { kind: 'Component' },
-        orderFields: { field: METADATA_NAME_FIELD, order: 'asc' },
-        fullTextFilter: { term: 'example', fields: [METADATA_NAME_FIELD] },
-        limit: 10,
-      });
-
-      const entity = await connection.client.callTool({
-        name: 'get_entity_by_ref',
-        arguments: { entityRef: { kind: 'Component', namespace: 'default', name: 'example' } },
-      });
-      expect(fake.getEntityByRef).toHaveBeenCalledWith('Component:default/example');
-      expect(entity.structuredContent).toMatchObject({ status: 'success', data: { kind: 'Component' } });
-
-      await connection.client.callTool({
-        name: 'add_location',
-        arguments: {
-          target: 'https://example.test/catalog-info.yaml',
-          type: 'url',
-          dryRun: true,
-          onConflict: 'refresh',
-        },
-      });
-      expect(fake.addLocation).toHaveBeenCalledWith({
-        target: 'https://example.test/catalog-info.yaml',
-        type: 'url',
-        dryRun: true,
-        onConflict: 'refresh',
-      });
-    } finally {
-      await connection.close();
-    }
-  });
-
-  it('should preserve Backstage authentication and conflict semantics in MCP errors', async () => {
-    const fake = createCatalogFake();
-    fake.queryEntities.mockRejectedValueOnce({ statusCode: 401 });
-    fake.addLocation.mockRejectedValueOnce({ statusCode: 409 });
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    const connection = await connectTestClient(app);
-    try {
-      const unauthenticated = await connection.client.callTool({ name: 'get_entities', arguments: {} });
-      expect(unauthenticated).toMatchObject({
-        isError: true,
-        structuredContent: {
-          error: { code: McpErrorCode.AUTHENTICATION_REQUIRED, details: { statusCode: 401 } },
-        },
-      });
-
-      const conflict = await connection.client.callTool({
-        name: 'add_location',
-        arguments: { target: 'https://example.test/catalog-info.yaml' },
-      });
-      expect(conflict).toMatchObject({
-        isError: true,
-        structuredContent: { error: { code: McpErrorCode.CONFLICT, details: { statusCode: 409 } } },
-      });
-    } finally {
-      await connection.close();
-    }
-  });
-
-  it('should issue cursor-only queries and return typed not-found results', async () => {
-    const fake = createCatalogFake();
-    fake.getEntityByRef.mockResolvedValueOnce(undefined);
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    const connection = await connectTestClient(app);
+    const connection = await connectTestClient(
+      createBackstageServer({ catalogClient: fake.client, logger: noopLogger })
+    );
     try {
       await connection.client.callTool({
         name: 'get_entities',
-        arguments: {
-          cursor: 'next-page',
-          fields: [METADATA_NAME_FIELD],
-          limit: 5,
-          filter: { kind: 'Component' },
-          offset: 10,
-        },
+        arguments: { cursor: 'next', fields: ['metadata.name'], limit: 5, offset: 2 },
       });
-      expect(fake.queryEntities).toHaveBeenCalledWith({
-        cursor: 'next-page',
-        fields: [METADATA_NAME_FIELD],
+      expect(fake.operations.queryEntities).toHaveBeenCalledWith({
+        cursor: 'next',
+        fields: ['metadata.name'],
         limit: 5,
-      });
-      const missing = await connection.client.callTool({
-        name: 'get_entity_by_ref',
-        arguments: { entityRef: 'component:default/missing' },
-      });
-      expect(missing).toMatchObject({
-        isError: true,
-        structuredContent: { error: { code: McpErrorCode.NOT_FOUND } },
       });
     } finally {
       await connection.close();
@@ -172,14 +147,17 @@ describe('Backstage MCP plugin', () => {
   });
 
   it.each([
+    [401, McpErrorCode.AUTHENTICATION_REQUIRED],
     [403, McpErrorCode.INSUFFICIENT_PERMISSIONS],
+    [409, McpErrorCode.CONFLICT],
     [429, McpErrorCode.RATE_LIMITED],
     [500, McpErrorCode.UPSTREAM_ERROR],
-  ])('should map Backstage status %i to %s', async (statusCode, code) => {
+  ])('maps Catalog status %i to %s', async (statusCode, code) => {
     const fake = createCatalogFake();
-    fake.queryEntities.mockRejectedValueOnce({ statusCode });
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    const connection = await connectTestClient(app);
+    fake.operations.queryEntities.mockRejectedValueOnce({ statusCode });
+    const connection = await connectTestClient(
+      createBackstageServer({ catalogClient: fake.client, logger: noopLogger })
+    );
     try {
       const result = await connection.client.callTool({ name: 'get_entities', arguments: {} });
       expect(result).toMatchObject({ isError: true, structuredContent: { error: { code } } });
@@ -188,41 +166,21 @@ describe('Backstage MCP plugin', () => {
     }
   });
 
-  it('should map entity lookup and status-less failures to upstream errors', async () => {
+  it.each([
+    ['get_entity_by_ref', 'getEntityByRef', { entityRef: 'component:default/missing' }],
+    ['get_location_by_entity', 'getLocationByEntity', { entityRef: 'component:default/missing' }],
+    ['get_location_by_ref', 'getLocationByRef', { locationRef: 'url:missing' }],
+  ] as const)('returns NOT_FOUND for absent optional result from %s', async (name, operationName, toolArguments) => {
     const fake = createCatalogFake();
-    fake.getEntityByRef.mockRejectedValueOnce(new Error('network'));
-    fake.queryEntities.mockRejectedValueOnce('connection closed');
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    const connection = await connectTestClient(app);
+    fake.operations[operationName].mockResolvedValueOnce(undefined);
+    const connection = await connectTestClient(
+      createBackstageServer({ catalogClient: fake.client, logger: noopLogger })
+    );
     try {
-      const entity = await connection.client.callTool({
-        name: 'get_entity_by_ref',
-        arguments: { entityRef: 'component:default/api' },
-      });
-      const query = await connection.client.callTool({ name: 'get_entities', arguments: {} });
-      expect(entity).toMatchObject({
-        isError: true,
-        structuredContent: { error: { code: McpErrorCode.UPSTREAM_ERROR } },
-      });
-      expect(query).toMatchObject({
-        isError: true,
-        structuredContent: { error: { code: McpErrorCode.UPSTREAM_ERROR } },
-      });
-    } finally {
-      await connection.close();
-    }
-  });
-
-  it('should ignore a nonnumeric upstream status value', async () => {
-    const fake = createCatalogFake();
-    fake.queryEntities.mockRejectedValueOnce({ statusCode: 'unavailable' });
-    const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
-    const connection = await connectTestClient(app);
-    try {
-      const result = await connection.client.callTool({ name: 'get_entities', arguments: {} });
+      const result = await connection.client.callTool({ name, arguments: toolArguments });
       expect(result).toMatchObject({
         isError: true,
-        structuredContent: { error: { code: McpErrorCode.UPSTREAM_ERROR } },
+        structuredContent: { error: { code: McpErrorCode.NOT_FOUND } },
       });
     } finally {
       await connection.close();

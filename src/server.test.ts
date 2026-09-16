@@ -35,7 +35,7 @@ describe('Backstage server composition', () => {
   it('should create a side-effect-free application with injected dependencies', () => {
     const app = createBackstageServer({ catalogClient, logger: noopLogger, env: {} });
     expect(app.state).toBe('created');
-    expect(app.manifest().features).toHaveLength(3);
+    expect(app.manifest().features).toHaveLength(13);
     expect(createBackstageServer({ catalogClient, env: { LOG_LEVEL: 'debug' } }).state).toBe('created');
     expect(createBackstageServer({ catalogClient, logger: noopLogger }).state).toBe('created');
   });
@@ -67,7 +67,7 @@ describe('Backstage server composition', () => {
     });
     const client = new Client({ name: 'server-test', version: '1.0.0' });
     await client.connect(clientTransport);
-    expect((await client.listTools()).tools).toHaveLength(3);
+    expect((await client.listTools()).tools).toHaveLength(13);
     await client.close();
     await app.stop('test-complete');
   });

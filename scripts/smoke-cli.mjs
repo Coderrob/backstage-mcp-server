@@ -60,7 +60,21 @@ try {
   await client.connect(transport);
   const result = await client.listTools();
   const names = result.tools.map(/** Selects an advertised tool name. */ ({ name }) => name);
-  const expected = ['add_location', 'get_entities', 'get_entity_by_ref'];
+  const expected = [
+    'add_location',
+    'get_entities',
+    'get_entities_by_query',
+    'get_entities_by_refs',
+    'get_entity_ancestors',
+    'get_entity_by_ref',
+    'get_entity_facets',
+    'get_location_by_entity',
+    'get_location_by_ref',
+    'refresh_entity',
+    'remove_entity_by_uid',
+    'remove_location_by_id',
+    'validate_entity',
+  ];
   if (JSON.stringify(names) !== JSON.stringify(expected)) {
     throw new Error(`Unexpected CLI tool list: ${JSON.stringify(names)}`);
   }

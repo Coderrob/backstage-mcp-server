@@ -12,6 +12,8 @@ The canonical path described here is implemented under `src/mcp`, with the Backs
 
 The legacy decorator, builder, plugin, middleware, strategy, health, and duplicate infrastructure implementations were audited as unreachable from both package entrypoints and removed. The remaining production surface has one generic MCP kernel, one Backstage plugin/adapter, and one shared logger. Every behavioral module has a colocated Vitest file, and coverage is enforced at 95% per file across statements, branches, functions, and lines. Streamable HTTP and distributed policy providers remain later-release work as specified by the non-goals below. The removal and verification floor are recorded in [ADR 0005](../adr/0005-remove-unreachable-compatibility-and-enforce-coverage.md).
 
+All thirteen historical Backstage Catalog tools are now schema-first definitions under `src/backstage/tools`. The plugin is a composition boundary rather than an implementation container, and `src/backstage/tools/AGENTS.md` records the scoped authoring and verification convention. The generated manifest, SDK smoke test, MCP Inspector test, and opt-in live Backstage test all verify the same complete tool list.
+
 ## Success criteria
 
 A feature author should be able to:
@@ -319,7 +321,7 @@ Acceptance:
 
 - all four commands pass from a clean checkout;
 - importing the test target emits no protocol or network side effects;
-- a smoke client initializes, lists the three actual tools, calls one, and shuts down;
+- a smoke client initializes, lists all thirteen Catalog tools, calls one, and shuts down;
 - no test fixture contains a credential-shaped literal.
 
 ### Phase 1: add typed definitions and an instance registry
@@ -383,11 +385,11 @@ Acceptance:
 Tasks:
 
 - define `BackstageContext` and inject `IBackstageCatalogApi`;
-- migrate the three active tools to typed function definitions;
+- migrate all thirteen historical Catalog tools to typed function definitions;
 - distinguish upstream Backstage auth from MCP caller identity;
 - choose one cache owner and add mutation invalidation rules;
 - remove migrated builder, base class, registrar, strategy, and decorator paths;
-- decide whether each of the ten manifest-only tools is implemented, deferred, or removed from product claims.
+- keep the runtime, generated manifest, tests, and documentation synchronized from the same definitions.
 
 Acceptance:
 

@@ -148,3 +148,8 @@ export interface IBackstageCatalogApi {
    */
   validateEntity(entity: Entity, locationRef: string, options?: CatalogRequestOptions): Promise<ValidateEntityResponse>;
 }
+
+/** Dependencies available to every Backstage Catalog MCP tool. */
+export interface BackstageMcpContext {
+  catalogClient: IBackstageCatalogApi;
+}

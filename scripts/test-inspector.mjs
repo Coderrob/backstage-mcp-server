@@ -24,7 +24,21 @@ const INSPECTOR_ENTRY = resolve(
   'index.js'
 );
 const SERVER_ENTRY = resolve('dist', 'cli.cjs');
-const EXPECTED_TOOLS = ['add_location', 'get_entities', 'get_entity_by_ref'];
+const EXPECTED_TOOLS = [
+  'add_location',
+  'get_entities',
+  'get_entities_by_query',
+  'get_entities_by_refs',
+  'get_entity_ancestors',
+  'get_entity_by_ref',
+  'get_entity_facets',
+  'get_location_by_entity',
+  'get_location_by_ref',
+  'refresh_entity',
+  'remove_entity_by_uid',
+  'remove_location_by_id',
+  'validate_entity',
+];
 
 /**
  * Handles one request received by the deterministic Catalog stub.

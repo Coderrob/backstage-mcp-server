@@ -16,7 +16,7 @@
       "name": "add_location",
       "plugin": "backstage-catalog",
       "title": "Add a catalog location",
-      "description": "Add a location to the Backstage catalog, or validate it using dry-run mode.",
+      "description": "Add a location to the Backstage Catalog, or validate it using dry-run mode.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -80,7 +80,7 @@
       "name": "get_entities",
       "plugin": "backstage-catalog",
       "title": "Get catalog entities",
-      "description": "Query Backstage catalog entities with filters, full-text search, ordering, and cursor pagination.",
+      "description": "Query Catalog entities with filters, full-text search, ordering, projection, and pagination.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -135,7 +135,28 @@
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "minItems": 1
+          },
+          "order": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "order": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
           },
           "orderFields": {
             "anyOf": [
@@ -182,7 +203,8 @@
                     "order"
                   ],
                   "additionalProperties": false
-                }
+                },
+                "minItems": 1
               }
             ]
           },
@@ -207,7 +229,8 @@
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "minItems": 1
               }
             },
             "required": [
@@ -261,10 +284,305 @@
     },
     {
       "kind": "tool",
-      "name": "get_entity_by_ref",
+      "name": "get_entities_by_query",
       "plugin": "backstage-catalog",
-      "title": "Get a catalog entity",
-      "description": "Get one Backstage catalog entity by its compound reference.",
+      "title": "Get catalog entities by query",
+      "description": "Query Catalog entities using the legacy name with current Backstage query capabilities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      }
+                    ]
+                  }
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "order": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "order": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
+          },
+          "orderFields": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "order": {
+                    "type": "string",
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                },
+                "required": [
+                  "field",
+                  "order"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "order": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "order"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fullTextFilter": {
+            "type": "object",
+            "properties": {
+              "term": {
+                "type": "string",
+                "minLength": 1
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "term"
+            ],
+            "additionalProperties": false
+          },
+          "totalItems": {
+            "type": "string",
+            "enum": [
+              "include",
+              "exclude"
+            ]
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entities_by_refs",
+      "plugin": "backstage-catalog",
+      "title": "Get catalog entities by references",
+      "description": "Retrieve multiple Backstage Catalog entities by string or structured compound references.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRefs": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "namespace": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "namespace",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "minItems": 1
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "entityRefs"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entity_ancestors",
+      "plugin": "backstage-catalog",
+      "title": "Get catalog entity ancestors",
+      "description": "Retrieve the ancestry tree for a Backstage Catalog entity.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -333,6 +651,559 @@
             "catalog"
           ]
         }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entity_by_ref",
+      "plugin": "backstage-catalog",
+      "title": "Get a catalog entity",
+      "description": "Retrieve one Backstage Catalog entity by string or structured compound reference.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "namespace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "namespace",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entity_facets",
+      "plugin": "backstage-catalog",
+      "title": "Get catalog entity facets",
+      "description": "Retrieve facet counts for one or more Backstage Catalog entity fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      }
+                    ]
+                  }
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "facets"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_location_by_entity",
+      "plugin": "backstage-catalog",
+      "title": "Get catalog location by entity",
+      "description": "Retrieve the Backstage Catalog location associated with an entity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "namespace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "namespace",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_location_by_ref",
+      "plugin": "backstage-catalog",
+      "title": "Get catalog location by reference",
+      "description": "Retrieve a Backstage Catalog location by its location reference.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationRef": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "locationRef"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "refresh_entity",
+      "plugin": "backstage-catalog",
+      "title": "Refresh a catalog entity",
+      "description": "Request immediate refresh processing for a Backstage Catalog entity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "namespace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "namespace",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "rateLimit": {
+          "maxRequests": 50,
+          "windowMs": 60000
+        },
+        "invalidates": [
+          "catalog"
+        ]
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "remove_entity_by_uid",
+      "plugin": "backstage-catalog",
+      "title": "Remove a catalog entity",
+      "description": "Permanently remove a Backstage Catalog entity by its unique identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "rateLimit": {
+          "maxRequests": 50,
+          "windowMs": 60000
+        },
+        "invalidates": [
+          "catalog"
+        ]
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "remove_location_by_id",
+      "plugin": "backstage-catalog",
+      "title": "Remove a catalog location",
+      "description": "Permanently remove a Backstage Catalog location by its identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "locationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "rateLimit": {
+          "maxRequests": 50,
+          "windowMs": 60000
+        },
+        "invalidates": [
+          "catalog"
+        ]
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "validate_entity",
+      "plugin": "backstage-catalog",
+      "title": "Validate a catalog entity",
+      "description": "Validate a Backstage entity descriptor in the context of its source location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "metadata"
+            ],
+            "additionalProperties": {}
+          },
+          "locationRef": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "entity",
+          "locationRef"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success"
+          },
+          "data": {}
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000
       }
     }
   ]
