@@ -13,10 +13,19 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * Configuration for different authentication methods.
- */
-export interface IAuthConfig {
+/** Bearer authentication backed by an immutable token value. */
+interface IStaticBearerAuthConfig {
   type: 'bearer';
   token: string;
+  tokenFile?: never;
 }
+
+/** Bearer authentication backed by an externally managed token file. */
+export interface IFileBearerAuthConfig {
+  type: 'bearer';
+  token?: never;
+  tokenFile: string;
+}
+
+/** Supported external Backstage bearer-credential sources. */
+export type IAuthConfig = IStaticBearerAuthConfig | IFileBearerAuthConfig;

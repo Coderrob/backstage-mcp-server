@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`BACKSTAGE_TOKEN_FILE` environment variable**: read the bearer token from a file instead of an env literal. The file is re-read on every outgoing request, so external rotation (e.g. by a sidecar refresh process) takes effect without restarting the server. Takes precedence over `BACKSTAGE_TOKEN` when both are set.
+
 ### Fixed
 
 - **Authentication and Security**: Implemented comprehensive authentication system with AuthManager supporting multiple auth methods (Bearer, OAuth, API keys, Service accounts), automatic token refresh, rate limiting, security auditing, and input sanitization. Added security interceptors to API client and audit logging for all operations.

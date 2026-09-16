@@ -19,6 +19,14 @@ afterEach(() => {
 describe('Backstage server composition', () => {
   it('should validate external-access authentication configuration', () => {
     expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'token' })).toEqual({ type: 'bearer', token: 'token' });
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN_FILE: '/run/secrets/backstage-token' })).toEqual({
+      type: 'bearer',
+      tokenFile: '/run/secrets/backstage-token',
+    });
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'static-token', BACKSTAGE_TOKEN_FILE: '/run/secrets/token' })).toEqual({
+      type: 'bearer',
+      tokenFile: '/run/secrets/token',
+    });
     expect(() => buildAuthConfig({})).toThrow(ConfigurationError);
     vi.stubEnv('BACKSTAGE_TOKEN', 'process-token');
     expect(buildAuthConfig()).toEqual({ type: 'bearer', token: 'process-token' });

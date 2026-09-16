@@ -4,9 +4,20 @@
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
  */
 
+import { readFile } from 'node:fs/promises';
+
 import { AuthenticationError } from '../../shared/errors/error-handling.js';
 import { isNonEmptyString } from '../../shared/validation/guards.js';
-import type { IAuthConfig } from '../../types/index.js';
+import type { IAuthConfig, IFileBearerAuthConfig } from '../../types/index.js';
+
+/**
+ * Reports whether authentication uses an externally managed token file.
+ * @param config - Backstage bearer authentication configuration.
+ * @returns Whether the configuration names a token file.
+ */
+function isFileBearerAuth(config: Readonly<IAuthConfig>): config is Readonly<IFileBearerAuthConfig> {
+  return 'tokenFile' in config;
+}
 
 /**
  * Supplies the bearer credential used by this external Backstage client.
@@ -16,7 +27,7 @@ import type { IAuthConfig } from '../../types/index.js';
  * token issuance is intentionally not emulated by this standalone process.
  */
 export class AuthManager {
-  private readonly token: string;
+  private readonly config: Readonly<IAuthConfig>;
 
   /**
    * Initializes a bearer-token provider.
@@ -24,17 +35,41 @@ export class AuthManager {
    * @throws {AuthenticationError} When the configured token is empty.
    */
   constructor(config: Readonly<IAuthConfig>) {
-    if (!isNonEmptyString(config.token)) {
+    const credential = isFileBearerAuth(config) ? config.tokenFile : config.token;
+    if (!isNonEmptyString(credential)) {
       throw new AuthenticationError('A non-empty Backstage bearer token is required');
     }
-    this.token = config.token;
+    this.config = config;
   }
 
   /**
    * Gets the authorization header for a Catalog API request.
-   * @returns A bearer authorization header containing the configured token.
+   * File-backed tokens are read for every request so an external process can
+   * rotate the credential without restarting this server.
+   * @returns A bearer authorization header containing the current token.
+   * @throws {AuthenticationError} When a token file cannot be read or is empty.
    */
-  getAuthorizationHeader(): string {
-    return `Bearer ${this.token}`;
+  async getAuthorizationHeader(): Promise<string> {
+    const token = isFileBearerAuth(this.config) ? await this.readTokenFile(this.config.tokenFile) : this.config.token;
+    return `Bearer ${token}`;
+  }
+
+  /**
+   * Reads and validates the current externally managed bearer token.
+   * @param tokenFile - Path to the token file.
+   * @returns The trimmed, non-empty token.
+   * @throws {AuthenticationError} When the file cannot be read or contains no token.
+   */
+  private async readTokenFile(tokenFile: string): Promise<string> {
+    let token: string;
+    try {
+      token = (await readFile(tokenFile, 'utf8')).trim();
+    } catch {
+      throw new AuthenticationError('Unable to read the Backstage bearer token file');
+    }
+    if (!isNonEmptyString(token)) {
+      throw new AuthenticationError('The Backstage bearer token file is empty');
+    }
+    return token;
   }
 }

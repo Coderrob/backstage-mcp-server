@@ -40,7 +40,12 @@ The build produces side-effect-free library bundles at `dist/index.mjs` and `dis
 
 ## Configuration
 
-Set `BACKSTAGE_BASE_URL` to the Backstage backend root (or the full `/api/catalog` URL) and provide `BACKSTAGE_TOKEN`.
+Set `BACKSTAGE_BASE_URL` to the Backstage backend root (or the full `/api/catalog` URL) and configure one bearer-credential source:
+
+- `BACKSTAGE_TOKEN` supplies a static token value.
+- `BACKSTAGE_TOKEN_FILE` supplies a path whose trimmed contents are read before every outgoing request, allowing an external secret manager or sidecar to rotate the token without restarting the server.
+
+`BACKSTAGE_TOKEN_FILE` takes precedence when both variables are set.
 
 The token is sent verbatim as a bearer credential. For a standalone external caller, use a sufficiently strong static token configured under Backstage `backend.auth.externalAccess`, or a JWT accepted by a configured JWKS external-access provider. Restrict the credential to the `catalog` plugin and the necessary permission actions where possible. Backstage's automatic plugin-to-plugin token flow is not available to an external standalone process.
 
@@ -53,6 +58,14 @@ Example:
 ```bash
 export BACKSTAGE_BASE_URL=https://backstage.example.com
 export BACKSTAGE_TOKEN=your-token
+corepack yarn start
+```
+
+For an externally rotated file-based token:
+
+```bash
+export BACKSTAGE_BASE_URL=https://backstage.example.com
+export BACKSTAGE_TOKEN_FILE=/run/secrets/backstage-token
 corepack yarn start
 ```
 

@@ -23,15 +23,17 @@ export interface BackstageServerOptions {
 }
 
 /**
- * Resolves the bearer token used for Backstage external access.
+ * Resolves the bearer credential used for Backstage external access.
  * @param env - Environment variables containing Backstage credentials.
  * @returns Validated bearer authentication configuration.
- * @throws {ConfigurationError} When no Backstage token is configured.
+ * @throws {ConfigurationError} When no Backstage token source is configured.
  */
 export function buildAuthConfig(env: Readonly<NodeJS.ProcessEnv> = process.env): IAuthConfig {
+  const tokenFile = env.BACKSTAGE_TOKEN_FILE;
+  if (isNonEmptyString(tokenFile)) return { type: 'bearer', tokenFile };
   const token = env.BACKSTAGE_TOKEN;
   if (isNonEmptyString(token)) return { type: 'bearer', token };
-  throw new ConfigurationError('BACKSTAGE_TOKEN is required for Backstage external access');
+  throw new ConfigurationError('BACKSTAGE_TOKEN or BACKSTAGE_TOKEN_FILE is required for Backstage external access');
 }
 
 /**

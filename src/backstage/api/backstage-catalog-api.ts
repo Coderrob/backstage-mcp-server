@@ -93,7 +93,7 @@ function createAuthenticatedFetch(
     const request = new Request(input, init);
     if (request.headers.has('authorization')) return fetchImplementation(request);
     const headers = new Headers(request.headers);
-    headers.set('authorization', authManager.getAuthorizationHeader());
+    headers.set('authorization', await authManager.getAuthorizationHeader());
     return fetchImplementation(new Request(request, { headers }));
   }
 

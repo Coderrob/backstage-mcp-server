@@ -25,7 +25,9 @@ The adapter normalizes both forms without appending `/api/catalog` twice.
 
 ## Authentication and permissions
 
-Set `BACKSTAGE_TOKEN` to a token accepted by the target Backstage deployment. For this standalone external process, the documented options are:
+Set either `BACKSTAGE_TOKEN` to a token value or `BACKSTAGE_TOKEN_FILE` to the path of a file containing a token accepted by the target Backstage deployment. File-backed tokens are trimmed and read before every outgoing request so an external secret manager can rotate them without restarting the server. `BACKSTAGE_TOKEN_FILE` takes precedence when both variables are set.
+
+For this standalone external process, the documented token options are:
 
 - a sufficiently strong static token configured in `backend.auth.externalAccess`; or
 - a JWT accepted by a configured JWKS external-access entry.
@@ -73,7 +75,7 @@ Use `add_location` only with a credential and Backstage permission policy author
 
 ## Verification
 
-The colocated [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts) verifies URL normalization, modern entity-query serialization, canonical entity-reference routing, external bearer authentication, and location query/body separation.
+The colocated [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts) verifies URL normalization, modern entity-query serialization, canonical entity-reference routing, external bearer authentication, and location query/body separation. [`auth-manager.test.ts`](../../src/backstage/auth/auth-manager.test.ts) verifies file-backed token loading, rotation, and safe failures.
 
 There is no active request path to Backstage's deprecated `GET /entities` endpoint; the unreachable legacy compatibility implementation has been removed.
 

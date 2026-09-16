@@ -16,7 +16,7 @@ Backstage publishes `@backstage/catalog-client` as the frontend- and backend-com
 - Use `queryEntities` for the `get_entities` MCP tool instead of deprecated `getEntities` behavior.
 - Expose current query fields: `orderFields`, `fullTextFilter`, `totalItems`, and `cursor`.
 - Expose the current `addLocation` `onConflict` option.
-- Accept `BACKSTAGE_TOKEN` as the standalone process credential and send it as a bearer token. The token may be a Backstage static external-access token or a JWT accepted by a configured JWKS provider.
+- Accept `BACKSTAGE_TOKEN` or an externally rotated `BACKSTAGE_TOKEN_FILE` as the standalone process credential and send it as a bearer token. The token may be a Backstage static external-access token or a JWT accepted by a configured JWKS provider.
 - Do not emulate Backstage's internal plugin-to-plugin token issuance or claim that arbitrary API keys and service-account strings are Backstage authentication modes.
 
 ## Consequences
