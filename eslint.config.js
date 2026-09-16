@@ -61,6 +61,40 @@ const MAX_MJS_COMPLEXITY = 3;
 const MAX_MJS_FILE_LINES = 350;
 const MAX_MJS_FUNCTION_LINES = 30;
 const MAX_TYPESCRIPT_FUNCTION_LINES = 30;
+const TYPESCRIPT_FILES = ['./src/**/*.ts'];
+const TYPESCRIPT_TEST_FILES = ['./src/**/*.{test,spec}.ts'];
+const TEST_FILES = ['**/*.{test,spec}.{js,mjs,cjs,ts}'];
+
+const commonModulePlugins = {
+  jsdoc,
+  'simple-import-sort': simpleImportSort,
+  'zero-tolerance': zeroTolerance,
+  sonarjs,
+};
+
+const commonModuleRules = {
+  'no-console': ['error', { allow: ['warn', 'error'] }],
+  'simple-import-sort/exports': 'error',
+  'simple-import-sort/imports': 'error',
+  'sonarjs/cognitive-complexity': ['error', 10],
+  'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
+  'sonarjs/no-identical-functions': 'error',
+  complexity: ['error', 10],
+};
+
+const testRuleOverrides = {
+  'jsdoc/require-jsdoc': 'off',
+  'max-lines': 'off',
+  'max-lines-per-function': 'off',
+  'zero-tolerance/max-function-lines': 'off',
+  'zero-tolerance/no-mock-implementation': 'warn',
+  'zero-tolerance/no-set-interval-in-tests': 'warn',
+  'zero-tolerance/no-set-timeout-in-tests': 'warn',
+  'zero-tolerance/no-test-interface-declaration': 'warn',
+  'zero-tolerance/prefer-result-return': 'off',
+  'zero-tolerance/require-jsdoc-anonymous-functions': 'off',
+  'zero-tolerance/require-test-description-style': 'warn',
+};
 
 const repositoryQualityPlugin = {
   rules: {
@@ -120,32 +154,23 @@ export default [
     ignores: ['dist/**', '.yarn/**', 'node_modules/**', 'coverage/**'],
   },
   {
+    name: 'repository/javascript',
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: nodeGlobals,
     },
-    plugins: {
-      jsdoc,
-      'simple-import-sort': simpleImportSort,
-      'zero-tolerance': zeroTolerance,
-      sonarjs,
-    },
+    plugins: commonModulePlugins,
     rules: {
       ...jsdocDocumentationRules,
       ...zeroToleranceRules,
-      'no-console': ['error', { allow: ['warn', 'error'] }],
-      'simple-import-sort/exports': 'error',
-      'simple-import-sort/imports': 'error',
-      'sonarjs/cognitive-complexity': ['error', 10],
-      'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
-      'sonarjs/no-identical-functions': 'error',
-      complexity: ['error', 10],
+      ...commonModuleRules,
     },
   },
   {
-    files: ['./src/**/*.ts'],
+    name: 'repository/typescript',
+    files: TYPESCRIPT_FILES,
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -156,13 +181,10 @@ export default [
       globals: nodeGlobals,
     },
     plugins: {
+      ...commonModulePlugins,
       '@typescript-eslint': tseslint,
-      jsdoc,
-      'repository-quality': repositoryQualityPlugin,
-      'zero-tolerance': zeroTolerance,
-      'simple-import-sort': simpleImportSort,
       'import-x': importPlugin,
-      sonarjs: sonarjs,
+      'repository-quality': repositoryQualityPlugin,
       'unused-imports': unusedImports,
     },
     rules: {
@@ -172,6 +194,7 @@ export default [
       ...importPlugin.flatConfigs.typescript.rules,
       ...jsdocDocumentationRules,
       ...zeroToleranceRules,
+      ...commonModuleRules,
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/require-await': 'off',
@@ -183,11 +206,8 @@ export default [
           varsIgnorePattern: '^_',
         },
       ],
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
       'import-x/no-unused-modules': ['off', { unusedExports: true }],
       'import-x/no-unresolved': 'off',
-      'no-console': ['error', { allow: ['warn', 'error'] }],
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'warn',
@@ -198,10 +218,6 @@ export default [
           argsIgnorePattern: '^_',
         },
       ],
-      'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
-      'sonarjs/cognitive-complexity': ['error', 10],
-      'sonarjs/no-identical-functions': 'error',
-      complexity: ['error', 10],
       'repository-quality/require-jsdoc-classes': 'error',
     },
     settings: {
@@ -211,101 +227,16 @@ export default [
     },
   },
   {
-    files: ['./src/**/*.test.ts', './src/**/*.spec.ts'],
-    languageOptions: {
-      parser: tsparser,
-      parserOptions: {
-        project: ['./tsconfig.json', './tsconfig.test.json'],
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: nodeGlobals,
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-      jsdoc,
-      'repository-quality': repositoryQualityPlugin,
-      'zero-tolerance': zeroTolerance,
-      'simple-import-sort': simpleImportSort,
-      'import-x': importPlugin,
-      sonarjs: sonarjs,
-      'unused-imports': unusedImports,
-    },
-    rules: {
-      ...tseslint.configs.recommended.rules,
-      ...tseslint.configs['strict-type-checked'].rules,
-      ...importPlugin.flatConfigs.recommended.rules,
-      ...importPlugin.flatConfigs.typescript.rules,
-      ...jsdocDocumentationRules,
-      ...zeroToleranceRules,
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'error',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/prefer-promise-reject-errors': 'off',
-      '@typescript-eslint/require-await': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'import-x/no-unused-modules': ['off', { unusedExports: true }],
-      'import-x/no-unresolved': 'off',
-      'no-console': ['error', { allow: ['warn', 'error'] }],
-      'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          vars: 'all',
-          varsIgnorePattern: '^_',
-          args: 'after-used',
-          argsIgnorePattern: '^_',
-        },
-      ],
-      'sonarjs/no-duplicate-string': ['error', { threshold: 5 }],
-      'sonarjs/cognitive-complexity': ['error', 10],
-      'sonarjs/no-identical-functions': 'error',
-      complexity: ['error', 10],
-      'repository-quality/require-jsdoc-classes': 'error',
-      'jsdoc/require-jsdoc': 'off',
-      'import-x/no-extraneous-dependencies': [
-        'error',
-        { devDependencies: ['./src/**/*.test.ts', './src/**/*.spec.ts'] },
-      ],
-      'zero-tolerance/no-mock-implementation': 'warn',
-      'zero-tolerance/no-set-interval-in-tests': 'warn',
-      'zero-tolerance/no-set-timeout-in-tests': 'warn',
-      'zero-tolerance/no-test-interface-declaration': 'warn',
-      'zero-tolerance/max-function-lines': 'off',
-      'zero-tolerance/prefer-result-return': 'off',
-      'zero-tolerance/require-jsdoc-anonymous-functions': 'off',
-      'zero-tolerance/require-test-description-style': 'warn',
-    },
-    settings: {
-      'import/resolver': {
-        typescript: {},
-      },
-    },
-  },
-  {
-    files: ['./src/**/*.ts'],
-    ignores: ['./src/**/*.test.ts'],
+    name: 'repository/typescript-production-limits',
+    files: TYPESCRIPT_FILES,
+    ignores: TYPESCRIPT_TEST_FILES,
     rules: {
       'max-lines-per-function': ['error', { max: MAX_TYPESCRIPT_FUNCTION_LINES, IIFEs: true }],
       'zero-tolerance/max-function-lines': ['error', { max: MAX_TYPESCRIPT_FUNCTION_LINES }],
     },
   },
   {
+    name: 'repository/mjs-production-limits',
     files: ['**/*.mjs'],
     plugins: {
       jsdoc,
@@ -323,14 +254,23 @@ export default [
     },
   },
   {
-    files: ['**/*.test.js', '**/*.spec.js', '**/*.test.mjs', '**/*.spec.mjs', '**/*.test.cjs', '**/*.spec.cjs'],
+    name: 'repository/tests',
+    files: TEST_FILES,
+    rules: testRuleOverrides,
+  },
+  {
+    name: 'repository/typescript-tests',
+    files: TYPESCRIPT_TEST_FILES,
     rules: {
-      'max-lines': 'off',
-      'max-lines-per-function': 'off',
-      'zero-tolerance/max-function-lines': 'off',
-      'zero-tolerance/prefer-result-return': 'off',
-      'zero-tolerance/require-jsdoc-anonymous-functions': 'off',
-      'zero-tolerance/require-test-description-style': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/prefer-promise-reject-errors': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+      'import-x/no-extraneous-dependencies': ['error', { devDependencies: TYPESCRIPT_TEST_FILES }],
     },
   },
 ];
