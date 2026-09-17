@@ -12,41 +12,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 
-import type { ITool, IToolMetadata, IToolRegistrar } from './types/tools.js';
-import { logger } from './utils/core/logger.js';
-import { DefaultToolFactory } from './utils/tools/tool-factory.js';
-import { ToolLoader } from './utils/tools/tool-loader.js';
-import { ReflectToolMetadataProvider } from './utils/tools/tool-metadata.js';
-import { DefaultToolValidator } from './utils/tools/tool-validator.js';
+import { writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
-class MockToolRegistrar implements IToolRegistrar {
-  register(_toolClass: ITool, _metadata: IToolMetadata): void {
-    // Mock implementation - do nothing for manifest generation
-  }
+import { createBackstageServer } from './server.js';
+
+const DEFAULT_MANIFEST_FILENAME = 'tools-manifest.json';
+const JSON_INDENT_SPACES = 2;
+const TEXT_ENCODING = 'utf8';
+
+/**
+ * Generates manifest.
+ * @param outputPath - The manifest output path.
+ */
+export async function generateManifest(outputPath = resolve(process.cwd(), DEFAULT_MANIFEST_FILENAME)): Promise<void> {
+  const manifest = createBackstageServer().manifest();
+  await writeFile(outputPath, `${JSON.stringify(manifest, null, JSON_INDENT_SPACES)}\n`, TEXT_ENCODING);
 }
-
-export async function generateManifest(): Promise<void> {
-  // ESM doesn't provide a __dirname variable - synthesize one from import.meta.url
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-
-  const toolLoader = new ToolLoader(
-    new DefaultToolFactory(),
-    new MockToolRegistrar(),
-    new DefaultToolValidator(),
-    new ReflectToolMetadataProvider()
-  );
-
-  await toolLoader.registerAll();
-  await toolLoader.exportManifest(join(__dirname, '..', 'tools-manifest.json'));
-
-  logger.info('Tools manifest generated successfully!');
-}
-
-generateManifest().catch((error) => {
-  logger.error('Failed to generate manifest:', error);
-  process.exit(1);
-});

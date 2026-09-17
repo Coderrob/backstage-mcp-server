@@ -2,6 +2,7 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "declaration": true,
+    "downlevelIteration": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
@@ -13,7 +14,7 @@
     "rootDir": "src",
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2022",
+    "target": "ES2024",
     "types": ["node"]
   },
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__fixtures__/**/*"],

@@ -12,18 +12,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { startServer } from './server.js';
-import { logger } from './utils/core/logger.js';
-import { isError } from './utils/index.js';
 
-// Export for programmatic usage
-export { startServer };
-
-(async function main(): Promise<void> {
-  await startServer().catch((err) => {
-    logger.error('Fatal server startup error', {
-      error: isError(err) ? err.message : String(err),
-    });
-    process.exit(1);
-  });
-})();
+export * from './backstage/backstage.plugin.js';
+export * from './generate-manifest.js';
+export * from './mcp/index.js';
+export * from './server.js';
+export * from './shared/constants/backstage-catalog.js';
+export { createStderrLogger, LogLevel, noopLogger, redact } from './shared/logging/logger.js';
+export type * from './types/index.js';

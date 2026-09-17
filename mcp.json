@@ -2,7 +2,7 @@
   "mcpServers": {
     "backstage": {
       "command": "node",
-      "args": ["dist/bundle.cjs"],
+      "args": ["dist/cli.cjs"],
       "env": {
         "BACKSTAGE_BASE_URL": "http://localhost:7007",
         "BACKSTAGE_TOKEN": "your-backstage-token"

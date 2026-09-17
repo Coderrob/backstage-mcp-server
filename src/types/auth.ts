@@ -12,22 +12,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-export interface AuthConfig {
-  type: 'bearer' | 'oauth' | 'api-key' | 'service-account';
-  token?: string;
-  clientId?: string;
-  clientSecret?: string;
-  tokenUrl?: string;
-  apiKey?: string;
-  serviceAccountKey?: string;
+
+import type { AuthType } from '../shared/constants/backstage-catalog.js';
+
+/** Bearer authentication backed by an immutable token value. */
+interface IStaticBearerAuthConfig {
+  type: AuthType.BEARER;
+  token: string;
+  tokenFile?: never;
 }
 
-/**
- * Information about an authentication token.
- */
-export interface TokenInfo {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: number;
-  tokenType: string;
+/** Bearer authentication backed by an externally managed token file. */
+export interface IFileBearerAuthConfig {
+  type: AuthType.BEARER;
+  token?: never;
+  tokenFile: string;
 }
+
+/** Supported external Backstage bearer-credential sources. */
+export type IAuthConfig = IStaticBearerAuthConfig | IFileBearerAuthConfig;

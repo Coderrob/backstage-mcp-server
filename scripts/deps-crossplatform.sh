@@ -178,7 +178,7 @@ safe_copy() {
     if [[ "$OS" == "windows" ]]; then
         # Use robocopy on Windows for better reliability
         if command -v robocopy >/dev/null 2>&1; then
-            robocopy "$(dirname "$src")" "$(dirname "$dst")" "$(basename "$src")" /NJH /NJS /NDL /NFL /NJH >nul 2>&1
+            robocopy "$(dirname "$src")" "$(dirname "$dst")" "$(basename "$src")" /NJH /NJS /NDL /NFL /NJH >/dev/null 2>&1
         else
             cp "$src" "$dst"
         fi
@@ -192,7 +192,7 @@ safe_mkdir() {
     local dir="$1"
 
     if [[ "$OS" == "windows" ]]; then
-        mkdir -p "$dir" 2>nul || true
+        mkdir -p "$dir" 2>/dev/null || true
     else
         mkdir -p "$dir" 2>/dev/null || true
     fi
@@ -215,7 +215,7 @@ safe_sleep() {
         sleep "$seconds"
     else
         # Fallback using ping (works on Windows)
-        ping -n $((seconds + 1)) 127.0.0.1 >nul 2>&1 || true
+        ping -n $((seconds + 1)) 127.0.0.1 >/dev/null 2>&1 || true
     fi
 }
 
@@ -430,7 +430,7 @@ quick_check() {
         if command -v timeout >/dev/null 2>&1 && [[ "$OS" != "windows" ]]; then
             timeout 30 npm ls --depth=0 >/dev/null 2>&1 || check_result=$?
         elif [[ "$OS" == "windows" ]] && command -v timeout >/dev/null 2>&1; then
-            timeout /t 30 /nobreak npm ls --depth=0 >nul 2>&1 || check_result=$?
+            timeout /t 30 /nobreak npm ls --depth=0 >/dev/null 2>&1 || check_result=$?
         else
             npm ls --depth=0 >/dev/null 2>&1 || check_result=$?
         fi
@@ -567,4 +567,6 @@ readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 readonly PURPLE='\033[0;35m'
 
 # Execute main function
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

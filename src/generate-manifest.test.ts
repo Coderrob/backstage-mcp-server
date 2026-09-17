@@ -12,60 +12,45 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { jest } from '@jest/globals';
+
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { generateManifest } from './generate-manifest.js';
-import { logger } from './utils/core/logger.js';
 
-// Mock dependencies
-jest.mock('./utils/core/logger.js', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-  },
-}));
+const originalDirectory = process.cwd();
+const temporaryDirectories: string[] = [];
 
-// Spy on logger methods
-jest.spyOn(logger, 'info');
-jest.spyOn(logger, 'error');
+afterEach(async () => {
+  process.chdir(originalDirectory);
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
+});
 
-const mockLogger = logger as jest.Mocked<typeof logger>;
-
-// Mock path and url modules with proper Jest mocking
-const mockFileURLToPath = jest.fn();
-const mockDirname = jest.fn();
-const mockJoin = jest.fn();
-
-jest.mock('path', () => ({
-  dirname: mockDirname,
-  join: mockJoin,
-}));
-
-jest.mock('url', () => ({
-  fileURLToPath: mockFileURLToPath,
-}));
+/** Creates and tracks an isolated temporary directory. */
+async function temporaryDirectory(): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), 'backstage-manifest-'));
+  temporaryDirectories.push(directory);
+  return directory;
+}
 
 describe('generateManifest', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    // Mock fileURLToPath and dirname
-    mockFileURLToPath.mockReturnValue('/d:/backstage-mcp-server/src/generate-manifest.ts');
-    mockDirname.mockReturnValue('/d:/backstage-mcp-server/src');
-    mockJoin.mockReturnValue('/d:/backstage-mcp-server/tools-manifest.json');
+  it('should write the runtime manifest to an explicit path', async () => {
+    const directory = await temporaryDirectory();
+    const outputPath = join(directory, 'manifest.json');
+    await generateManifest(outputPath);
+    const manifest: unknown = JSON.parse(await readFile(outputPath, 'utf8'));
+    expect(manifest).toBeTypeOf('object');
+    expect(JSON.stringify(manifest)).toContain('"name":"backstage-mcp-server"');
+    expect(JSON.stringify(manifest)).toContain('"name":"get_entities"');
   });
 
-  it('should generate manifest successfully', async () => {
+  it('should default to tools-manifest.json in the working directory', async () => {
+    const directory = await temporaryDirectory();
+    process.chdir(directory);
     await generateManifest();
-
-    expect(mockLogger.info).toHaveBeenCalledWith('Tools manifest generated successfully!');
-  });
-
-  it('should handle errors gracefully', async () => {
-    // Mock join to return an invalid path to trigger an error
-    mockJoin.mockReturnValueOnce('/invalid/path/tools-manifest.json');
-
-    // The function should still complete without throwing
-    await expect(generateManifest()).resolves.not.toThrow();
+    expect(await readFile(join(directory, 'tools-manifest.json'), 'utf8')).toContain('backstage-catalog');
   });
 });

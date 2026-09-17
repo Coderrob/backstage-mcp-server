@@ -12,91 +12,89 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import { jest } from '@jest/globals';
 
-import { buildAuthConfig } from './server.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('server', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    // Restore original env
-    delete process.env.BACKSTAGE_TOKEN;
-    delete process.env.BACKSTAGE_CLIENT_ID;
-    delete process.env.BACKSTAGE_CLIENT_SECRET;
-    delete process.env.BACKSTAGE_TOKEN_URL;
-    delete process.env.BACKSTAGE_API_KEY;
-    delete process.env.BACKSTAGE_SERVICE_ACCOUNT_KEY;
+import { BackstageCatalogApi } from './backstage/api/backstage-catalog-api.js';
+import { defineTransport } from './mcp/transports.js';
+import { buildAuthConfig, createBackstageServer, startServer } from './server.js';
+import { AuthType, BackstageToolName } from './shared/constants/backstage-catalog.js';
+import { McpApplicationState } from './shared/constants/mcp-protocol.js';
+import { ConfigurationError } from './shared/errors/error-handling.js';
+import { noopLogger } from './shared/logging/logger.js';
+
+const catalogClient = new BackstageCatalogApi({
+  baseUrl: 'https://backstage.example.test',
+  auth: { type: AuthType.BEARER, token: 'test-token' },
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('Backstage server composition', () => {
+  it('should validate external-access authentication configuration', () => {
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'token' })).toEqual({ type: AuthType.BEARER, token: 'token' });
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN_FILE: '/run/secrets/backstage-token' })).toEqual({
+      type: AuthType.BEARER,
+      tokenFile: '/run/secrets/backstage-token',
+    });
+    expect(buildAuthConfig({ BACKSTAGE_TOKEN: 'static-token', BACKSTAGE_TOKEN_FILE: '/run/secrets/token' })).toEqual({
+      type: AuthType.BEARER,
+      tokenFile: '/run/secrets/token',
+    });
+    expect(() => buildAuthConfig({})).toThrow(ConfigurationError);
+    vi.stubEnv('BACKSTAGE_TOKEN', 'process-token');
+    expect(buildAuthConfig()).toEqual({ type: AuthType.BEARER, token: 'process-token' });
   });
 
-  describe('buildAuthConfig', () => {
-    it('should build bearer auth config', () => {
-      process.env.BACKSTAGE_TOKEN = 'test-token';
+  it('should create a side-effect-free application with injected dependencies', () => {
+    const app = createBackstageServer({ catalogClient, logger: noopLogger, env: {} });
+    expect(app.state).toBe(McpApplicationState.CREATED);
+    expect(app.manifest().features).toHaveLength(Object.values(BackstageToolName).length);
+    expect(createBackstageServer({ catalogClient, env: { LOG_LEVEL: 'debug' } }).state).toBe(
+      McpApplicationState.CREATED
+    );
+    expect(createBackstageServer({ catalogClient, logger: noopLogger }).state).toBe(McpApplicationState.CREATED);
+  });
 
-      const result = buildAuthConfig();
+  it('should reject missing URL and token when constructing the runtime context', async () => {
+    const [, missingUrlTransport] = InMemoryTransport.createLinkedPair();
+    const missingUrl = createBackstageServer({ logger: noopLogger, env: { BACKSTAGE_TOKEN: 'token' } });
+    await expect(missingUrl.start(defineTransport('test', () => missingUrlTransport))).rejects.toThrow(
+      /BACKSTAGE_BASE_URL/
+    );
 
-      expect(result).toEqual({
-        type: 'bearer',
-        token: 'test-token',
-      });
+    const [, missingTokenTransport] = InMemoryTransport.createLinkedPair();
+    const missingToken = createBackstageServer({
+      logger: noopLogger,
+      env: { BACKSTAGE_BASE_URL: 'https://example.test/' },
     });
+    await expect(missingToken.start(defineTransport('test', () => missingTokenTransport))).rejects.toThrow(
+      /BACKSTAGE_TOKEN/
+    );
+  });
 
-    it('should build oauth auth config', () => {
-      process.env.BACKSTAGE_CLIENT_ID = 'client-id';
-      process.env.BACKSTAGE_CLIENT_SECRET = 'client-secret';
-      process.env.BACKSTAGE_TOKEN_URL = 'https://token.url';
-
-      const result = buildAuthConfig();
-
-      expect(result).toEqual({
-        type: 'oauth',
-        clientId: 'client-id',
-        clientSecret: 'client-secret',
-        tokenUrl: 'https://token.url',
-      });
+  it('should start using an injected transport factory', async () => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const app = await startServer({
+      catalogClient,
+      logger: noopLogger,
+      env: {},
+      transport: defineTransport('test', () => serverTransport),
     });
+    const client = new Client({ name: 'server-test', version: '1.0.0' });
+    await client.connect(clientTransport);
+    expect((await client.listTools()).tools).toHaveLength(Object.values(BackstageToolName).length);
+    await client.close();
+    await app.stop('test-complete');
+  });
 
-    it('should build api-key auth config', () => {
-      process.env.BACKSTAGE_API_KEY = 'api-key';
-
-      const result = buildAuthConfig();
-
-      expect(result).toEqual({
-        type: 'api-key',
-        apiKey: 'api-key',
-      });
-    });
-
-    it('should build service-account auth config', () => {
-      process.env.BACKSTAGE_SERVICE_ACCOUNT_KEY = 'service-key';
-
-      const result = buildAuthConfig();
-
-      expect(result).toEqual({
-        type: 'service-account',
-        serviceAccountKey: 'service-key',
-      });
-    });
-
-    it('should prioritize bearer over others', () => {
-      process.env.BACKSTAGE_TOKEN = 'token';
-      process.env.BACKSTAGE_API_KEY = 'key';
-
-      const result = buildAuthConfig();
-
-      expect(result.type).toBe('bearer');
-    });
-
-    it('should throw error when no auth config', () => {
-      expect(() => buildAuthConfig()).toThrow('No valid authentication configuration found');
-    });
-
-    it('should throw error for incomplete oauth', () => {
-      process.env.BACKSTAGE_CLIENT_ID = 'id';
-      process.env.BACKSTAGE_CLIENT_SECRET = 'secret';
-      // Missing tokenUrl
-
-      expect(() => buildAuthConfig()).toThrow('No valid authentication configuration found');
-    });
+  it('should default to the stdio transport when no factory is injected', async () => {
+    const app = await startServer({ catalogClient, logger: noopLogger, env: {} });
+    expect(app.state).toBe(McpApplicationState.RUNNING);
+    await app.stop('stdio-test-complete');
   });
 });
