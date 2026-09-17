@@ -23,6 +23,7 @@ This directory contains the Backstage Catalog tool surface exposed over MCP. Kee
 ## Testing and verification
 
 - Add a colocated `<tool_name>.tool.test.ts` for every tool module and a colocated test for every other behavioral TypeScript module in this directory.
+- Follow the repository-wide contract rules in the root `AGENTS.md`: test files must import named contracts, must not declare types or interfaces, and must not use casts or indexed-access property types.
 - Test the tool's metadata and schema plus meaningful handler behavior, including argument forwarding and relevant failure or not-found behavior.
 - Maintain at least 95% statement, branch, function, and line coverage for every file, not only the aggregate suite.
 - Update plugin contract tests, CLI/Inspector expected tool lists, the generated MCP manifest, and user documentation whenever the registered tool surface changes.

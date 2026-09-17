@@ -1,4 +1,17 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
@@ -74,8 +87,8 @@ export interface ToolDefinition<TContext> {
   readonly name: string;
   readonly title?: string;
   readonly description: string;
-  readonly inputSchema: z.AnyZodObject;
-  readonly outputSchema?: z.AnyZodObject;
+  readonly inputSchema: z.ZodObject<z.ZodRawShape>;
+  readonly outputSchema?: z.ZodObject<z.ZodRawShape>;
   readonly annotations?: ToolAnnotations;
   readonly policy?: McpToolPolicy;
   readonly handler: (invocation: McpInvocation<Record<string, unknown>, TContext>) => MaybePromise<CallToolResult>;
@@ -116,7 +129,7 @@ export interface PromptDefinition<TContext> {
   readonly title?: string;
   readonly description?: string;
   readonly argsSchema: z.ZodObject<McpPromptArgsShape>;
-  readonly handler: (invocation: McpInvocation<Record<string, unknown>, TContext>) => MaybePromise<GetPromptResult>;
+  handler(invocation: McpInvocation<Record<string, unknown>, TContext>): MaybePromise<GetPromptResult>;
 }
 
 /** Union of all feature kinds supported by the generic harness. */
@@ -143,11 +156,40 @@ export interface PluginDefinition<TContext> {
   readonly dispose?: (lifecycle: McpPluginLifecycle<TContext>) => MaybePromise<void>;
 }
 
-/** Registry entry that retains both a feature and its owning plugin. */
-export interface CompiledFeature<TContext> {
+/** Compiled tool entry with a top-level discriminant for safe dispatch. */
+export interface CompiledToolFeature<TContext> {
+  readonly kind: McpFeatureKind.TOOL;
   readonly plugin: PluginDefinition<TContext>;
-  readonly feature: McpFeature<TContext>;
+  readonly feature: ToolDefinition<TContext>;
 }
+
+/** Compiled fixed-resource entry with a top-level discriminant for safe dispatch. */
+export interface CompiledResourceFeature<TContext> {
+  readonly kind: McpFeatureKind.RESOURCE;
+  readonly plugin: PluginDefinition<TContext>;
+  readonly feature: ResourceDefinition<TContext>;
+}
+
+/** Compiled resource-template entry with a top-level discriminant for safe dispatch. */
+export interface CompiledResourceTemplateFeature<TContext> {
+  readonly kind: McpFeatureKind.RESOURCE_TEMPLATE;
+  readonly plugin: PluginDefinition<TContext>;
+  readonly feature: ResourceTemplateDefinition<TContext>;
+}
+
+/** Compiled prompt entry with a top-level discriminant for safe dispatch. */
+export interface CompiledPromptFeature<TContext> {
+  readonly kind: McpFeatureKind.PROMPT;
+  readonly plugin: PluginDefinition<TContext>;
+  readonly feature: PromptDefinition<TContext>;
+}
+
+/** Registry entry that retains a narrowed feature and its owning plugin. */
+export type CompiledFeature<TContext> =
+  | CompiledToolFeature<TContext>
+  | CompiledResourceFeature<TContext>
+  | CompiledResourceTemplateFeature<TContext>
+  | CompiledPromptFeature<TContext>;
 
 /** Data visible to middleware for the current feature invocation. */
 export interface McpMiddlewareInvocation<TContext> {
@@ -159,9 +201,11 @@ export interface McpMiddlewareInvocation<TContext> {
 
 /** Onion-style middleware that may observe, transform, short-circuit, or delegate an invocation. */
 export type McpMiddleware<TContext> = (
+  <TResult>(
   invocation: McpMiddlewareInvocation<TContext>,
-  next: () => Promise<unknown>
-) => Promise<unknown>;
+  next: () => Promise<TResult>
+) => Promise<TResult>
+);
 
 /** Services available while the application context is being created. */
 export interface McpRuntimeContext {
@@ -179,6 +223,10 @@ export interface CreateMcpServerOptions<TContext> {
   middleware?: readonly McpMiddleware<TContext>[];
   logger?: Logger;
   defaultTimeoutMs?: number;
+  /** Maximum number of cached tool results retained by the application. */
+  cacheCapacity?: number;
+  /** Maximum number of principal-specific rate-limit records retained by the application. */
+  rateLimitCapacity?: number;
 }
 
 /** Lazily creates a named SDK transport for an application instance. */
@@ -190,33 +238,48 @@ export interface McpTransportFactory {
 /** MCP SDK request metadata supplied to registered feature callbacks. */
 export type SdkRequestExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
+/** Invokes one compiled MCP tool through the application boundary. */
+export type McpToolInvoker<TContext> = (
+  compiled: CompiledToolFeature<TContext>,
+  input: Record<string, unknown>,
+  extra: SdkRequestExtra
+) => Promise<CallToolResult>;
+
+/** Invokes one compiled fixed resource through the application boundary. */
+export type McpResourceInvoker<TContext> = (
+  compiled: CompiledResourceFeature<TContext>,
+  uri: URL,
+  extra: SdkRequestExtra
+) => Promise<ReadResourceResult>;
+
+/** Invokes one compiled resource template through the application boundary. */
+export type McpResourceTemplateInvoker<TContext> = (
+  compiled: CompiledResourceTemplateFeature<TContext>,
+  uri: URL,
+  variables: Readonly<Record<string, string | string[]>>,
+  extra: SdkRequestExtra
+) => Promise<ReadResourceResult>;
+
+/** Lists concrete resources exposed by one compiled resource template. */
+export type McpResourceTemplateLister<TContext> = (
+  compiled: CompiledResourceTemplateFeature<TContext>,
+  extra: SdkRequestExtra
+) => Promise<ListResourcesResult>;
+
+/** Invokes one compiled MCP prompt through the application boundary. */
+export type McpPromptInvoker<TContext> = (
+  compiled: CompiledPromptFeature<TContext>,
+  input: Record<string, unknown>,
+  extra: SdkRequestExtra
+) => Promise<GetPromptResult>;
+
 /** Application callbacks consumed by the MCP SDK registration adapter. */
 export interface McpFeatureRuntime<TContext> {
-  invokeTool(
-    compiled: CompiledFeature<TContext> & { feature: ToolDefinition<TContext> },
-    input: Record<string, unknown>,
-    extra: SdkRequestExtra
-  ): Promise<CallToolResult>;
-  invokeResource(
-    compiled: CompiledFeature<TContext> & { feature: ResourceDefinition<TContext> },
-    uri: URL,
-    extra: SdkRequestExtra
-  ): Promise<ReadResourceResult>;
-  invokeResourceTemplate(
-    compiled: CompiledFeature<TContext> & { feature: ResourceTemplateDefinition<TContext> },
-    uri: URL,
-    variables: Readonly<Record<string, string | string[]>>,
-    extra: SdkRequestExtra
-  ): Promise<ReadResourceResult>;
-  listResourceTemplate(
-    compiled: CompiledFeature<TContext> & { feature: ResourceTemplateDefinition<TContext> },
-    extra: SdkRequestExtra
-  ): Promise<ListResourcesResult>;
-  invokePrompt(
-    compiled: CompiledFeature<TContext> & { feature: PromptDefinition<TContext> },
-    input: Record<string, unknown>,
-    extra: SdkRequestExtra
-  ): Promise<GetPromptResult>;
+  invokeTool: McpToolInvoker<TContext>;
+  invokeResource: McpResourceInvoker<TContext>;
+  invokeResourceTemplate: McpResourceTemplateInvoker<TContext>;
+  listResourceTemplate: McpResourceTemplateLister<TContext>;
+  invokePrompt: McpPromptInvoker<TContext>;
 }
 
 /** Serializable manifest metadata for one registered feature. */

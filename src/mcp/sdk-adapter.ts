@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -11,79 +20,15 @@ import type { z } from 'zod';
 import { McpFeatureKind } from '../shared/constants/mcp-protocol.js';
 import type {
   CompiledFeature,
+  CompiledPromptFeature,
+  CompiledResourceFeature,
+  CompiledResourceTemplateFeature,
+  CompiledToolFeature,
   McpFeatureRuntime,
-  PromptDefinition,
-  ResourceDefinition,
-  ResourceTemplateDefinition,
   SdkRequestExtra,
-  ToolDefinition,
 } from '../types/mcp.js';
 
 export type { McpFeatureRuntime, SdkRequestExtra } from '../types/mcp.js';
-
-type CompiledPrompt<TContext> = CompiledFeature<TContext> & { feature: PromptDefinition<TContext> };
-type CompiledResource<TContext> = CompiledFeature<TContext> & { feature: ResourceDefinition<TContext> };
-type CompiledResourceTemplate<TContext> = CompiledFeature<TContext> & {
-  feature: ResourceTemplateDefinition<TContext>;
-};
-type CompiledTool<TContext> = CompiledFeature<TContext> & { feature: ToolDefinition<TContext> };
-
-/**
- * Returns a Zod object's raw shape with the concrete type expected by the SDK.
- * @param schema - Harness object schema being registered.
- * @returns Raw Zod property shape.
- */
-function schemaShape(schema: Readonly<z.AnyZodObject>): z.ZodRawShape {
-  return schema.shape as z.ZodRawShape;
-}
-
-/**
- * Registers one tool with the SDK server.
- * @param server - SDK server receiving the tool.
- * @param compiled - Tool and owning plugin metadata.
- * @param runtime - Harness callbacks used for invocation.
- */
-function registerToolFeature<TContext>(
-  server: Readonly<McpServer>,
-  compiled: Readonly<CompiledTool<TContext>>,
-  runtime: Readonly<McpFeatureRuntime<TContext>>
-): void {
-  const { feature } = compiled;
-  server.registerTool(
-    feature.name,
-    {
-      title: feature.title,
-      description: feature.description,
-      inputSchema: schemaShape(feature.inputSchema),
-      outputSchema: feature.outputSchema ? schemaShape(feature.outputSchema) : undefined,
-      annotations: feature.annotations,
-    },
-    /** Invokes the registered harness tool. */ async (
-      input: Record<string, unknown>,
-      extra: SdkRequestExtra
-    ): Promise<CallToolResult> => runtime.invokeTool(compiled, input, extra)
-  );
-}
-
-/**
- * Registers one fixed resource with the SDK server.
- * @param server - SDK server receiving the resource.
- * @param compiled - Resource and owning plugin metadata.
- * @param runtime - Harness callbacks used for invocation.
- */
-function registerResourceFeature<TContext>(
-  server: Readonly<McpServer>,
-  compiled: Readonly<CompiledResource<TContext>>,
-  runtime: Readonly<McpFeatureRuntime<TContext>>
-): void {
-  const { feature } = compiled;
-  server.registerResource(
-    feature.name,
-    feature.uri,
-    { title: feature.title, description: feature.description, mimeType: feature.mimeType },
-    /** Invokes the registered fixed resource. */ async (uri, extra) => runtime.invokeResource(compiled, uri, extra)
-  );
-}
 
 /**
  * Creates the SDK template wrapper for a parameterized resource.
@@ -92,7 +37,7 @@ function registerResourceFeature<TContext>(
  * @returns SDK resource template wrapper.
  */
 function createSdkResourceTemplate<TContext>(
-  compiled: Readonly<CompiledResourceTemplate<TContext>>,
+  compiled: Readonly<CompiledResourceTemplateFeature<TContext>>,
   runtime: Readonly<McpFeatureRuntime<TContext>>
 ): ResourceTemplate {
   const { feature } = compiled;
@@ -106,27 +51,6 @@ function createSdkResourceTemplate<TContext>(
 }
 
 /**
- * Registers one parameterized resource with the SDK server.
- * @param server - SDK server receiving the resource template.
- * @param compiled - Resource template and owning plugin metadata.
- * @param runtime - Harness callbacks used for invocation.
- */
-function registerResourceTemplateFeature<TContext>(
-  server: Readonly<McpServer>,
-  compiled: Readonly<CompiledResourceTemplate<TContext>>,
-  runtime: Readonly<McpFeatureRuntime<TContext>>
-): void {
-  const { feature } = compiled;
-  server.registerResource(
-    feature.name,
-    createSdkResourceTemplate(compiled, runtime),
-    { title: feature.title, description: feature.description, mimeType: feature.mimeType },
-    /** Invokes the registered parameterized resource. */ async (uri, variables, extra) =>
-      runtime.invokeResourceTemplate(compiled, uri, variables, extra)
-  );
-}
-
-/**
  * Registers one prompt with the SDK server.
  * @param server - SDK server receiving the prompt.
  * @param compiled - Prompt and owning plugin metadata.
@@ -134,7 +58,7 @@ function registerResourceTemplateFeature<TContext>(
  */
 function registerPromptFeature<TContext>(
   server: Readonly<McpServer>,
-  compiled: Readonly<CompiledPrompt<TContext>>,
+  compiled: Readonly<CompiledPromptFeature<TContext>>,
   runtime: Readonly<McpFeatureRuntime<TContext>>
 ): void {
   const { feature } = compiled;
@@ -150,6 +74,47 @@ function registerPromptFeature<TContext>(
 }
 
 /**
+ * Registers one fixed resource with the SDK server.
+ * @param server - SDK server receiving the resource.
+ * @param compiled - Resource and owning plugin metadata.
+ * @param runtime - Harness callbacks used for invocation.
+ */
+function registerResourceFeature<TContext>(
+  server: Readonly<McpServer>,
+  compiled: Readonly<CompiledResourceFeature<TContext>>,
+  runtime: Readonly<McpFeatureRuntime<TContext>>
+): void {
+  const { feature } = compiled;
+  server.registerResource(
+    feature.name,
+    feature.uri,
+    { title: feature.title, description: feature.description, mimeType: feature.mimeType },
+    /** Invokes the registered fixed resource. */ async (uri, extra) => runtime.invokeResource(compiled, uri, extra)
+  );
+}
+
+/**
+ * Registers one parameterized resource with the SDK server.
+ * @param server - SDK server receiving the resource template.
+ * @param compiled - Resource template and owning plugin metadata.
+ * @param runtime - Harness callbacks used for invocation.
+ */
+function registerResourceTemplateFeature<TContext>(
+  server: Readonly<McpServer>,
+  compiled: Readonly<CompiledResourceTemplateFeature<TContext>>,
+  runtime: Readonly<McpFeatureRuntime<TContext>>
+): void {
+  const { feature } = compiled;
+  server.registerResource(
+    feature.name,
+    createSdkResourceTemplate(compiled, runtime),
+    { title: feature.title, description: feature.description, mimeType: feature.mimeType },
+    /** Invokes the registered parameterized resource. */ async (uri, variables, extra) =>
+      runtime.invokeResourceTemplate(compiled, uri, variables, extra)
+  );
+}
+
+/**
  * Dispatches one compiled feature to its SDK registration adapter.
  * @param server - SDK server receiving the feature.
  * @param compiled - Feature and owning plugin metadata.
@@ -160,14 +125,14 @@ function registerSdkFeature<TContext>(
   compiled: Readonly<CompiledFeature<TContext>>,
   runtime: Readonly<McpFeatureRuntime<TContext>>
 ): void {
-  if (compiled.feature.kind === McpFeatureKind.TOOL) {
-    registerToolFeature(server, compiled as CompiledTool<TContext>, runtime);
-  } else if (compiled.feature.kind === McpFeatureKind.RESOURCE) {
-    registerResourceFeature(server, compiled as CompiledResource<TContext>, runtime);
-  } else if (compiled.feature.kind === McpFeatureKind.RESOURCE_TEMPLATE) {
-    registerResourceTemplateFeature(server, compiled as CompiledResourceTemplate<TContext>, runtime);
+  if (compiled.kind === McpFeatureKind.TOOL) {
+    registerToolFeature(server, compiled, runtime);
+  } else if (compiled.kind === McpFeatureKind.RESOURCE) {
+    registerResourceFeature(server, compiled, runtime);
+  } else if (compiled.kind === McpFeatureKind.RESOURCE_TEMPLATE) {
+    registerResourceTemplateFeature(server, compiled, runtime);
   } else {
-    registerPromptFeature(server, compiled as CompiledPrompt<TContext>, runtime);
+    registerPromptFeature(server, compiled, runtime);
   }
 }
 
@@ -185,4 +150,41 @@ export function registerSdkFeatures<TContext>(
   for (const compiled of features) {
     registerSdkFeature(server, compiled, runtime);
   }
+}
+
+/**
+ * Registers one tool with the SDK server.
+ * @param server - SDK server receiving the tool.
+ * @param compiled - Tool and owning plugin metadata.
+ * @param runtime - Harness callbacks used for invocation.
+ */
+function registerToolFeature<TContext>(
+  server: Readonly<McpServer>,
+  compiled: Readonly<CompiledToolFeature<TContext>>,
+  runtime: Readonly<McpFeatureRuntime<TContext>>
+): void {
+  const { feature } = compiled;
+  server.registerTool(
+    feature.name,
+    {
+      title: feature.title,
+      description: feature.description,
+      inputSchema: schemaShape(feature.inputSchema),
+      outputSchema: feature.outputSchema ? schemaShape(feature.outputSchema) : undefined,
+      annotations: feature.annotations,
+    },
+    /** Invokes the registered harness tool. */ async (
+      input: Readonly<Record<string, unknown>>,
+      extra: Readonly<SdkRequestExtra>
+    ): Promise<CallToolResult> => runtime.invokeTool(compiled, input, extra)
+  );
+}
+
+/**
+ * Returns a Zod object's raw shape with the concrete type expected by the SDK.
+ * @param schema - Harness object schema being registered.
+ * @returns Raw Zod property shape.
+ */
+function schemaShape(schema: Readonly<z.ZodObject<z.ZodRawShape>>): z.ZodRawShape {
+  return schema.shape;
 }

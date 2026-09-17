@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /** Stable machine-readable error codes emitted by the MCP harness. */
@@ -12,6 +21,7 @@ export enum McpErrorCode {
   NOT_FOUND = 'NOT_FOUND',
   CONFLICT = 'CONFLICT',
   RATE_LIMITED = 'RATE_LIMITED',
+  CANCELLED = 'CANCELLED',
   TIMEOUT = 'TIMEOUT',
   UPSTREAM_ERROR = 'UPSTREAM_ERROR',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
@@ -29,13 +39,21 @@ export class McpHarnessError extends Error {
    * @param options - Standard JavaScript error construction options.
    */
   constructor(
-    readonly code: McpErrorCode,
+    readonly code: Readonly<McpErrorCode>,
     message: string,
     readonly details?: Readonly<Record<string, unknown>>,
     options?: Readonly<ErrorOptions>
   ) {
     super(message, options);
     this.name = new.target.name;
+  }
+}
+
+/** Reports that an invocation was cancelled before it completed. */
+export class McpCancellationError extends McpHarnessError {
+  /** Creates a stable cancellation error. */
+  constructor() {
+    super(McpErrorCode.CANCELLED, 'Operation was cancelled');
   }
 }
 

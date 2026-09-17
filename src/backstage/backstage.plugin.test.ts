@@ -1,5 +1,19 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
+import type { ValidateEntityResponse } from '@backstage/catalog-client';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -8,7 +22,8 @@ import { connectTestClient } from '../mcp/testing.js';
 import { createBackstageServer } from '../server.js';
 import { BackstageToolName } from '../shared/constants/backstage-catalog.js';
 import { noopLogger } from '../shared/logging/logger.js';
-import type { IBackstageCatalogApi } from '../types/index.js';
+import type { IBackstageCatalogApi } from '../types/backstage.js';
+import type { ICatalogApiFixture } from '../types/backstage-testing.js';
 import { getEntitiesInputSchema } from './backstage.plugin.js';
 
 const EXPECTED_TOOLS = Object.values(BackstageToolName);
@@ -16,37 +31,42 @@ const RESOLVED_ENTITY_REF = 'Component:default/api';
 const LOCATION_ID = 'location-1';
 const TEST_TARGET = 'test';
 
-type CatalogFake = {
-  client: IBackstageCatalogApi;
-  operations: Readonly<Record<string, Mock>>;
-};
-
 /** Creates a complete official Catalog client test double. */
-function createCatalogFake(): CatalogFake {
+function createCatalogApiFixture(): ICatalogApiFixture<Readonly<Record<string, Mock>>> {
   const operations = {
     addLocation: vi.fn(async () => ({
-      location: { id: LOCATION_ID, type: 'url', target: TEST_TARGET },
+      location: { id: LOCATION_ID, type: 'url', target: TEST_TARGET, entityRef: RESOLVED_ENTITY_REF },
       entities: [],
     })),
     getEntitiesByRefs: vi.fn(async () => ({ items: [] })),
     getEntityAncestors: vi.fn(async () => ({ rootEntityRef: 'component:default/api', items: [] })),
     getEntityByRef: vi.fn(async () => ({ apiVersion: 'v1', kind: 'Component', metadata: { name: 'api' } })),
     getEntityFacets: vi.fn(async () => ({ facets: {} })),
-    getLocationByEntity: vi.fn(async () => ({ id: LOCATION_ID, type: 'url', target: TEST_TARGET })),
+    getLocationByEntity: vi.fn(async () => ({
+      id: LOCATION_ID,
+      type: 'url',
+      target: TEST_TARGET,
+      entityRef: RESOLVED_ENTITY_REF,
+    })),
     getLocationById: vi.fn(async () => undefined),
-    getLocationByRef: vi.fn(async () => ({ id: LOCATION_ID, type: 'url', target: TEST_TARGET })),
+    getLocationByRef: vi.fn(async () => ({
+      id: LOCATION_ID,
+      type: 'url',
+      target: TEST_TARGET,
+      entityRef: RESOLVED_ENTITY_REF,
+    })),
     queryEntities: vi.fn(async () => ({ items: [], totalItems: 0, pageInfo: {} })),
     refreshEntity: vi.fn(async () => undefined),
     removeEntityByUid: vi.fn(async () => undefined),
     removeLocationById: vi.fn(async () => undefined),
-    validateEntity: vi.fn(async () => ({ valid: true })),
-  };
-  return { client: operations as unknown as IBackstageCatalogApi, operations };
+    validateEntity: vi.fn(async (): Promise<ValidateEntityResponse> => ({ valid: true })),
+  } satisfies IBackstageCatalogApi;
+  return { client: operations, operations };
 }
 
 describe('Backstage MCP plugin', () => {
-  it('publishes the complete historical tool surface', async () => {
-    const fake = createCatalogFake();
+  it('should publish the complete historical tool surface', async () => {
+    const fake = createCatalogApiFixture();
     const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
     expect(app.manifest().features.map(({ name }) => name)).toEqual(EXPECTED_TOOLS);
     const connection = await connectTestClient(app);
@@ -57,8 +77,8 @@ describe('Backstage MCP plugin', () => {
     }
   });
 
-  it('forwards every tool through the typed Catalog context', async () => {
-    const fake = createCatalogFake();
+  it('should forward every tool through the typed Catalog context', async () => {
+    const fake = createCatalogApiFixture();
     const app = createBackstageServer({ catalogClient: fake.client, logger: noopLogger });
     const connection = await connectTestClient(app);
     const entityRef = { kind: 'Component', namespace: 'default', name: 'api' };
@@ -111,10 +131,10 @@ describe('Backstage MCP plugin', () => {
     }
   });
 
-  it('preserves cursor semantics and rejects empty filters', async () => {
+  it('should preserve cursor semantics and reject empty filters', async () => {
     expect(getEntitiesInputSchema.safeParse({ filter: {} }).success).toBe(false);
     expect(getEntitiesInputSchema.safeParse({ filter: [] }).success).toBe(false);
-    const fake = createCatalogFake();
+    const fake = createCatalogApiFixture();
     const connection = await connectTestClient(
       createBackstageServer({ catalogClient: fake.client, logger: noopLogger })
     );
@@ -139,8 +159,8 @@ describe('Backstage MCP plugin', () => {
     [409, McpErrorCode.CONFLICT],
     [429, McpErrorCode.RATE_LIMITED],
     [500, McpErrorCode.UPSTREAM_ERROR],
-  ])('maps Catalog status %i to %s', async (statusCode, code) => {
-    const fake = createCatalogFake();
+  ])('should map Catalog status %i to %s', async (statusCode, code) => {
+    const fake = createCatalogApiFixture();
     fake.operations.queryEntities.mockRejectedValueOnce({ statusCode });
     const connection = await connectTestClient(
       createBackstageServer({ catalogClient: fake.client, logger: noopLogger })
@@ -157,8 +177,8 @@ describe('Backstage MCP plugin', () => {
     ['get_entity_by_ref', 'getEntityByRef', { entityRef: 'component:default/missing' }],
     ['get_location_by_entity', 'getLocationByEntity', { entityRef: 'component:default/missing' }],
     ['get_location_by_ref', 'getLocationByRef', { locationRef: 'url:missing' }],
-  ] as const)('returns NOT_FOUND for absent optional result from %s', async (name, operationName, toolArguments) => {
-    const fake = createCatalogFake();
+  ])('should return NOT_FOUND for absent optional result from %s', async (name, operationName, toolArguments) => {
+    const fake = createCatalogApiFixture();
     fake.operations[operationName].mockResolvedValueOnce(undefined);
     const connection = await connectTestClient(
       createBackstageServer({ catalogClient: fake.client, logger: noopLogger })

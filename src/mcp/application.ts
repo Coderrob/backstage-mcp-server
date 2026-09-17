@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -13,11 +22,20 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { ZodError } from 'zod';
 
-import { McpApplicationState, McpFeatureKind } from '../shared/constants/mcp-protocol.js';
+import {
+  DEFAULT_MCP_CACHE_CAPACITY,
+  DEFAULT_MCP_RATE_LIMIT_CAPACITY,
+  McpApplicationState,
+  McpFeatureKind,
+} from '../shared/constants/mcp-protocol.js';
 import { noopLogger } from '../shared/logging/logger.js';
 import type { Logger } from '../types/logging.js';
 import type {
   CompiledFeature,
+  CompiledPromptFeature,
+  CompiledResourceFeature,
+  CompiledResourceTemplateFeature,
+  CompiledToolFeature,
   CreateMcpServerOptions,
   MaybePromise,
   McpFeatureRuntime,
@@ -28,15 +46,13 @@ import type {
   McpRequestContext,
   McpTransportFactory,
   PluginDefinition,
-  PromptDefinition,
-  ResourceDefinition,
-  ResourceTemplateDefinition,
   SdkRequestExtra,
   ToolDefinition,
 } from '../types/mcp.js';
 import {
   McpAuthenticationError,
   McpAuthorizationError,
+  McpCancellationError,
   McpConfigurationError,
   McpInputError,
   McpLifecycleError,
@@ -57,6 +73,61 @@ const DEFAULT_STOP_REASON = 'requested';
 const SHARED_CACHE_PRINCIPAL_ID = 'shared';
 const STARTUP_FAILURE_REASON = 'startup-failure';
 const UNSTARTED_TRANSPORT_NAME = 'not-started';
+
+/**
+ * Returns a new map with one entry replaced while preserving insertion order.
+ * @param entries - Existing bounded state.
+ * @param key - Entry key to replace.
+ * @param value - Replacement value.
+ * @returns Immutable replacement for the supplied map state.
+ */
+function replaceMapEntry<TKey, TValue>(
+  entries: ReadonlyMap<TKey, TValue>,
+  key: TKey,
+  value: TValue
+): Map<TKey, TValue> {
+  return new Map(
+    Array.from(entries, /** Replaces the matching entry. */ ([entryKey, entryValue]) => [
+      entryKey,
+      entryKey === key ? value : entryValue,
+    ])
+  );
+}
+
+/**
+ * Returns bounded map state containing a newly inserted entry.
+ * @param entries - Existing bounded state.
+ * @param entry - New key and value pair.
+ * @param capacity - Maximum retained entry count.
+ * @param isExpired - Determines whether an existing entry can be discarded.
+ * @returns Map state with expired and oldest excess entries removed.
+ */
+function insertBoundedMapEntry<TKey, TValue>(
+  entries: ReadonlyMap<TKey, TValue>,
+  entry: readonly [TKey, TValue],
+  capacity: number,
+  isExpired: (value: TValue) => boolean
+): Map<TKey, TValue> {
+  const [key, value] = entry;
+  const activeEntries = Array.from(entries).filter(
+    /** Retains live entries other than the key being inserted. */ ([entryKey, entryValue]) =>
+      entryKey !== key && !isExpired(entryValue)
+  );
+  const retainedEntries = activeEntries.slice(Math.max(0, activeEntries.length - capacity + 1));
+  return new Map([...retainedEntries, [key, value]]);
+}
+
+/**
+ * Validates a configurable in-memory state capacity.
+ * @param value - Configured capacity.
+ * @param optionName - Option name used in the diagnostic.
+ * @throws {McpConfigurationError} When the capacity is not a positive integer.
+ */
+function validateCapacity(value: number, optionName: string): void {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new McpConfigurationError(`${optionName} must be a positive integer`);
+  }
+}
 
 interface CacheEntry {
   expiresAt: number;
@@ -98,7 +169,7 @@ function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
+      Object.entries(value)
         .sort(/** Compares two items for sorting. */ ([left], [right]) => left.localeCompare(right))
         .map(/** Maps each item to its transformed value. */ ([key, nested]) => [key, stableValue(nested)])
     );
@@ -112,8 +183,10 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
   private readonly registry: McpRegistry<TContext>;
   private readonly logger: Logger;
   private readonly rootController = new AbortController();
-  private readonly cache = new Map<string, CacheEntry>();
-  private readonly rateLimits = new Map<string, RateLimitEntry>();
+  private cache = new Map<string, CacheEntry>();
+  private rateLimits = new Map<string, RateLimitEntry>();
+  private readonly cacheCapacity: number;
+  private readonly rateLimitCapacity: number;
   private context?: TContext;
   private server?: McpServer;
   private startPromise?: Promise<void>;
@@ -136,6 +209,10 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     ) {
       throw new McpConfigurationError('defaultTimeoutMs must be greater than zero');
     }
+    this.cacheCapacity = options.cacheCapacity ?? DEFAULT_MCP_CACHE_CAPACITY;
+    this.rateLimitCapacity = options.rateLimitCapacity ?? DEFAULT_MCP_RATE_LIMIT_CAPACITY;
+    validateCapacity(this.cacheCapacity, 'cacheCapacity');
+    validateCapacity(this.rateLimitCapacity, 'rateLimitCapacity');
     this.registry = new McpRegistry(options.plugins);
     this.logger = options.logger ?? noopLogger;
   }
@@ -221,21 +298,20 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns A native MCP result, including a safe error result on failure.
    */
   async invokeTool(
-    compiled: CompiledFeature<TContext> & { feature: ToolDefinition<TContext> },
+    compiled: CompiledToolFeature<TContext>,
     input: Readonly<Record<string, unknown>>,
     extra: Readonly<SdkRequestExtra>
   ): Promise<CallToolResult> {
     const requestId = String(extra.requestId);
     try {
       const parsed = this.parseToolInput(compiled.feature, input);
-      const result = (await this.executeFeature(
+      return await this.executeFeature(
         compiled,
         parsed,
         extra,
         /** Invokes the compiled feature implementation. */ (invocation) =>
           this.executeToolHandler(compiled, parsed, invocation)
-      )) as CallToolResult;
-      return result;
+      );
     } catch (error) {
       this.logger.error('MCP tool failed', {
         requestId,
@@ -318,17 +394,17 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The resource contents produced by the handler.
    */
   async invokeResource(
-    compiled: CompiledFeature<TContext> & { feature: ResourceDefinition<TContext> },
+    compiled: CompiledResourceFeature<TContext>,
     uri: Readonly<URL>,
     extra: Readonly<SdkRequestExtra>
   ): Promise<ReadResourceResult> {
-    return (await this.executeFeature(
+    return this.executeFeature(
       compiled,
       { uri },
       extra,
       /** Invokes the compiled feature implementation. */ (invocation) =>
         compiled.feature.handler({ input: { uri }, context: invocation.context, request: invocation.request })
-    )) as ReadResourceResult;
+    );
   }
 
   /**
@@ -340,12 +416,12 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The resource contents produced by the handler.
    */
   async invokeResourceTemplate(
-    compiled: CompiledFeature<TContext> & { feature: ResourceTemplateDefinition<TContext> },
+    compiled: CompiledResourceTemplateFeature<TContext>,
     uri: Readonly<URL>,
     variables: Readonly<Record<string, string | string[]>>,
     extra: Readonly<SdkRequestExtra>
   ): Promise<ReadResourceResult> {
-    return (await this.executeFeature(
+    return this.executeFeature(
       compiled,
       { uri, variables },
       extra,
@@ -355,7 +431,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
           context: invocation.context,
           request: invocation.request,
         })
-    )) as ReadResourceResult;
+    );
   }
 
   /**
@@ -365,18 +441,18 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The listed resources, or an empty list when no lister is defined.
    */
   async listResourceTemplate(
-    compiled: CompiledFeature<TContext> & { feature: ResourceTemplateDefinition<TContext> },
+    compiled: CompiledResourceTemplateFeature<TContext>,
     extra: Readonly<SdkRequestExtra>
   ): Promise<ListResourcesResult> {
     const list = compiled.feature.list;
     if (!list) return { resources: [] };
-    return (await this.executeFeature(
+    return this.executeFeature(
       compiled,
       {},
       extra,
       /** Invokes the compiled feature implementation. */ (invocation) =>
         list({ input: {}, context: invocation.context, request: invocation.request })
-    )) as ListResourcesResult;
+    );
   }
 
   /**
@@ -387,18 +463,18 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The generated MCP prompt messages.
    */
   async invokePrompt(
-    compiled: CompiledFeature<TContext> & { feature: PromptDefinition<TContext> },
+    compiled: CompiledPromptFeature<TContext>,
     input: Readonly<Record<string, unknown>>,
     extra: Readonly<SdkRequestExtra>
   ): Promise<GetPromptResult> {
-    const parsed = compiled.feature.argsSchema.parse(input) as Record<string, unknown>;
-    return (await this.executeFeature(
+    const parsed = compiled.feature.argsSchema.parse(input);
+    return this.executeFeature(
       compiled,
       parsed,
       extra,
       /** Invokes the compiled feature implementation. */ (invocation) =>
         compiled.feature.handler({ input: parsed, context: invocation.context, request: invocation.request })
-    )) as GetPromptResult;
+    );
   }
 
   /**
@@ -410,12 +486,12 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The operation result.
    * @throws {Error} When the operation cannot be completed.
    */
-  private async executeFeature(
+  private async executeFeature<TResult>(
     compiled: Readonly<CompiledFeature<TContext>>,
     input: unknown,
     extra: Readonly<SdkRequestExtra>,
-    handler: (invocation: McpMiddlewareInvocation<TContext>) => MaybePromise<unknown>
-  ): Promise<unknown> {
+    handler: (invocation: McpMiddlewareInvocation<TContext>) => MaybePromise<TResult>
+  ): Promise<TResult> {
     const context = this.requireRunningContext();
     const cancellation = this.createInvocationCancellation(extra);
     const timeoutMs = compiled.feature.kind === McpFeatureKind.TOOL ? compiled.feature.policy?.timeoutMs : undefined;
@@ -427,6 +503,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
       kind: compiled.feature.kind,
     };
     try {
+      if (cancellation.controller.signal.aborted) throw new McpCancellationError();
       const operation = composeMiddleware(
         this.options.middleware ?? [],
         invocation,
@@ -467,6 +544,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     };
     this.rootController.signal.addEventListener(ABORT_EVENT_NAME, abort, { once: true });
     extra.signal.addEventListener(ABORT_EVENT_NAME, abort, { once: true });
+    if (this.rootController.signal.aborted || extra.signal.aborted) abort();
     return {
       controller,
       /** Removes cancellation listeners owned by this invocation. */
@@ -507,11 +585,11 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @param timeoutMs - Effective timeout, or undefined when disabled.
    * @returns First settled invocation or timeout result.
    */
-  private async executeWithTimeout(
-    operation: Readonly<Promise<unknown>>,
+  private async executeWithTimeout<TResult>(
+    operation: Readonly<Promise<TResult>>,
     controller: Readonly<AbortController>,
     timeoutMs: number | undefined
-  ): Promise<unknown> {
+  ): Promise<TResult> {
     if (!timeoutMs) return operation;
     let timer: NodeJS.Timeout | undefined;
     try {
@@ -559,7 +637,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @returns The operation result.
    */
   private async executeToolHandler(
-    compiled: CompiledFeature<TContext> & { feature: ToolDefinition<TContext> },
+    compiled: CompiledToolFeature<TContext>,
     input: Readonly<Record<string, unknown>>,
     invocation: Readonly<McpMiddlewareInvocation<TContext>>
   ): Promise<CallToolResult> {
@@ -588,7 +666,9 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     const cached = this.cache.get(key);
     if (!cached) return undefined;
     if (cached.expiresAt > Date.now()) return cached.result;
-    this.cache.delete(key);
+    this.cache = new Map(
+      Array.from(this.cache).filter(/** Removes the expired cache key. */ ([entryKey]) => entryKey !== key)
+    );
     return undefined;
   }
 
@@ -599,7 +679,7 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    * @throws {Error} When the operation cannot be completed.
    */
   private validateToolOutput(feature: Readonly<ToolDefinition<TContext>>, result: Readonly<CallToolResult>): void {
-    if (!feature.outputSchema) return;
+    if (result.isError || !feature.outputSchema) return;
     if (!result.structuredContent) throw new McpOutputError();
     const parsed = feature.outputSchema.safeParse(result.structuredContent);
     if (!parsed.success) throw new McpOutputError({ cause: parsed.error });
@@ -620,11 +700,13 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     this.invalidateCache(feature.policy?.invalidates);
     const cachePolicy = feature.policy?.cache;
     if (!cacheKey || !cachePolicy) return;
-    this.cache.set(cacheKey, {
-      expiresAt: Date.now() + cachePolicy.ttlMs,
-      result,
-      tags: cachePolicy.tags ?? [],
-    });
+    const now = Date.now();
+    this.cache = insertBoundedMapEntry(
+      this.cache,
+      [cacheKey, { expiresAt: now + cachePolicy.ttlMs, result, tags: cachePolicy.tags ?? [] }],
+      this.cacheCapacity,
+      /** Reports whether a cache entry has expired. */ (entry) => entry.expiresAt <= now
+    );
   }
 
   /**
@@ -640,11 +722,16 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
     const key = `${tool.name}:${principal?.id ?? ANONYMOUS_PRINCIPAL_ID}`;
     const existing = this.rateLimits.get(key);
     if (!existing || existing.resetsAt <= now) {
-      this.rateLimits.set(key, { count: 1, resetsAt: now + policy.windowMs });
+      this.rateLimits = insertBoundedMapEntry(
+        this.rateLimits,
+        [key, { count: 1, resetsAt: now + policy.windowMs }],
+        this.rateLimitCapacity,
+        /** Reports whether a rate-limit entry has expired. */ (entry) => entry.resetsAt <= now
+      );
       return;
     }
     if (existing.count >= policy.maxRequests) throw new McpRateLimitError(existing.resetsAt - now);
-    existing.count += 1;
+    this.rateLimits = replaceMapEntry(this.rateLimits, key, { ...existing, count: existing.count + 1 });
   }
 
   /**
@@ -688,10 +775,12 @@ export class McpApplication<TContext> implements McpFeatureRuntime<TContext> {
    */
   private invalidateCache(tags: readonly string[] | undefined): void {
     if (!tags?.length) return;
-    for (const [key, entry] of this.cache) {
-      if (entry.tags.some(/** Determines whether any item satisfies the predicate. */ (tag) => tags.includes(tag)))
-        this.cache.delete(key);
-    }
+    this.cache = new Map(
+      Array.from(this.cache).filter(
+        /** Retains entries that do not match an invalidated cache tag. */ ([, entry]) =>
+          !entry.tags.some(/** Determines whether any item satisfies the predicate. */ (tag) => tags.includes(tag))
+      )
+    );
   }
 
   /**

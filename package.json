@@ -87,7 +87,7 @@
     "deps:restore": "sh -c 'bash scripts/deps-crossplatform.sh restore'",
     "deps:update": "sh -c 'bash scripts/deps.sh update'",
     "deps:validate": "sh -c 'bash scripts/deps-crossplatform.sh check'",
-    "lint": "eslint . --ext .ts,.js,.mjs,.cjs",
+    "lint": "eslint . --ext .ts,.js,.mjs,.cjs --max-warnings 0",
     "lint:fix": "prettier . --write && eslint . --ext .ts,.js,.mjs,.cjs --fix",
     "knip": "knip --treat-config-hints-as-errors",
     "manifest:generate": "node scripts/generate-manifest.mjs",

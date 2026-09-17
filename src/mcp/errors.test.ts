@@ -1,10 +1,24 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 import { describe, expect, it } from 'vitest';
 
 import {
   McpAuthenticationError,
   McpAuthorizationError,
+  McpCancellationError,
   McpConfigurationError,
   McpErrorCode,
   McpHarnessError,
@@ -35,6 +49,7 @@ describe('MCP errors', () => {
       new McpOutputError({ cause: new Error('schema') }),
       new McpAuthenticationError(),
       new McpAuthorizationError(['catalog:read']),
+      new McpCancellationError(),
       new McpNotFoundError('Entity'),
       new McpNotFoundError('Entity', 'component:default/api'),
       new McpRateLimitError(500),
@@ -48,6 +63,7 @@ describe('MCP errors', () => {
       McpErrorCode.INTERNAL_ERROR,
       McpErrorCode.AUTHENTICATION_REQUIRED,
       McpErrorCode.INSUFFICIENT_PERMISSIONS,
+      McpErrorCode.CANCELLED,
       McpErrorCode.NOT_FOUND,
       McpErrorCode.NOT_FOUND,
       McpErrorCode.RATE_LIMITED,

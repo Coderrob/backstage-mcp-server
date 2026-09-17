@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -10,21 +19,54 @@ import { z } from 'zod';
 
 import { McpApplicationState, McpFeatureKind } from '../shared/constants/mcp-protocol.js';
 import type { Logger } from '../shared/logging/logger.js';
+import type { CompiledToolFeature } from '../types/mcp.js';
+import type { IMcpApplicationTestContext as TestContext } from '../types/mcp-testing.js';
 import type { McpApplication } from './application.js';
 import { createMcpServer } from './application.js';
-import type { CompiledFeature, ToolDefinition } from './definitions.js';
 import { definePlugin, definePrompt, defineResource, defineResourceTemplate, defineTool } from './definitions.js';
 import { McpConfigurationError, McpErrorCode, McpNotFoundError } from './errors.js';
-import { jsonResult } from './results.js';
+import { errorResult as createErrorResult, jsonResult } from './results.js';
 import type { SdkRequestExtra } from './sdk-adapter.js';
 import { connectTestClient } from './testing.js';
 import { defineTransport } from './transports.js';
 
-interface TestContext {
-  prefix: string;
+const CATALOG_READ_SCOPE = 'catalog:read';
+
+/**
+ * Creates a logger that records error messages without writing test output.
+ * @param errors - Mutable collection receiving error messages.
+ * @returns A logger suitable for lifecycle failure tests.
+ */
+function createRecordingLogger(errors: string[]): Logger {
+  return {
+    debug: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
+    error: (message) => errors.push(message),
+  };
 }
 
-const CATALOG_READ_SCOPE = 'catalog:read';
+/**
+ * Creates the SDK request metadata needed for direct application-boundary tests.
+ * @param scopes - Optional authenticated caller scopes.
+ * @param clientId - Authenticated caller identity used by principal-aware policies.
+ * @returns Request metadata with an isolated cancellation signal.
+ */
+function createRequestExtra(
+  scopes?: readonly string[],
+  clientId = 'test-client',
+  signal = new AbortController().signal
+): SdkRequestExtra {
+  return {
+    signal,
+    requestId: 'direct-request',
+    authInfo: scopes ? { token: 'test-token', clientId, scopes: [...scopes], extra: { tenant: 'test' } } : undefined,
+    sendNotification: async (): Promise<void> => undefined,
+    sendRequest: async (): Promise<never> => {
+      throw new Error('Nested requests are not supported by this test');
+    },
+  };
+}
 
 /**
  * Creates an application containing every supported MCP feature kind.
@@ -59,7 +101,7 @@ function createTestApplication(counter = { calls: 0 }): McpApplication<TestConte
     uri: 'test://status',
     description: 'Current test status.',
     handler({ input, context }) {
-      return { contents: [{ uri: input.uri.toString(), mimeType: 'text/plain', text: `${context.prefix}ready` }] };
+      return { contents: [{ uri: String(input.uri), mimeType: 'text/plain', text: `${context.prefix}ready` }] };
     },
   });
 
@@ -71,7 +113,7 @@ function createTestApplication(counter = { calls: 0 }): McpApplication<TestConte
       return { resources: [{ name: 'one', uri: 'test://items/one' }] };
     },
     handler({ input }) {
-      return { contents: [{ uri: input.uri.toString(), text: String(input.variables.id) }] };
+      return { contents: [{ uri: String(input.uri), text: String(input.variables.id) }] };
     },
   });
 
@@ -96,24 +138,6 @@ function createTestApplication(counter = { calls: 0 }): McpApplication<TestConte
 }
 
 /**
- * Creates the SDK request metadata needed for direct application-boundary tests.
- * @param scopes - Optional authenticated caller scopes.
- * @param clientId - Authenticated caller identity used by principal-aware policies.
- * @returns Request metadata with an isolated cancellation signal.
- */
-function createRequestExtra(scopes?: readonly string[], clientId = 'test-client'): SdkRequestExtra {
-  return {
-    signal: new AbortController().signal,
-    requestId: 'direct-request',
-    authInfo: scopes ? { token: 'test-token', clientId, scopes: [...scopes], extra: { tenant: 'test' } } : undefined,
-    sendNotification: async (): Promise<void> => undefined,
-    sendRequest: async (): Promise<never> => {
-      throw new Error('Nested requests are not supported by this test');
-    },
-  };
-}
-
-/**
  * Finds a compiled tool and preserves its discriminated runtime type.
  * @param app - Application whose registry is inspected.
  * @param name - Tool name to resolve.
@@ -122,30 +146,38 @@ function createRequestExtra(scopes?: readonly string[], clientId = 'test-client'
 function findTool(
   app: Readonly<McpApplication<TestContext>>,
   name: string
-): CompiledFeature<TestContext> & { feature: ToolDefinition<TestContext> } {
-  const compiled = app.listFeatures().find((entry) => entry.feature.name === name);
-  if (!compiled || compiled.feature.kind !== McpFeatureKind.TOOL) throw new Error(`Missing test tool '${name}'`);
-  return compiled as CompiledFeature<TestContext> & { feature: ToolDefinition<TestContext> };
+): CompiledToolFeature<TestContext> {
+  const compiled = app.listFeatures().find(
+    /** Selects the requested compiled tool. */ (entry): entry is CompiledToolFeature<TestContext> =>
+      entry.kind === McpFeatureKind.TOOL && entry.feature.name === name
+  );
+  if (!compiled) throw new Error(`Missing test tool '${name}'`);
+  return compiled;
 }
 
 /**
- * Creates a logger that records error messages without writing test output.
- * @param errors - Mutable collection receiving error messages.
- * @returns A logger suitable for lifecycle failure tests.
+ * Creates a rejected promise for testing defensive handling of non-Error failures.
+ * @param reason - Foreign rejection value to propagate.
+ * @returns A promise rejected with the supplied value.
  */
-function createRecordingLogger(errors: string[]): Logger {
-  return {
-    debug: () => undefined,
-    info: () => undefined,
-    warn: () => undefined,
-    error: (message) => errors.push(message),
-  };
+function rejectWith(reason: unknown): Promise<never> {
+  const deferred = Promise.withResolvers<never>();
+  deferred.reject(reason);
+  return deferred.promise;
 }
 
 describe('MCP generic harness', () => {
   it('should validate construction and enforce terminal lifecycle states', async () => {
     expect(() =>
       createMcpServer({ identity: { name: '', version: '1.0.0' }, plugins: [], createContext: () => ({}) })
+    ).toThrow(McpConfigurationError);
+    expect(() =>
+      createMcpServer({
+        identity: { name: 'invalid-capacity', version: '1.0.0' },
+        plugins: [],
+        cacheCapacity: 0,
+        createContext: () => ({}),
+      })
     ).toThrow(McpConfigurationError);
     expect(() =>
       createMcpServer({
@@ -255,7 +287,7 @@ describe('MCP generic harness', () => {
       inputSchema: z.object({}),
       policy: { timeoutMs: 5 },
       async handler() {
-        await new Promise((resolve) => globalThis.setTimeout(resolve, 25));
+        await new Promise<never>(() => undefined);
         return jsonResult({ completed: true });
       },
     });
@@ -293,7 +325,11 @@ describe('MCP generic harness', () => {
         structuredContent: { error: { code: McpErrorCode.RATE_LIMITED } },
       });
 
-      const timedOut = await connection.client.callTool({ name: 'slow_value', arguments: {} });
+      vi.useFakeTimers();
+      const timedOutPromise = connection.client.callTool({ name: 'slow_value', arguments: {} });
+      await vi.advanceTimersByTimeAsync(5);
+      const timedOut = await timedOutPromise;
+      vi.useRealTimers();
       expect(timedOut).toMatchObject({
         isError: true,
         structuredContent: { error: { code: McpErrorCode.TIMEOUT } },
@@ -305,6 +341,7 @@ describe('MCP generic harness', () => {
         structuredContent: { error: { code: McpErrorCode.INTERNAL_ERROR } },
       });
     } finally {
+      vi.useRealTimers();
       await connection.close();
     }
   });
@@ -353,7 +390,8 @@ describe('MCP generic harness', () => {
       name: 'error_result',
       description: 'Return an explicit error result.',
       inputSchema: z.object({}),
-      handler: () => ({ isError: true, content: [{ type: 'text', text: 'expected error' }] }),
+      outputSchema: z.object({ status: z.literal('success') }),
+      handler: () => createErrorResult(McpErrorCode.CONFLICT, 'expected error'),
     });
     const unmatchedInvalidation = defineTool<TestContext>()({
       name: 'unmatched_invalidation',
@@ -366,10 +404,7 @@ describe('MCP generic harness', () => {
       name: 'string_failure',
       description: 'Throw a non-Error value.',
       inputSchema: z.object({}),
-      handler() {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies safe handling of foreign throws.
-        throw 'string failure';
-      },
+      handler: () => rejectWith('string failure'),
     });
     const app = createMcpServer<TestContext>({
       identity: { name: 'branch-server', version: '1.0.0' },
@@ -440,7 +475,8 @@ describe('MCP generic harness', () => {
 
       const missingOutput = await app.invokeTool(findTool(app, 'missing_structured_output'), {}, createRequestExtra());
       expect(missingOutput.structuredContent).toMatchObject({ error: { code: McpErrorCode.INTERNAL_ERROR } });
-      expect((await app.invokeTool(findTool(app, 'error_result'), {}, createRequestExtra())).isError).toBe(true);
+      const expectedError = await app.invokeTool(findTool(app, 'error_result'), {}, createRequestExtra());
+      expect(expectedError.structuredContent).toMatchObject({ error: { code: McpErrorCode.CONFLICT } });
       await app.invokeTool(findTool(app, 'unmatched_invalidation'), {}, createRequestExtra());
       expect((await app.invokeTool(findTool(app, 'string_failure'), {}, createRequestExtra())).isError).toBe(true);
     } finally {
@@ -453,7 +489,7 @@ describe('MCP generic harness', () => {
     const unlisted = defineResourceTemplate<TestContext>({
       name: 'unlisted',
       uriTemplate: 'test://unlisted/{id}',
-      handler: ({ input }) => ({ contents: [{ uri: input.uri.toString(), text: 'value' }] }),
+      handler: ({ input }) => ({ contents: [{ uri: String(input.uri), text: 'value' }] }),
     });
     const tool = defineTool<TestContext>()({
       name: 'not_started',
@@ -468,8 +504,8 @@ describe('MCP generic harness', () => {
     });
     const [template, compiledTool] = app.listFeatures();
     if (
-      template.feature.kind !== McpFeatureKind.RESOURCE_TEMPLATE ||
-      compiledTool.feature.kind !== McpFeatureKind.TOOL
+      template.kind !== McpFeatureKind.RESOURCE_TEMPLATE ||
+      compiledTool.kind !== McpFeatureKind.TOOL
     ) {
       throw new Error('Expected test features were not compiled');
     }
@@ -489,7 +525,13 @@ describe('MCP generic harness', () => {
       inputSchema: z.object({}),
       handler: ({ request }) =>
         new Promise((resolve) => {
-          request.signal.addEventListener('abort', () => { resolve(jsonResult({ aborted: true })); }, { once: true });
+          request.signal.addEventListener(
+            'abort',
+            () => {
+              resolve(jsonResult({ aborted: true }));
+            },
+            { once: true }
+          );
         }),
     });
     const app = createMcpServer<TestContext>({
@@ -504,6 +546,31 @@ describe('MCP generic harness', () => {
     await Promise.all([firstStop, secondStop, invocation]);
     await connection.close();
     expect(app.state).toBe(McpApplicationState.STOPPED);
+  });
+
+  it('should reject an already-aborted request without invoking its handler', async () => {
+    const handler = vi.fn(() => jsonResult({ invoked: true }));
+    const tool = defineTool<TestContext>()({
+      name: 'pre_aborted',
+      description: 'Must not run after request cancellation.',
+      inputSchema: z.object({}),
+      handler,
+    });
+    const app = createMcpServer<TestContext>({
+      identity: { name: 'pre-aborted-server', version: '1.0.0' },
+      plugins: [definePlugin({ name: 'pre-aborted-plugin', version: '1.0.0', features: [tool] })],
+      createContext: () => ({ prefix: '' }),
+    });
+    const connection = await connectTestClient(app);
+    const controller = new AbortController();
+    controller.abort();
+    try {
+      const result = await app.invokeTool(findTool(app, 'pre_aborted'), {}, createRequestExtra([], 'client', controller.signal));
+      expect(handler).not.toHaveBeenCalled();
+      expect(result.structuredContent).toMatchObject({ error: { code: McpErrorCode.CANCELLED } });
+    } finally {
+      await connection.close();
+    }
   });
 
   it('should cancel and clean up startup before stop resolves', async () => {
@@ -579,20 +646,14 @@ describe('MCP generic harness', () => {
       name: 'second-cleanup-plugin',
       version: '1.0.0',
       features: [],
-      dispose() {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies cleanup after foreign throws.
-        throw 'second dispose failed';
-      },
+      dispose: () => rejectWith('second dispose failed'),
     });
     const app = createMcpServer<TestContext>({
       identity: { name: 'cleanup-server', version: '1.0.0' },
       plugins: [firstPlugin, secondPlugin],
       logger: createRecordingLogger(errors),
       createContext: () => ({ prefix: '' }),
-      disposeContext() {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error -- Verifies cleanup after foreign throws.
-        throw 'context dispose failed';
-      },
+      disposeContext: () => rejectWith('context dispose failed'),
     });
     const [, serverTransport] = InMemoryTransport.createLinkedPair();
     vi.spyOn(serverTransport, 'close').mockRejectedValueOnce(new Error('transport close failed'));
@@ -639,6 +700,53 @@ describe('MCP generic harness', () => {
       await connection.client.callTool({ name: 'write_value', arguments: {} });
       await connection.client.callTool({ name: 'read_value', arguments: {} });
       expect(reads).toBe(2);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('should bound cache and rate-limit state by evicting the oldest entries', async () => {
+    let cachedCalls = 0;
+    const cached = defineTool<TestContext>()({
+      name: 'bounded_cache',
+      description: 'Cache unique values within a fixed capacity.',
+      inputSchema: z.object({ key: z.string() }),
+      annotations: { readOnlyHint: true },
+      policy: { cache: { ttlMs: 10_000 } },
+      handler() {
+        cachedCalls += 1;
+        return jsonResult({ cachedCalls });
+      },
+    });
+    const limited = defineTool<TestContext>()({
+      name: 'bounded_rate_limit',
+      description: 'Rate limit callers within a fixed capacity.',
+      inputSchema: z.object({}),
+      policy: { rateLimit: { maxRequests: 1, windowMs: 10_000 } },
+      handler: () => jsonResult({ allowed: true }),
+    });
+    const app = createMcpServer<TestContext>({
+      identity: { name: 'bounded-state-server', version: '1.0.0' },
+      plugins: [definePlugin({ name: 'bounded-state-plugin', version: '1.0.0', features: [cached, limited] })],
+      cacheCapacity: 1,
+      rateLimitCapacity: 1,
+      createContext: () => ({ prefix: '' }),
+    });
+    const connection = await connectTestClient(app);
+    try {
+      for (const key of ['first', 'second', 'third', 'first']) {
+        await app.invokeTool(findTool(app, 'bounded_cache'), { key }, createRequestExtra());
+      }
+      expect(cachedCalls).toBe(4);
+      for (const clientId of ['first', 'second', 'third']) {
+        await app.invokeTool(findTool(app, 'bounded_rate_limit'), {}, createRequestExtra([], clientId));
+      }
+      const evictedCaller = await app.invokeTool(
+        findTool(app, 'bounded_rate_limit'),
+        {},
+        createRequestExtra([], 'first')
+      );
+      expect(evictedCaller.isError).not.toBe(true);
     } finally {
       await connection.close();
     }

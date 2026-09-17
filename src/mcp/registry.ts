@@ -2,12 +2,21 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import type { ZodTypeAny } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { McpFeatureKind } from '../shared/constants/mcp-protocol.js';
+import { McpFeatureKind, McpJsonSchemaReferenceStrategy } from '../shared/constants/mcp-protocol.js';
 import type {
   CompiledFeature,
   McpFeature,
@@ -24,7 +33,6 @@ import { McpConfigurationError } from './errors.js';
 export type { McpManifest, McpManifestFeature } from '../types/mcp.js';
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{1,127}$/;
-const JSON_SCHEMA_REFERENCE_STRATEGY = 'none' as const;
 const PLUGIN_DEFINITION_KIND = 'plugin';
 
 /**
@@ -71,8 +79,13 @@ function compileFeature<TContext>(
     });
   }
   state.featureNames.set(key, plugin.name);
-  if (feature.kind === McpFeatureKind.TOOL) validateToolPolicy(feature as unknown as ToolDefinition<unknown>);
-  return Object.freeze({ plugin, feature });
+  if (feature.kind === McpFeatureKind.TOOL) {
+    validateToolPolicy(feature);
+    return Object.freeze({ kind: feature.kind, plugin, feature });
+  }
+  if (feature.kind === McpFeatureKind.RESOURCE) return Object.freeze({ kind: feature.kind, plugin, feature });
+  if (feature.kind === McpFeatureKind.RESOURCE_TEMPLATE) return Object.freeze({ kind: feature.kind, plugin, feature });
+  return Object.freeze({ kind: feature.kind, plugin, feature });
 }
 
 /**
@@ -101,7 +114,10 @@ function compilePlugin<TContext>(
  * @param cache - The cache.
  * @throws {Error} When the operation cannot be completed.
  */
-function validateCachePolicy(tool: Readonly<ToolDefinition<unknown>>, cache: McpToolCachePolicy | undefined): void {
+function validateCachePolicy<TContext>(
+  tool: Readonly<ToolDefinition<TContext>>,
+  cache: McpToolCachePolicy | undefined
+): void {
   assertOptionalPositive(cache?.ttlMs, `Tool '${tool.name}' has an invalid cache TTL`);
   if (cache && !tool.annotations?.readOnlyHint) {
     throw new McpConfigurationError(`Cached tool '${tool.name}' must declare readOnlyHint`);
@@ -127,7 +143,10 @@ function validateName(kind: string, name: string): void {
  * @param tool - The tool.
  * @param policy - The policy.
  */
-function validatePolicyFields(tool: Readonly<ToolDefinition<unknown>>, policy: Readonly<McpToolPolicy>): void {
+function validatePolicyFields<TContext>(
+  tool: Readonly<ToolDefinition<TContext>>,
+  policy: Readonly<McpToolPolicy>
+): void {
   assertOptionalPositive(policy.timeoutMs, `Tool '${tool.name}' has an invalid timeout`);
   validateCachePolicy(tool, policy.cache);
   validateRateLimitPolicy(tool, policy.rateLimit);
@@ -143,8 +162,8 @@ interface CompilationState {
  * @param tool - The tool.
  * @param rateLimit - The rate limit.
  */
-function validateRateLimitPolicy(
-  tool: Readonly<ToolDefinition<unknown>>,
+function validateRateLimitPolicy<TContext>(
+  tool: Readonly<ToolDefinition<TContext>>,
   rateLimit: McpToolRateLimitPolicy | undefined
 ): void {
   assertOptionalPositiveInteger(rateLimit?.maxRequests, `Tool '${tool.name}' has an invalid rate-limit maximum`);
@@ -155,7 +174,7 @@ function validateRateLimitPolicy(
  * Validates tool policy.
  * @param tool - The tool.
  */
-function validateToolPolicy(tool: Readonly<ToolDefinition<unknown>>): void {
+function validateToolPolicy<TContext>(tool: Readonly<ToolDefinition<TContext>>): void {
   if (tool.policy) validatePolicyFields(tool, tool.policy);
 }
 
@@ -166,8 +185,8 @@ function validateToolPolicy(tool: Readonly<ToolDefinition<unknown>>): void {
  */
 function serializeSchema(schema: Readonly<ZodTypeAny>): Record<string, unknown> {
   const { $schema: _schemaDeclaration, ...document } = zodToJsonSchema(schema, {
-    $refStrategy: JSON_SCHEMA_REFERENCE_STRATEGY,
-  }) as Record<string, unknown>;
+    $refStrategy: McpJsonSchemaReferenceStrategy.INLINE,
+  });
   return document;
 }
 
@@ -211,7 +230,7 @@ function manifestFeature<TContext>(compiled: Readonly<CompiledFeature<TContext>>
 
 /** Validates plugins, detects collisions, and exposes compiled features and manifests. */
 export class McpRegistry<TContext> {
-  private readonly compiled: CompiledFeature<TContext>[];
+  private readonly compiled: readonly CompiledFeature<TContext>[];
 
   /**
    * Compiles and validates an immutable plugin collection.
@@ -222,7 +241,7 @@ export class McpRegistry<TContext> {
     const compiled = plugins.flatMap(
       /** Maps each item and flattens the resulting collections. */ (plugin) => compilePlugin(plugin, state)
     );
-    this.compiled = Object.freeze(compiled) as unknown as CompiledFeature<TContext>[];
+    this.compiled = Object.freeze(compiled);
   }
 
   /**
@@ -238,7 +257,7 @@ export class McpRegistry<TContext> {
    * @param identity - Public server name and version.
    * @returns The server, plugin, feature, schema, annotation, and policy metadata.
    */
-  manifest(identity: { name: string; version: string }): McpManifest {
+  manifest(identity: Readonly<{ name: string; version: string }>): McpManifest {
     return {
       server: { ...identity },
       plugins: this.plugins.map(

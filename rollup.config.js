@@ -27,6 +27,8 @@ import dts from 'rollup-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
+const CIRCULAR_DEPENDENCY_WARNING = 'CIRCULAR_DEPENDENCY';
+const UNRESOLVED_IMPORT_WARNING = 'UNRESOLVED_IMPORT';
 
 // External dependencies (should not be bundled)
 const externalDeps = [
@@ -77,12 +79,12 @@ const external = (id) => {
  */
 const onwarn = (warning, warn) => {
   // Suppress circular dependency warnings for external dependencies (node_modules)
-  if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.message.includes('node_modules')) {
+  if (warning.code === CIRCULAR_DEPENDENCY_WARNING && warning.message.includes('node_modules')) {
     return;
   }
 
   // Suppress unresolved dependency warnings for external modules
-  if (warning.code === 'UNRESOLVED_IMPORT' && external(String(warning.source))) {
+  if (warning.code === UNRESOLVED_IMPORT_WARNING && external(String(warning.source))) {
     return;
   }
 

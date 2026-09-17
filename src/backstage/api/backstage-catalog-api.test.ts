@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,6 +24,23 @@ const TEST_CATALOG_URL = `${TEST_BASE_URL}/api/catalog`;
 const TEST_TOKEN = 'external-token';
 const METADATA_NAME_FIELD = 'metadata.name';
 const LARGE_REF_COUNT = 1001;
+const HTTP_DELETE_METHOD = 'DELETE';
+const HTTP_GET_METHOD = 'GET';
+
+/**
+ * Validates the request body used by batched entity-reference requests.
+ * @param value - Parsed JSON value to validate.
+ * @returns Whether the value contains a string entity-reference collection.
+ */
+function isEntityRefsBody(value: unknown): value is { entityRefs: string[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'entityRefs' in value &&
+    Array.isArray(value.entityRefs) &&
+    value.entityRefs.every((entityRef) => typeof entityRef === 'string')
+  );
+}
 
 /**
  * Creates a JSON response suitable for the official Catalog client.
@@ -145,7 +171,8 @@ describe('BackstageCatalogApi', () => {
     const fetchImplementation: typeof globalThis.fetch = async (input, init) => {
       const request = new Request(input, init);
       requests.push(request);
-      const body = (await request.clone().json()) as { entityRefs: string[] };
+      const body: unknown = await request.clone().json();
+      if (!isEntityRefsBody(body)) throw new Error('Expected an entity-reference request body');
       return jsonResponse({ items: body.entityRefs.map(() => null) });
     };
     const api = new BackstageCatalogApi({
@@ -168,7 +195,7 @@ describe('BackstageCatalogApi', () => {
     expect(response.items).toHaveLength(LARGE_REF_COUNT);
     expect(response.items.every((entity) => entity === undefined)).toBe(true);
     const firstRequest = requests[0];
-    const firstBody = (await firstRequest.clone().json()) as Record<string, unknown>;
+    const firstBody: unknown = await firstRequest.clone().json();
     expect(new URL(firstRequest.url).searchParams.getAll('filter')).toEqual(['kind=Component']);
     expect(firstBody).toMatchObject({ fields: ['kind', METADATA_NAME_FIELD] });
   });
@@ -205,7 +232,7 @@ describe('BackstageCatalogApi', () => {
     ]);
     expect(urls[1].searchParams.getAll('facet')).toEqual(['kind', 'spec.type']);
     expect(urls[1].searchParams.getAll('filter')).toEqual(['kind=Component']);
-    const validationBody = await requests[4].clone().json();
+    const validationBody: unknown = await requests[4].clone().json();
     expect(validationBody).toEqual({ entity, location: `url:${location.target}` });
   });
 
@@ -214,8 +241,8 @@ describe('BackstageCatalogApi', () => {
     const fetchImplementation: typeof globalThis.fetch = async (input, init) => {
       const request = new Request(input, init);
       requests.push(request);
-      if (request.method === 'DELETE') return new Response(null, { status: 204 });
-      if (request.method === 'GET' && new URL(request.url).pathname.endsWith('/locations')) {
+      if (request.method === HTTP_DELETE_METHOD) return new Response(null, { status: 204 });
+      if (request.method === HTTP_GET_METHOD && new URL(request.url).pathname.endsWith('/locations')) {
         return jsonResponse([]);
       }
       return jsonResponse({ items: [], facets: {}, rootEntityRef: TEST_ENTITY_REF });
@@ -243,6 +270,6 @@ describe('BackstageCatalogApi', () => {
 
     expect(requests).toHaveLength(11);
     expect(requests.at(-1)?.headers.get('authorization')).toBe('Bearer request-token');
-    expect(requests.filter(({ method }) => method === 'DELETE')).toHaveLength(2);
+    expect(requests.filter(({ method }) => method === HTTP_DELETE_METHOD)).toHaveLength(2);
   });
 });

@@ -1,13 +1,34 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
+import type {
+  McpFeatureRuntime,
+  McpPromptInvoker,
+  McpResourceInvoker,
+  McpResourceTemplateInvoker,
+  McpResourceTemplateLister,
+  McpToolInvoker,
+} from '../types/mcp.js';
 import { definePlugin, definePrompt, defineResource, defineResourceTemplate, defineTool } from './definitions.js';
 import { McpRegistry } from './registry.js';
 import { jsonResult } from './results.js';
-import { type McpFeatureRuntime,registerSdkFeatures } from './sdk-adapter.js';
+import { registerSdkFeatures } from './sdk-adapter.js';
 
 describe('registerSdkFeatures', () => {
   it('should register every feature kind with the SDK server', () => {
@@ -37,23 +58,24 @@ describe('registerSdkFeatures', () => {
       }),
     ];
     const compiled = new McpRegistry([definePlugin({ name: 'sdk_plugin', version: '1.0.0', features })]).list();
-    const server = {
-      registerTool: vi.fn(),
-      registerResource: vi.fn(),
-      registerPrompt: vi.fn(),
-    } as unknown as McpServer;
+    const server = new McpServer({ name: 'sdk-adapter-test', version: '1.0.0' });
+    const registerTool = vi.spyOn(server, 'registerTool');
+    const registerResource = vi.spyOn(server, 'registerResource');
+    const registerPrompt = vi.spyOn(server, 'registerPrompt');
     const runtime = {
-      invokeTool: vi.fn(),
-      invokeResource: vi.fn(),
-      invokeResourceTemplate: vi.fn(),
-      listResourceTemplate: vi.fn(),
-      invokePrompt: vi.fn(),
-    } as unknown as McpFeatureRuntime<object>;
+      invokeTool: vi.fn<McpToolInvoker<object>>(async () => jsonResult({ ok: true })),
+      invokeResource: vi.fn<McpResourceInvoker<object>>(async () => ({ contents: [] })),
+      invokeResourceTemplate: vi.fn<McpResourceTemplateInvoker<object>>(async () => ({
+        contents: [],
+      })),
+      listResourceTemplate: vi.fn<McpResourceTemplateLister<object>>(async () => ({ resources: [] })),
+      invokePrompt: vi.fn<McpPromptInvoker<object>>(async () => ({ messages: [] })),
+    } satisfies McpFeatureRuntime<object>;
 
     registerSdkFeatures(server, compiled, runtime);
 
-    expect(server.registerTool).toHaveBeenCalledTimes(1);
-    expect(server.registerResource).toHaveBeenCalledTimes(3);
-    expect(server.registerPrompt).toHaveBeenCalledTimes(1);
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(registerResource).toHaveBeenCalledTimes(3);
+    expect(registerPrompt).toHaveBeenCalledTimes(1);
   });
 });

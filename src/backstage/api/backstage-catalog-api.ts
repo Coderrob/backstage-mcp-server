@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import {
@@ -26,21 +35,40 @@ import {
   AUTHORIZATION_HEADER_NAME,
   BACKSTAGE_CATALOG_PATH,
   BACKSTAGE_CATALOG_PLUGIN_ID,
+  CATALOG_OPERATION_TIMEOUT_MS,
 } from '../../shared/constants/backstage-catalog.js';
 import { ConfigurationError } from '../../shared/errors/error-handling.js';
 import type { IBackstageCatalogApi, IBackstageCatalogApiOptions, ICatalogDiscoveryApi } from '../../types/index.js';
 import { AuthManager } from '../auth/auth-manager.js';
 
-export type { IBackstageCatalogApiOptions, ICatalogDiscoveryApi } from '../../types/backstage.js';
-
 /**
- * Converts a Backstage backend URL into the Catalog plugin base URL.
- * @param baseUrl - Backstage backend root or an explicit Catalog plugin URL.
- * @returns A normalized URL ending in `/api/catalog`.
+ * Creates a fetch implementation that supplies a Backstage external-access token.
+ * @param fetchImplementation - Fetch implementation used to perform the request.
+ * @param authManager - Bearer credential provider for requests without explicit authorization.
+ * @returns A fetch implementation that authenticates Catalog requests.
  */
-export function normalizeCatalogBaseUrl(baseUrl: string): string {
-  const normalized = baseUrl.replace(/\/+$/, '');
-  return normalized.endsWith(BACKSTAGE_CATALOG_PATH) ? normalized : `${normalized}${BACKSTAGE_CATALOG_PATH}`;
+function createAuthenticatedFetch(
+  fetchImplementation: typeof globalThis.fetch,
+  authManager: Readonly<AuthManager>
+): typeof globalThis.fetch {
+  /**
+   * Adds the configured external-access token unless a request-specific token is present.
+   * @param input - URL or request passed by the official Catalog client.
+   * @param init - Optional fetch request options.
+   * @returns The upstream fetch response.
+   */
+  async function authenticatedFetch(input: RequestInfo | URL, init?: Readonly<RequestInit>): Promise<Response> {
+    const catalogRequest = new Request(input, init);
+    const signal = AbortSignal.any([catalogRequest.signal, AbortSignal.timeout(CATALOG_OPERATION_TIMEOUT_MS)]);
+    if (catalogRequest.headers.has(AUTHORIZATION_HEADER_NAME)) {
+      return fetchImplementation(catalogRequest, { signal });
+    }
+    const headers = new Headers(catalogRequest.headers);
+    headers.set(AUTHORIZATION_HEADER_NAME, await authManager.getAuthorizationHeader());
+    return fetchImplementation(new Request(catalogRequest, { headers }), { signal });
+  }
+
+  return authenticatedFetch;
 }
 
 /**
@@ -66,30 +94,13 @@ export function createCatalogDiscoveryApi(catalogBaseUrl: string): ICatalogDisco
 }
 
 /**
- * Creates a fetch implementation that supplies a Backstage external-access token.
- * @param fetchImplementation - Fetch implementation used to perform the request.
- * @param authManager - Bearer credential provider for requests without explicit authorization.
- * @returns A fetch implementation that authenticates Catalog requests.
+ * Converts a Backstage backend URL into the Catalog plugin base URL.
+ * @param baseUrl - Backstage backend root or an explicit Catalog plugin URL.
+ * @returns A normalized URL ending in `/api/catalog`.
  */
-function createAuthenticatedFetch(
-  fetchImplementation: typeof globalThis.fetch,
-  authManager: Readonly<AuthManager>
-): typeof globalThis.fetch {
-  /**
-   * Adds the configured external-access token unless a request-specific token is present.
-   * @param input - URL or request passed by the official Catalog client.
-   * @param init - Optional fetch request options.
-   * @returns The upstream fetch response.
-   */
-  async function authenticatedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const request = new Request(input, init);
-    if (request.headers.has(AUTHORIZATION_HEADER_NAME)) return fetchImplementation(request);
-    const headers = new Headers(request.headers);
-    headers.set(AUTHORIZATION_HEADER_NAME, await authManager.getAuthorizationHeader());
-    return fetchImplementation(new Request(request, { headers }));
-  }
-
-  return authenticatedFetch;
+export function normalizeCatalogBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.replace(/\/+$/, '');
+  return normalized.endsWith(BACKSTAGE_CATALOG_PATH) ? normalized : `${normalized}${BACKSTAGE_CATALOG_PATH}`;
 }
 
 /**

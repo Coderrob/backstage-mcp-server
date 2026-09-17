@@ -13,16 +13,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { describe, expect, it } from 'vitest';
+import type { IBackstageCatalogApi } from './backstage.js';
 
-import { getLocationByRefTool } from './get_location_by_ref.tool.js';
-
-describe('get_location_by_ref tool', () => {
-  it('should declares a valid typed MCP contract', () => {
-    expect(getLocationByRefTool).toMatchObject({ kind: 'tool', name: 'get_location_by_ref' });
-    expect(
-      getLocationByRefTool.inputSchema.safeParse({ locationRef: 'url:https://example.test/catalog-info.yaml' }).success
-    ).toBe(true);
-    expect(getLocationByRefTool.description.length).toBeGreaterThan(0);
-  });
-});
+/** Typed catalog test double and its observable operations. */
+export interface ICatalogApiFixture<TOperations> {
+  readonly client: IBackstageCatalogApi;
+  readonly operations: TOperations;
+}

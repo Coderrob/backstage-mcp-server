@@ -3,6 +3,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { pathToFileURL } from 'node:url';
@@ -18,27 +27,6 @@ export type { CliRuntime } from './types/cli.js';
 export enum CliShutdownSignal {
   INTERRUPT = 'SIGINT',
   TERMINATE = 'SIGTERM',
-}
-
-/**
- * Resolves the supported log level from process configuration.
- * @param env - Process environment containing the optional log level.
- * @returns Debug when explicitly requested, otherwise info.
- */
-export function resolveLogLevel(env: Readonly<NodeJS.ProcessEnv>): LogLevel {
-  return env[BackstageEnvironmentVariable.LOG_LEVEL] === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO;
-}
-
-/**
- * Reports a startup failure without writing to the MCP stdout channel.
- * @param error - Failure raised during CLI startup.
- * @param logger - Structured stderr logger.
- */
-export function reportStartupFailure(error: unknown, logger: Readonly<Logger>): void {
-  logger.error('Fatal MCP server startup error', {
-    error: error instanceof Error ? error.message : String(error),
-  });
-  process.exitCode = 1;
 }
 
 /**
@@ -61,6 +49,37 @@ export function createCliRuntime(): CliRuntime {
 }
 
 /**
+ * Reports whether this module is the process entrypoint.
+ * @param moduleUrl - Current module URL.
+ * @param executablePath - Script path supplied by Node.js.
+ * @returns Whether the module should start the CLI automatically.
+ */
+export function isCliEntrypoint(moduleUrl: string, executablePath: string | undefined): boolean {
+  return executablePath !== undefined && moduleUrl === pathToFileURL(executablePath).href;
+}
+
+/**
+ * Reports a startup failure without writing to the MCP stdout channel.
+ * @param error - Failure raised during CLI startup.
+ * @param logger - Structured stderr logger.
+ */
+export function reportStartupFailure(error: unknown, logger: Readonly<Logger>): void {
+  logger.error('Fatal MCP server startup error', {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  process.exitCode = 1;
+}
+
+/**
+ * Resolves the supported log level from process configuration.
+ * @param env - Process environment containing the optional log level.
+ * @returns Debug when explicitly requested, otherwise info.
+ */
+export function resolveLogLevel(env: Readonly<NodeJS.ProcessEnv>): LogLevel {
+  return env[BackstageEnvironmentVariable.LOG_LEVEL] === LogLevel.DEBUG ? LogLevel.DEBUG : LogLevel.INFO;
+}
+
+/**
  * Starts the stdio server and installs idempotent signal shutdown handlers.
  * @param runtime - Injectable process and application dependencies.
  */
@@ -73,23 +92,13 @@ export async function runCli(runtime: Readonly<CliRuntime> = createCliRuntime())
    * Stops the application once for either supported process signal.
    * @param signal - Process signal that initiated shutdown.
    */
-  const stop = (signal: NodeJS.Signals): void => {
+  const stop = (signal: Readonly<NodeJS.Signals>): void => {
     if (stopping) return;
     stopping = true;
     void app.stop(signal);
   };
   runtime.registerSignal(CliShutdownSignal.INTERRUPT, stop);
   runtime.registerSignal(CliShutdownSignal.TERMINATE, stop);
-}
-
-/**
- * Reports whether this module is the process entrypoint.
- * @param moduleUrl - Current module URL.
- * @param executablePath - Script path supplied by Node.js.
- * @returns Whether the module should start the CLI automatically.
- */
-export function isCliEntrypoint(moduleUrl: string, executablePath: string | undefined): boolean {
-  return executablePath !== undefined && moduleUrl === pathToFileURL(executablePath).href;
 }
 
 /* v8 ignore start -- exercised by the packaged stdio and MCP Inspector process tests. */

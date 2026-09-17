@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -10,7 +19,7 @@ import { destination, type Logger as PinoLoggerInstance, type LoggerOptions, pin
 
 import type { Logger, LoggerFields, OperationalLogger } from '../../types/logging.js';
 
-export type { Logger, LoggerFields, OperationalLogger } from '../../types/logging.js';
+export type { Logger, OperationalLogger } from '../../types/logging.js';
 
 const STDERR_FILE_DESCRIPTOR = 2;
 const SENSITIVE_KEY = /(authorization|cookie|password|secret|token|api[-_]?key)/i;
@@ -60,7 +69,7 @@ class StructuredLogger implements OperationalLogger {
    * @param options - Pino configuration, including the minimum severity.
    * @param instance - Existing child instance used internally by `child`.
    */
-  constructor(options: Readonly<LoggerOptions> = {}, instance?: PinoLoggerInstance) {
+  constructor(options: Readonly<LoggerOptions> = {}, instance?: Readonly<PinoLoggerInstance>) {
     this.instance =
       instance ??
       pino(
@@ -86,7 +95,7 @@ class StructuredLogger implements OperationalLogger {
    * @param message - Human-readable event description.
    * @param fields - Optional structured context.
    */
-  debug(message: string, fields?: LoggerFields): void {
+  debug(message: string, fields?: Readonly<LoggerFields>): void {
     this.instance.debug(sanitizeFields(fields), message);
   }
 
@@ -95,7 +104,7 @@ class StructuredLogger implements OperationalLogger {
    * @param message - Human-readable event description.
    * @param fields - Optional structured context.
    */
-  info(message: string, fields?: LoggerFields): void {
+  info(message: string, fields?: Readonly<LoggerFields>): void {
     this.instance.info(sanitizeFields(fields), message);
   }
 
@@ -104,7 +113,7 @@ class StructuredLogger implements OperationalLogger {
    * @param message - Human-readable event description.
    * @param fields - Optional structured context.
    */
-  warn(message: string, fields?: LoggerFields): void {
+  warn(message: string, fields?: Readonly<LoggerFields>): void {
     this.instance.warn(sanitizeFields(fields), message);
   }
 
@@ -113,7 +122,7 @@ class StructuredLogger implements OperationalLogger {
    * @param message - Human-readable event description.
    * @param fields - Optional structured context.
    */
-  error(message: string, fields?: LoggerFields): void {
+  error(message: string, fields?: Readonly<LoggerFields>): void {
     this.instance.error(sanitizeFields(fields), message);
   }
 
@@ -122,7 +131,7 @@ class StructuredLogger implements OperationalLogger {
    * @param message - Human-readable event description.
    * @param fields - Optional structured context.
    */
-  fatal(message: string, fields?: LoggerFields): void {
+  fatal(message: string, fields?: Readonly<LoggerFields>): void {
     this.instance.fatal(sanitizeFields(fields), message);
   }
 
@@ -131,7 +140,7 @@ class StructuredLogger implements OperationalLogger {
    * @param bindings - Context included with every child record.
    * @returns A child operational logger.
    */
-  child(bindings: LoggerFields): OperationalLogger {
+  child(bindings: Readonly<LoggerFields>): OperationalLogger {
     return new StructuredLogger({}, this.instance.child(sanitizeFields(bindings)));
   }
 
@@ -141,7 +150,7 @@ class StructuredLogger implements OperationalLogger {
    * @param additionalContext - Additional fixed structured context.
    * @returns An operation-scoped logger.
    */
-  createOperationLogger(operation: string, additionalContext: LoggerFields = {}): OperationalLogger {
+  createOperationLogger(operation: string, additionalContext: Readonly<LoggerFields> = {}): OperationalLogger {
     return this.child({
       operation,
       correlationId: `${OPERATION_ID_PREFIX}${randomUUID()}`,
@@ -156,7 +165,7 @@ class StructuredLogger implements OperationalLogger {
  * @param minimumLevel - Minimum severity written to stderr.
  * @returns A redacting logger that never writes to the stdio protocol channel.
  */
-export function createStderrLogger(minimumLevel: LogLevel = LogLevel.INFO): Logger {
+export function createStderrLogger(minimumLevel: Readonly<LogLevel> = LogLevel.INFO): Logger {
   return new StructuredLogger({ level: minimumLevel });
 }
 
@@ -188,7 +197,7 @@ export function redact(value: unknown, seen = new WeakSet<object>()): unknown {
  * @param fields - Structured context supplied by a caller.
  * @returns Redacted structured fields.
  */
-function sanitizeFields(fields?: LoggerFields): Record<string, unknown> {
+function sanitizeFields(fields?: Readonly<LoggerFields>): Record<string, unknown> {
   if (!fields) return {};
   const sanitized = redact(fields);
   return typeof sanitized === 'object' && sanitized !== null && !Array.isArray(sanitized)

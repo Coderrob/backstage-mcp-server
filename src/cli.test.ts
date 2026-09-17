@@ -1,4 +1,17 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -31,12 +44,12 @@ describe('CLI lifecycle', () => {
   });
 
   it('should create production process bindings', () => {
-    const once = vi.spyOn(process, 'once').mockImplementation(() => process);
+    const once = vi.spyOn(process, 'once').mockImplementationOnce(() => process);
     const runtime = createCliRuntime();
     const handler = vi.fn();
     runtime.registerSignal(CliShutdownSignal.INTERRUPT, handler);
     expect(runtime.env).toBe(process.env);
-    expect(runtime.start).toBeTypeOf('function');
+    expect(typeof runtime.start).toBe('function');
     expect(once).toHaveBeenCalledWith(CliShutdownSignal.INTERRUPT, handler);
     once.mockRestore();
   });
@@ -46,7 +59,7 @@ describe('CLI lifecycle', () => {
     const stop = vi.fn(async () => undefined);
     await runCli({
       env: {},
-      start: vi.fn(async () => ({ stop }) as never),
+      start: vi.fn(async () => ({ stop })),
       registerSignal: (signal, handler) => handlers.set(signal, handler),
     });
     handlers.get(CliShutdownSignal.INTERRUPT)?.(CliShutdownSignal.INTERRUPT);
@@ -56,11 +69,12 @@ describe('CLI lifecycle', () => {
   });
 
   it('should report Error and non-Error startup failures safely', () => {
-    const logger: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const error = vi.fn();
+    const logger: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error };
     reportStartupFailure(new Error('failed'), logger);
     reportStartupFailure('unknown', logger);
-    expect(logger.error).toHaveBeenNthCalledWith(1, 'Fatal MCP server startup error', { error: 'failed' });
-    expect(logger.error).toHaveBeenNthCalledWith(2, 'Fatal MCP server startup error', { error: 'unknown' });
+    expect(error).toHaveBeenNthCalledWith(1, 'Fatal MCP server startup error', { error: 'failed' });
+    expect(error).toHaveBeenNthCalledWith(2, 'Fatal MCP server startup error', { error: 'unknown' });
     expect(process.exitCode).toBe(1);
   });
 });

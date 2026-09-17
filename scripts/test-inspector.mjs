@@ -2,6 +2,15 @@
  * Copyright (C) 2025 Robert Lindley
  *
  * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 import assert from 'node:assert/strict';
@@ -38,7 +47,7 @@ const INSPECTOR_ENVIRONMENT_VARIABLE = Object.freeze({
   CLIENT_CONFIG_PATH: 'MCP_CLIENT_CONFIG_PATH',
   STORAGE_DIRECTORY: 'MCP_STORAGE_DIR',
 });
-const TEST_TOKEN = 'inspector-test-token';
+const AUTH_VALUE = 'fixture-value';
 const TOOL_CALL_ARGUMENTS = Object.freeze([
   '--method',
   INSPECTOR_METHOD.CALL_TOOL,
@@ -57,33 +66,6 @@ const INSPECTOR_ENTRY = resolve(
   'index.js'
 );
 const SERVER_ENTRY = resolve(PACKAGED_SERVER_ENTRY);
-
-/**
- * Handles one request received by the deterministic Catalog stub.
- * @param request - Incoming HTTP request.
- * @param response - HTTP response used to return Catalog data.
- * @param markVerified - Callback recording a valid authenticated request.
- */
-function handleCatalogRequest(request, response, markVerified) {
-  if (
-    request.url !== CATALOG_QUERY_PATH ||
-    request.headers[HTTP_HEADER.AUTHORIZATION] !== `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${TEST_TOKEN}`
-  ) {
-    response.writeHead(HTTP_STATUS.BAD_REQUEST, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
-    response.end(JSON.stringify({ error: 'Unexpected request' }));
-    return;
-  }
-
-  markVerified();
-  response.writeHead(HTTP_STATUS.OK, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
-  response.end(
-    JSON.stringify({
-      items: [{ kind: 'Component', metadata: { name: 'inspector-test' } }],
-      totalItems: 1,
-      pageInfo: {},
-    })
-  );
-}
 
 /**
  * Closes an HTTP server after all active connections finish.
@@ -113,31 +95,29 @@ function createStubHandle(server, port, wasRequestVerified) {
 }
 
 /**
- * Starts a deterministic Backstage Catalog stub for the Inspector tool-call test.
- * @returns The stub URL, request-verification state, and cleanup function.
+ * Handles one request received by the deterministic Catalog stub.
+ * @param request - Incoming HTTP request.
+ * @param response - HTTP response used to return Catalog data.
+ * @param markVerified - Callback recording a valid authenticated request.
  */
-async function startBackstageStub() {
-  let requestVerified = false;
-  const server = createServer(
-    /** Serves the catalog response expected from the MCP tool invocation. */ (request, response) =>
-      handleCatalogRequest(
-        request,
-        response,
-        /** Records successful validation of the stub request. */ () => {
-          requestVerified = true;
-        }
-      )
-  );
+function handleCatalogRequest(request, response, markVerified) {
+  if (
+    request.url !== CATALOG_QUERY_PATH ||
+    request.headers[HTTP_HEADER.AUTHORIZATION] !== `${HTTP_AUTHORIZATION_SCHEME.BEARER} ${AUTH_VALUE}`
+  ) {
+    response.writeHead(HTTP_STATUS.BAD_REQUEST, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
+    response.end(JSON.stringify({ error: 'Unexpected request' }));
+    return;
+  }
 
-  server.listen(0, LOOPBACK_HOST);
-  await once(server, NODE_EVENT.LISTENING);
-  const address = server.address();
-  assert(address && typeof address !== 'string', 'Could not determine the Inspector test server address');
-
-  return createStubHandle(
-    server,
-    address.port,
-    /** Reports whether the expected authenticated catalog request was received. */ () => requestVerified
+  markVerified();
+  response.writeHead(HTTP_STATUS.OK, { [HTTP_HEADER.CONTENT_TYPE]: MIME_TYPE.JSON });
+  response.end(
+    JSON.stringify({
+      items: [{ kind: 'Component', metadata: { name: 'inspector-test' } }],
+      totalItems: 1,
+      pageInfo: {},
+    })
   );
 }
 
@@ -159,7 +139,7 @@ function inspectorArguments(baseUrl, methodArguments) {
     '-e',
     `${BACKSTAGE_ENVIRONMENT_VARIABLE.BASE_URL}=${baseUrl}`,
     '-e',
-    `${BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN}=${TEST_TOKEN}`,
+    `${BACKSTAGE_ENVIRONMENT_VARIABLE.TOKEN}=${AUTH_VALUE}`,
     '-e',
     `${BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL}=${PROCESS_LOG_LEVEL.INFO}`,
   ];
@@ -186,22 +166,6 @@ function inspectorOptions(stateDirectory) {
 }
 
 /**
- * Executes one MCP Inspector CLI method against the built stdio server.
- * @param baseUrl - URL of the deterministic Backstage Catalog stub.
- * @param methodArguments - Inspector arguments selecting the MCP method and inputs.
- * @param stateDirectory - Isolated directory for Inspector configuration and authentication state.
- * @returns The protocol result emitted by MCP Inspector.
- */
-async function runInspector(baseUrl, methodArguments, stateDirectory) {
-  const { stdout } = await execFileAsync(process.execPath, inspectorArguments(baseUrl, methodArguments), {
-    ...inspectorOptions(stateDirectory),
-  });
-  const envelope = JSON.parse(stdout.trim());
-  assert('result' in envelope, `Inspector did not return a result envelope: ${stdout}`);
-  return envelope.result;
-}
-
-/**
  * Verifies schema discovery and a real authenticated tool invocation through MCP Inspector.
  */
 async function main() {
@@ -224,6 +188,51 @@ async function main() {
     await stub.close();
     await rm(stateDirectory, { recursive: true, force: true });
   }
+}
+
+/**
+ * Executes one MCP Inspector CLI method against the built stdio server.
+ * @param baseUrl - URL of the deterministic Backstage Catalog stub.
+ * @param methodArguments - Inspector arguments selecting the MCP method and inputs.
+ * @param stateDirectory - Isolated directory for Inspector configuration and authentication state.
+ * @returns The protocol result emitted by MCP Inspector.
+ */
+async function runInspector(baseUrl, methodArguments, stateDirectory) {
+  const { stdout } = await execFileAsync(process.execPath, inspectorArguments(baseUrl, methodArguments), {
+    ...inspectorOptions(stateDirectory),
+  });
+  const envelope = JSON.parse(stdout.trim());
+  assert('result' in envelope, `Inspector did not return a result envelope: ${stdout}`);
+  return envelope.result;
+}
+
+/**
+ * Starts a deterministic Backstage Catalog stub for the Inspector tool-call test.
+ * @returns The stub URL, request-verification state, and cleanup function.
+ */
+async function startBackstageStub() {
+  let requestVerified = false;
+  const server = createServer(
+    /** Serves the catalog response expected from the MCP tool invocation. */ (request, response) =>
+      handleCatalogRequest(
+        request,
+        response,
+        /** Records successful validation of the stub request. */ () => {
+          requestVerified = true;
+        }
+      )
+  );
+
+  server.listen(0, LOOPBACK_HOST);
+  await once(server, NODE_EVENT.LISTENING);
+  const address = server.address();
+  assert(address && typeof address !== 'string', 'Could not determine the Inspector test server address');
+
+  return createStubHandle(
+    server,
+    address.port,
+    /** Reports whether the expected authenticated catalog request was received. */ () => requestVerified
+  );
 }
 
 await main();

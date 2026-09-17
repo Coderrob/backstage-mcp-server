@@ -1,4 +1,17 @@
-/** Copyright (C) 2025 Robert Lindley. Licensed under GPL-3.0. */
+/**
+ * Copyright (C) 2025 Robert Lindley
+ *
+ * This file is part of the project and is licensed under the GNU General Public License v3.0.
+ * You may redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -13,6 +26,28 @@ import {
   SMOKE_CLIENT_VERSION,
   STDERR_MODE,
 } from './mcp-smoke-constants.mjs';
+
+/**
+ * Requires the live server to publish exactly the supported tool surface.
+ * @param names - Advertised tool names.
+ * @throws {Error} When the tool list differs from the supported surface.
+ */
+function assertExpectedTools(names) {
+  if (JSON.stringify(names) !== JSON.stringify(EXPECTED_MCP_TOOL_NAMES)) {
+    throw new Error(`Unexpected live MCP tool list: ${JSON.stringify(names)}`);
+  }
+}
+
+/**
+ * Requires a successful structured result from the live read operation.
+ * @param result - MCP tool result returned by the server.
+ * @throws {Error} When the live read fails.
+ */
+function assertSuccessfulRead(result) {
+  if (!isSuccessfulRead(result)) {
+    throw new Error(`Live get_entities failed: ${JSON.stringify(result)}`);
+  }
+}
 
 /**
  * Reads the required live Backstage base URL.
@@ -43,6 +78,15 @@ function credentialEnvironment() {
 }
 
 /**
+ * Reports whether an MCP result is a successful structured response.
+ * @param result - MCP tool result returned by the server.
+ * @returns Whether the result is successful.
+ */
+function isSuccessfulRead(result) {
+  return !(result.isError) && result.structuredContent?.status === MCP_RESULT_STATUS.SUCCESS;
+}
+
+/**
  * Reads the live integration configuration without logging credentials.
  * @returns Environment passed to the MCP server child process.
  */
@@ -53,37 +97,6 @@ function liveEnvironment() {
     ...credentialEnvironment(),
     [BACKSTAGE_ENVIRONMENT_VARIABLE.LOG_LEVEL]: PROCESS_LOG_LEVEL.WARN,
   };
-}
-
-/**
- * Requires the live server to publish exactly the supported tool surface.
- * @param names - Advertised tool names.
- * @throws {Error} When the tool list differs from the supported surface.
- */
-function assertExpectedTools(names) {
-  if (JSON.stringify(names) !== JSON.stringify(EXPECTED_MCP_TOOL_NAMES)) {
-    throw new Error(`Unexpected live MCP tool list: ${JSON.stringify(names)}`);
-  }
-}
-
-/**
- * Reports whether an MCP result is a successful structured response.
- * @param result - MCP tool result returned by the server.
- * @returns Whether the result is successful.
- */
-function isSuccessfulRead(result) {
-  return result.isError !== true && result.structuredContent?.status === MCP_RESULT_STATUS.SUCCESS;
-}
-
-/**
- * Requires a successful structured result from the live read operation.
- * @param result - MCP tool result returned by the server.
- * @throws {Error} When the live read fails.
- */
-function assertSuccessfulRead(result) {
-  if (!isSuccessfulRead(result)) {
-    throw new Error(`Live get_entities failed: ${JSON.stringify(result)}`);
-  }
 }
 
 /**
