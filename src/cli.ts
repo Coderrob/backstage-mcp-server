@@ -16,9 +16,10 @@
 
 import { pathToFileURL } from 'node:url';
 
+import { createStderrLogger, type Logger, LogLevel } from '@coderrob/mcp-kernel';
+
 import { startServer } from './server.js';
 import { BackstageEnvironmentVariable } from './shared/constants/backstage-catalog.js';
-import { createStderrLogger, type Logger, LogLevel } from './shared/logging/logger.js';
 import type { CliRuntime } from './types/cli.js';
 
 export type { CliRuntime } from './types/cli.js';

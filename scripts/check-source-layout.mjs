@@ -19,14 +19,11 @@ import { join, relative } from 'node:path';
 
 const SOURCE_ROOT = 'src';
 const SCRIPT_ROOT = 'scripts';
-const MCP_ROOT = join(SOURCE_ROOT, 'mcp');
-const ALLOWED_MCP_PARENT_IMPORTS = new Set([
-  '../shared/constants/mcp-protocol.js',
-  '../shared/logging/logger.js',
-  '../types/logging.js',
-  '../types/mcp-testing.js',
-  '../types/mcp.js',
-]);
+const PACKAGE_MANIFEST = 'package.json';
+const KERNEL_PACKAGE_NAME = '@coderrob/mcp-kernel';
+const KERNEL_VERSION_PATTERN = /^\^\d+\.\d+\.\d+$/;
+const LOCAL_KERNEL_IMPORT_PATTERN =
+  /(?:from\s+|import\s*(?:\(\s*)?)['"](?:\.\.?\/)+(?:mcp(?:\/[^'"]*|\.js)?|shared\/(?:constants\/mcp-protocol|logging\/logger)(?:\.js)?|types\/(?:logging|mcp|mcp-testing)(?:\.js)?)['"]/;
 const ALLOWED_ROOT_TYPESCRIPT = new Set(['cli.ts', 'generate-manifest.ts', 'index.ts', 'server.ts']);
 const SOURCE_FILE_PATTERN = /\.(?:cjs|js|mjs|ts)$/;
 const TEST_FILE_PATTERN = /\.(?:spec|test)\.(cjs|js|mjs|ts)$/;
@@ -51,21 +48,32 @@ async function checkBehavioralTestCoverage() {
 }
 
 /**
- * Prevents the reusable MCP kernel from importing application-specific source areas.
+ * Requires the published MCP kernel and rejects imports from its removed local implementation.
  */
-async function checkMcpBoundary() {
-  const violations = [];
-  for (const file of await listSourceFiles(MCP_ROOT)) {
-    const source = await readFile(file, 'utf8');
-    const forbiddenImports = findParentImports(source).filter(
-      /** Rejects parent imports that are not explicitly generic shared infrastructure. */ (specifier) =>
-        !ALLOWED_MCP_PARENT_IMPORTS.has(specifier)
-    );
-    if (forbiddenImports.length > 0) {
-      violations.push(`${relative(SOURCE_ROOT, file)} -> ${forbiddenImports.join(', ')}`);
-    }
-  }
-  assert.deepEqual(violations.sort(), [], `The generic MCP kernel imports application code: ${violations}`);
+async function checkPublishedKernelBoundary() {
+  const packageMetadata = JSON.parse(await readFile(PACKAGE_MANIFEST, 'utf8'));
+  const dependency = packageMetadata.dependencies?.[KERNEL_PACKAGE_NAME];
+  assert.equal(typeof dependency, 'string', `${KERNEL_PACKAGE_NAME} must be a runtime dependency`);
+  assert.match(
+    dependency,
+    KERNEL_VERSION_PATTERN,
+    `${KERNEL_PACKAGE_NAME} must resolve from npm with a caret version, not a local protocol`
+  );
+  const inspectedFiles = await Promise.all((await listSourceFiles(SOURCE_ROOT)).map(inspectKernelImport));
+  const violations = inspectedFiles.filter(
+    /** Retains files that import a removed local kernel module. */ (file) => file !== undefined
+  );
+  assert.deepEqual(violations.sort(), [], `Use ${KERNEL_PACKAGE_NAME} instead of local kernel imports: ${violations}`);
+}
+
+/**
+ * Reports a source file when it imports a removed local kernel module.
+ * @param file - Source file to inspect.
+ * @returns The source-relative violation or no value.
+ */
+async function inspectKernelImport(file) {
+  const source = await readFile(file, 'utf8');
+  return LOCAL_KERNEL_IMPORT_PATTERN.test(source) ? relative(SOURCE_ROOT, file) : undefined;
 }
 
 /**
@@ -120,16 +128,6 @@ async function checkTestColocation() {
     [],
     `Colocate each test with its matching source module: ${violations}`
   );
-}
-
-/**
- * Finds static and dynamic imports that escape the MCP source directory.
- * @param source - JavaScript or TypeScript module source.
- * @returns Parent-relative module specifiers found in the source.
- */
-function findParentImports(source) {
-  const imports = source.matchAll(/(?:from\s+|import\s*\(\s*)['"](\.\.\/[^'"]+)['"]/g);
-  return Array.from(imports, /** Selects the captured module specifier. */ (match) => match[1]);
 }
 
 /**
@@ -199,7 +197,7 @@ async function listSourceFiles(directory) {
 }
 
 await checkRootFiles();
-await checkMcpBoundary();
+await checkPublishedKernelBoundary();
 await checkTestColocation();
 await checkBehavioralTestCoverage();
 await checkShellTestCoverage();

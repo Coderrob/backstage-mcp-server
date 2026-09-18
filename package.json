@@ -4,10 +4,9 @@
   "dependencies": {
     "@backstage/catalog-client": "^1.16.2",
     "@backstage/catalog-model": "^1.10.1",
+    "@coderrob/mcp-kernel": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "pino": "^10.3.1",
-    "zod": "^3.25.76",
-    "zod-to-json-schema": "^3.25.2"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@coderrob/eslint-plugin-zero-tolerance": "^1.2.6",
@@ -103,7 +102,7 @@
     "test": "vitest run --coverage",
     "test:shell": "node scripts/run-bats.mjs",
     "test:cli": "node scripts/smoke-cli.mjs",
-    "test:contract": "vitest run src/mcp/application.test.ts src/backstage/backstage.plugin.test.ts src/backstage/api/backstage-catalog-api.test.ts",
+    "test:contract": "vitest run src/server.test.ts src/backstage/backstage.plugin.test.ts src/backstage/api/backstage-catalog-api.test.ts",
     "test:inspector": "node scripts/test-inspector.mjs",
     "test:live": "yarn build && node scripts/test-live-backstage.mjs",
     "test:mcp": "yarn test:contract && yarn build && yarn test:cli && yarn test:tools && yarn test:inspector",

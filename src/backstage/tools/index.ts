@@ -13,7 +13,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { ToolDefinition } from '../../mcp/definitions.js';
+import type { ToolDefinition } from '@coderrob/mcp-kernel';
+
 import type { BackstageMcpContext } from '../../types/index.js';
 import { addLocationTool } from './add_location.tool.js';
 import { getEntitiesTool } from './get_entities.tool.js';

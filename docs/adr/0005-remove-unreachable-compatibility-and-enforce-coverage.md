@@ -3,6 +3,8 @@
 - Status: Accepted
 - Date: 2026-09-15
 
+The kernel ownership described by this record later moved to the independently published `@coderrob/mcp-kernel` package. Its decisions about removing compatibility code and enforcing per-file verification remain in effect; the [current architecture overview](../architecture/overview.md) describes the package boundary.
+
 ## Context
 
 The generic MCP kernel became the only runtime reachable from the package and CLI entrypoints, but the repository still contained parallel decorator, builder, registry, middleware, execution, health, and utility implementations. Keeping unreachable alternatives inflated the maintenance and coverage denominator, obscured which abstractions were supported, and allowed similarly named concerns—especially logging—to diverge.

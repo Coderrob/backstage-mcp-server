@@ -2,23 +2,23 @@
 
 This page describes the current runtime, source boundaries, and lifecycle. For the historical assessment that motivated the generic harness, see the [architecture analysis](mcp-architecture-analysis.md). For durable trade-offs, use the [ADR index](../adr/README.md).
 
-![Runtime architecture: an MCP client communicates over stdio with the generic harness, which invokes the Backstage Catalog plugin and official Catalog client.](../assets/runtime-architecture.png)
+![Runtime architecture: an MCP client communicates over stdio through the published MCP Kernel dependency, Backstage Catalog plugin, and official Catalog client.](../assets/runtime-architecture.svg)
 
 ## Runtime in one sentence
 
-The packaged CLI accepts MCP JSON-RPC over stdio, delegates protocol registration and policy enforcement to a generic application kernel, invokes schema-first Backstage tool definitions, and reaches Catalog through Backstage's official client.
+The packaged CLI accepts MCP JSON-RPC over stdio, delegates protocol registration and policy enforcement to the published MCP Kernel package, invokes schema-first Backstage tool definitions, and reaches Catalog through Backstage's official client.
 
 ## Component map
 
-| Area                  | Responsibility                                                                                  | Start here                                          |
-| --------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Process entrypoint    | Reads environment, creates stderr logging, starts stdio, and handles shutdown signals           | [`src/cli.ts`](../../src/cli.ts)                    |
-| Composition root      | Creates the authenticated Catalog adapter, Backstage context, middleware, and MCP application   | [`src/server.ts`](../../src/server.ts)              |
-| Generic MCP kernel    | Owns definitions, registry validation, lifecycle, policies, results, middleware, and transports | [`src/mcp/`](../../src/mcp)                         |
-| Backstage integration | Adapts the official Catalog client and composes Catalog tools into one plugin                   | [`src/backstage/`](../../src/backstage)             |
-| Tool surface          | Defines one immutable, schema-first MCP tool per module                                         | [`src/backstage/tools/`](../../src/backstage/tools) |
-| Shared infrastructure | Owns cross-cutting constants, error helpers, logging behavior, and validation                   | [`src/shared/`](../../src/shared)                   |
-| Type contracts        | Groups reusable MCP, Backstage, CLI, logging, and authentication contracts                      | [`src/types/`](../../src/types)                     |
+| Area                  | Responsibility                                                                                 | Start here                                                                                   |
+| --------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Process entrypoint    | Reads environment, creates stderr logging, starts stdio, and handles shutdown signals          | [`src/cli.ts`](../../src/cli.ts)                                                             |
+| Composition root      | Creates the authenticated Catalog adapter, Backstage context, middleware, and MCP application  | [`src/server.ts`](../../src/server.ts)                                                       |
+| Generic MCP kernel    | Published dependency owning definitions, lifecycle, policies, logging, testing, and transports | [Kernel architecture](https://github.com/Coderrob/mcp-kernel/blob/main/docs/architecture.md) |
+| Backstage integration | Adapts the official Catalog client and composes Catalog tools into one plugin                  | [`src/backstage/`](../../src/backstage)                                                      |
+| Tool surface          | Defines one immutable, schema-first MCP tool per module                                        | [`src/backstage/tools/`](../../src/backstage/tools)                                          |
+| Shared infrastructure | Owns Backstage constants, error helpers, and validation                                        | [`src/shared/`](../../src/shared)                                                            |
+| Type contracts        | Groups Backstage, CLI, authentication, and test-fixture contracts                              | [`src/types/`](../../src/types)                                                              |
 
 ## Request path
 
@@ -35,7 +35,7 @@ The packaged CLI accepts MCP JSON-RPC over stdio, delegates protocol registratio
 
 Features are explicit immutable values. `defineTool`, `defineResource`, `defineResourceTemplate`, `definePrompt`, and `definePlugin` preserve schema-derived types without decorators, reflection, or a process-wide registry.
 
-The registry validates names, plugin uniqueness, feature collisions, and tool policy constraints before the transport starts. `sdk-adapter.ts` is the only generic-kernel module that translates those definitions into the installed MCP SDK's registration API. Keeping that boundary narrow limits SDK upgrade work.
+The kernel registry validates names, plugin uniqueness, feature collisions, and tool policy constraints before the transport starts. Its SDK adapter translates those definitions into the MCP SDK registration API. Kernel releases isolate that protocol work from Backstage application changes.
 
 ## Lifecycle and ownership
 
@@ -48,19 +48,17 @@ The registry validates names, plugin uniqueness, feature collisions, and tool po
 
 ## Dependency direction
 
-The repository intentionally remains one package, but the source tree has extraction-ready boundaries:
+The repository consumes the generic kernel as a published npm dependency:
 
 ```text
-root entrypoints
-  +-> backstage -> mcp
-  +-> shared
-  +-> types
+root entrypoints -> backstage -> @coderrob/mcp-kernel
+                 +-> shared
+                 +-> types
 
-mcp -> allowlisted domain-neutral shared modules and types
-mcp -X-> backstage or application composition
+@coderrob/mcp-kernel -X-> backstage application code
 ```
 
-`corepack yarn architecture:check` enforces the root-file policy, MCP boundary, colocated behavioral tests, colocated BATS tests, and absence of circular dependencies.
+`corepack yarn architecture:check` enforces the root-file policy, the published npm dependency boundary, absence of local kernel imports, colocated behavioral tests, colocated BATS tests, and absence of circular dependencies.
 
 ## Security boundaries
 

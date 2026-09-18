@@ -14,12 +14,17 @@
  */
 
 import type { QueryEntitiesRequest } from '@backstage/catalog-client';
+import {
+  jsonResult,
+  McpErrorCode,
+  McpHarnessError,
+  McpNotFoundError,
+  type McpToolPolicy,
+  McpUpstreamError,
+} from '@coderrob/mcp-kernel';
 import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
-import type { McpToolPolicy } from '../../mcp/definitions.js';
-import { McpErrorCode, McpHarnessError, McpNotFoundError, McpUpstreamError } from '../../mcp/errors.js';
-import { jsonResult } from '../../mcp/results.js';
 import {
   BACKSTAGE_STATUS_CODE_PROPERTY,
   CATALOG_CACHE_TAG,

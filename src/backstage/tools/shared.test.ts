@@ -13,9 +13,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { McpErrorCode, McpNotFoundError } from '@coderrob/mcp-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { McpErrorCode, McpNotFoundError } from '../../mcp/errors.js';
 import { CatalogResultStatus, CatalogSortOrder } from '../../shared/constants/backstage-catalog.js';
 import {
   catalogOptionalResult,

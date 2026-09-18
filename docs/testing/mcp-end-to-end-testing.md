@@ -32,7 +32,7 @@ The two black-box stages exercise the packaged CommonJS CLI through this process
 Official MCP SDK client or MCP Inspector
   -> stdio JSON-RPC
   -> node dist/cli.cjs
-  -> generic MCP application kernel
+  -> published @coderrob/mcp-kernel package
   -> Backstage MCP plugin
   -> BackstageCatalogApi
   -> authenticated HTTP request
@@ -46,9 +46,9 @@ This is intentionally different from importing a handler and calling it directly
 
 ### Vitest contract tests
 
-`test:contract` runs the colocated Vitest files [`application.test.ts`](../../src/mcp/application.test.ts), [`backstage.plugin.test.ts`](../../src/backstage/backstage.plugin.test.ts), and [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts).
+`test:contract` runs [`server.test.ts`](../../src/server.test.ts), [`backstage.plugin.test.ts`](../../src/backstage/backstage.plugin.test.ts), and [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstage-catalog-api.test.ts).
 
-The generic application suite connects the official MCP SDK client through linked in-memory transports. It covers tools, resources, resource templates, prompts, structured results, typed errors, policy enforcement, authenticated and anonymous cache isolation, expiry and invalidation, cancellation, deterministic manifests, lifecycle rollback, concurrent shutdown, and cleanup failures.
+The server composition suite verifies that the published kernel creates, starts, and stops the Backstage application through injected and default transports. Generic kernel behavior is tested and released by the `@coderrob/mcp-kernel` package.
 
 The Backstage plugin suite verifies the complete 13-tool surface and invokes every tool through an official MCP SDK client using a typed Catalog client fake. It checks argument forwarding, compound-reference normalization, cursor semantics, upstream error mapping, and optional lookup behavior.
 

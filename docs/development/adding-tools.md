@@ -2,14 +2,14 @@
 
 This guide is the contribution path for adding or changing the Catalog tool surface. The directory-specific rules in [`src/backstage/tools/AGENTS.md`](../../src/backstage/tools/AGENTS.md) are authoritative for files in that folder.
 
-![Tool lifecycle: define a Zod-backed tool, validate and compile it, register it, invoke it through middleware and policies, then return an MCP result.](../assets/tool-lifecycle.png)
+The generic definition, registration, middleware, and result lifecycle is documented by the [`@coderrob/mcp-kernel` architecture guide](https://github.com/Coderrob/mcp-kernel/blob/main/docs/architecture.md). This guide covers the Backstage-specific authoring steps.
 
 ## Before you start
 
 Decide whether the capability belongs in the Backstage plugin or the generic harness:
 
 - Catalog-specific schemas, handlers, annotations, and error mapping belong under `src/backstage/tools`.
-- Reusable MCP lifecycle or protocol behavior belongs under `src/mcp`.
+- Reusable MCP lifecycle or protocol behavior belongs in `@coderrob/mcp-kernel`; release it from the kernel repository before updating this package's dependency.
 - Cross-cutting constants and enums belong under `src/shared/constants`.
 - Reusable type-only contracts belong under `src/types`.
 
