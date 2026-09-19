@@ -8,9 +8,10 @@ The generic definition, registration, middleware, and result lifecycle is docume
 
 Decide whether the capability belongs in the Backstage plugin or the generic harness:
 
-- Catalog-specific schemas, handlers, annotations, and error mapping belong under `src/backstage/tools`.
+- Reusable Catalog Zod schemas belong in `src/shared/schema.ts`; tool-specific schemas can stay beside their handlers under `src/backstage/tools`.
 - Reusable MCP lifecycle or protocol behavior belongs in `@coderrob/mcp-kernel`; release it from the kernel repository before updating this package's dependency.
-- Cross-cutting constants and enums belong under `src/shared/constants`.
+- Catalog handlers, annotations, policies, and error mapping belong under `src/backstage/tools`.
+- Cross-cutting constants and enums belong under `src/shared/constants`. Use `BackstageEntityKind` for fixed standard-kind filters, while allowing custom kinds in generic inputs.
 - Reusable type-only contracts belong under `src/types`.
 
 Use the official `IBackstageCatalogApi` contract through `BackstageMcpContext`. Do not call Catalog HTTP endpoints directly from a tool.
@@ -46,7 +47,7 @@ export const getEntitiesTool = defineTool<BackstageMcpContext>()({
 });
 ```
 
-The Zod schema is both runtime validation and the source of the handler's input type. Do not add a parallel handwritten input interface or cast the parsed value.
+The Zod schema is both runtime validation and the source of the handler's input type. Do not add a parallel handwritten input interface or cast the parsed value. Give every Zod object and every named property a meaningful `.describe()` so generated MCP tool metadata explains the expected inputs and outputs.
 
 ## 3. Choose honest annotations and policies
 

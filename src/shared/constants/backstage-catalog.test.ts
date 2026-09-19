@@ -13,6 +13,25 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import {
+  ANNOTATION_LOCATION,
+  ANNOTATION_ORIGIN_LOCATION,
+  ANNOTATION_SOURCE_LOCATION,
+  RELATION_API_CONSUMED_BY,
+  RELATION_API_PROVIDED_BY,
+  RELATION_CHILD_OF,
+  RELATION_CONSUMES_API,
+  RELATION_DEPENDENCY_OF,
+  RELATION_DEPENDS_ON,
+  RELATION_HAS_MEMBER,
+  RELATION_HAS_PART,
+  RELATION_MEMBER_OF,
+  RELATION_OWNED_BY,
+  RELATION_OWNER_OF,
+  RELATION_PARENT_OF,
+  RELATION_PART_OF,
+  RELATION_PROVIDES_API,
+} from '@backstage/catalog-model';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -24,9 +43,13 @@ import {
   BACKSTAGE_CATALOG_PLUGIN_VERSION,
   BACKSTAGE_MCP_SERVER_NAME,
   BACKSTAGE_MCP_SERVER_VERSION,
+  BACKSTAGE_ORPHAN_ANNOTATION_VALUE,
   BACKSTAGE_STATUS_CODE_PROPERTY,
+  BackstageAnnotationKey,
   BackstageAuthorizationScheme,
+  BackstageEntityKind,
   BackstageEnvironmentVariable,
+  BackstageRelation,
   BackstageToolName,
   CATALOG_CACHE_TAG,
   CATALOG_CACHE_TTL_MS,
@@ -36,6 +59,7 @@ import {
   CATALOG_RATE_LIMIT_WINDOW_MS,
   CatalogHttpStatus,
   CatalogLocationConflictMode,
+  CatalogLookupField,
   CatalogResultStatus,
   CatalogSortOrder,
   CatalogTotalItemsMode,
@@ -56,8 +80,60 @@ describe('Backstage Catalog constants', () => {
     expect(Object.values(BackstageEnvironmentVariable)).toHaveLength(4);
   });
 
+  it('should expose the nine documented built-in entity kinds with canonical casing', () => {
+    expect(Object.values(BackstageEntityKind)).toEqual([
+      'API',
+      'Component',
+      'Domain',
+      'Group',
+      'Location',
+      'Resource',
+      'System',
+      'Template',
+      'User',
+    ]);
+  });
+
+  it('should match official Backstage relation values', () => {
+    expect(Object.values(BackstageRelation)).toEqual([
+      RELATION_API_CONSUMED_BY,
+      RELATION_API_PROVIDED_BY,
+      RELATION_CHILD_OF,
+      RELATION_CONSUMES_API,
+      RELATION_DEPENDENCY_OF,
+      RELATION_DEPENDS_ON,
+      RELATION_HAS_MEMBER,
+      RELATION_HAS_PART,
+      RELATION_MEMBER_OF,
+      RELATION_OWNED_BY,
+      RELATION_OWNER_OF,
+      RELATION_PARENT_OF,
+      RELATION_PART_OF,
+      RELATION_PROVIDES_API,
+    ]);
+  });
+
+  it('should identify selected documented annotation keys and the orphan marker', () => {
+    expect(BackstageAnnotationKey.MANAGED_BY_LOCATION).toBe(ANNOTATION_LOCATION);
+    expect(BackstageAnnotationKey.MANAGED_BY_ORIGIN_LOCATION).toBe(ANNOTATION_ORIGIN_LOCATION);
+    expect(BackstageAnnotationKey.SOURCE_LOCATION).toBe(ANNOTATION_SOURCE_LOCATION);
+    expect(BackstageAnnotationKey.TECHDOCS_REF).toBe('backstage.io/techdocs-ref');
+    expect(BackstageAnnotationKey.ORPHAN).toBe('backstage.io/orphan');
+    expect(BACKSTAGE_ORPHAN_ANNOTATION_VALUE).toBe('true');
+  });
+
+  it('should expose stable standard paths used by contextual Catalog queries', () => {
+    expect(Object.values(CatalogLookupField)).toEqual([
+      'metadata.annotations',
+      'metadata.name',
+      'metadata.namespace',
+      'metadata.title',
+      'relations',
+    ]);
+  });
+
   it('should expose stable Catalog tool and policy vocabulary', () => {
-    expect(Object.values(BackstageToolName)).toHaveLength(13);
+    expect(Object.values(BackstageToolName)).toHaveLength(32);
     expect(CATALOG_CACHE_TAG).toBe('catalog');
     expect(CATALOG_CACHE_TTL_MS).toBe(120_000);
     expect(CATALOG_OPERATION_TIMEOUT_MS).toBe(30_000);

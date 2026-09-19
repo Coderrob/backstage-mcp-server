@@ -17,18 +17,14 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { entityRefSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogOptionalResult,
-  catalogReadPolicy,
-  entityRefSchema,
-  readAnnotations,
-  successOutputSchema,
-  toEntityRef,
-} from './shared.js';
+import { catalogOptionalResult, catalogReadPolicy, readAnnotations, toEntityRef } from './shared.js';
 
 /** Input accepted by the single-entity lookup tool. */
-const getEntityByRefInputSchema = z.object({ entityRef: entityRefSchema });
+const getEntityByRefInputSchema = z
+  .object({ entityRef: entityRefSchema.describe('Entity reference to retrieve.') })
+  .describe('Retrieve one Catalog entity by reference.');
 
 /** Retrieves one Catalog entity by compound reference. */
 export const getEntityByRefTool = defineTool<BackstageMcpContext>()({

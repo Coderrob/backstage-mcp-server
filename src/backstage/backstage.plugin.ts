@@ -19,9 +19,9 @@ import {
   BACKSTAGE_CATALOG_PLUGIN_NAME,
   BACKSTAGE_CATALOG_PLUGIN_VERSION,
 } from '../shared/constants/backstage-catalog.js';
+import { queryEntitiesInputSchema } from '../shared/schema.js';
 import type { BackstageMcpContext } from '../types/backstage.js';
 import { backstageCatalogTools } from './tools/index.js';
-import { queryEntitiesInputSchema } from './tools/shared.js';
 
 export type { BackstageMcpContext } from '../types/backstage.js';
 

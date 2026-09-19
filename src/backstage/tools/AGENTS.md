@@ -7,13 +7,13 @@ This directory contains the Backstage Catalog tool surface exposed over MCP. Kee
 - Define exactly one MCP tool in each `<tool_name>.tool.ts` module using `defineTool<BackstageMcpContext>()`.
 - Export the tool definition as a named `camelCaseTool` constant. Do not use decorators, reflection, mutable registration, or class wrappers.
 - Keep `backstage.plugin.ts` limited to plugin metadata and composition of the tool definitions exported by this directory.
-- Put reusable schemas, policies, reference conversion, response construction, and Catalog error mapping in `shared.ts`. Do not duplicate these concerns in individual tools.
+- Put reusable Zod schemas in `../../shared/schema.ts`, with a meaningful `.describe()` on every object and property. Keep policies, reference conversion, response construction, and Catalog error mapping in `shared.ts`. Do not duplicate these concerns in individual tools.
 - Register every supported tool in `index.ts`; preserve a deterministic alphabetical order by MCP tool name.
 
 ## Definition requirements
 
 - Give every tool a stable snake_case `name`, concise `title` and `description`, Zod `inputSchema`, structured `outputSchema`, MCP annotations, and an execution policy.
-- Select the tool `name` from `BackstageToolName` in `../../shared/constants/backstage-catalog.ts`; do not repeat protocol identifiers as string literals.
+- Select the tool `name` from `BackstageToolName` in `../../shared/constants/backstage-catalog.ts`; do not repeat protocol identifiers as string literals. Use `BackstageEntityKind`, `BackstageRelation`, `BackstageAnnotationKey`, and `CatalogLookupField` there for fixed documented values while preserving custom inputs in generic tools.
 - Infer handler inputs from the Zod schema. Avoid parallel handwritten input types and unsafe casts.
 - Use the official Backstage Catalog client through `BackstageMcpContext`; do not reimplement Catalog HTTP routes in tool modules.
 - Mark mutations accurately. Destructive tools must use destructive annotations, and all mutations must invalidate the `catalog` cache tag.

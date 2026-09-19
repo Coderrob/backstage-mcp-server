@@ -2,7 +2,7 @@
 
 A type-safe Model Context Protocol server for the Backstage Software Catalog, built on the published `@coderrob/mcp-kernel` runtime.
 
-It exposes 13 Catalog tools over stdio, uses Backstage's official Catalog client, supports rotating bearer credentials, and ships with black-box SDK and MCP Inspector verification.
+It exposes 32 Catalog tools over stdio, uses Backstage's official Catalog client, supports rotating bearer credentials, and ships with black-box SDK and MCP Inspector verification.
 
 ![Runtime architecture from an MCP client through the published MCP Kernel dependency and Backstage integration to the Catalog API.](docs/assets/runtime-architecture.svg)
 
@@ -163,3 +163,9 @@ Choose a path from the [documentation hub](docs/README.md):
 ## License
 
 GPL-3.0. See [`LICENSE`](LICENSE).
+
+## Curated knowledge and skills
+
+The [Backstage knowledge base](docs/knowledge/README.md) maintains classified articles, named source citations and schema.org metadata. Repository skills in `.agents/skills` support catalog lookups, entity maintenance and MCP development.
+
+The 19 [contextual lookup tools](docs/knowledge/lookup-recipes.md) cover names, System and Domain contents, Groups, ownership, dependencies, APIs, annotations and orphaned entities. See [lookup contracts and examples](docs/knowledge/lookup-recipes.md), including pagination, ambiguity and work bounds.

@@ -19,6 +19,16 @@ import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import { backstageCatalogTools } from './index.js';
 
 describe('Backstage Catalog tool registry', () => {
+  it('should describes every registered tool schema and input property', () => {
+    for (const tool of backstageCatalogTools) {
+      if (!tool.outputSchema) throw new Error(`Missing output schema for ${tool.name}`);
+      expect(tool.inputSchema.description).toMatch(/\S/);
+      expect(tool.outputSchema.description).toMatch(/\S/);
+      for (const property of Object.values(tool.inputSchema.shape)) expect(property.description).toMatch(/\S/);
+      for (const property of Object.values(tool.outputSchema.shape)) expect(property.description).toMatch(/\S/);
+    }
+  });
+
   it('should exports all tools once in deterministic name order', () => {
     const names = backstageCatalogTools.map(({ name }) => name);
     expect(names).toHaveLength(Object.values(BackstageToolName).length);

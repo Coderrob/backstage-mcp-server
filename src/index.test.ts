@@ -26,5 +26,6 @@ describe('package API', () => {
     expect(typeof packageApi.createStderrLogger).toBe('function');
     expect(typeof packageApi.McpErrorCode).toBe('object');
     expect(typeof packageApi.LogLevel).toBe('object');
+    expect(packageApi.BackstageEntityKind.API).toBe('API');
   });
 });

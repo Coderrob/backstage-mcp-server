@@ -17,17 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { entityRefSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogReadPolicy,
-  catalogResult,
-  entityRefSchema,
-  readAnnotations,
-  successOutputSchema,
-  toEntityRef,
-} from './shared.js';
+import { catalogReadPolicy, catalogResult, readAnnotations, toEntityRef } from './shared.js';
 
-const inputSchema = z.object({ entityRef: entityRefSchema });
+const inputSchema = z
+  .object({ entityRef: entityRefSchema.describe('Entity reference whose ancestors are requested.') })
+  .describe('Retrieve the ancestor tree of a Catalog entity.');
 
 /** Retrieves the ancestry tree for one Catalog entity. */
 export const getEntityAncestorsTool = defineTool<BackstageMcpContext>()({

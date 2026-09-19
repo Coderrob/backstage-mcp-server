@@ -92,3 +92,7 @@ The colocated [`backstage-catalog-api.test.ts`](../../src/backstage/api/backstag
 There is no active request path to Backstage's deprecated `GET /entities` endpoint; the unreachable legacy compatibility implementation has been removed.
 
 The [MCP end-to-end testing guide](../testing/mcp-end-to-end-testing.md) documents the built-process SDK and Inspector tests. Those tests run the same official client adapter against deterministic Backstage-compatible HTTP stubs.
+
+## Curated lookups
+
+The [contextual lookup catalog](../knowledge/lookup-recipes.md) documents all 19 named read tools, their complete entity-reference inputs, relation direction, recursion defaults and result bounds. Each composes the official `queryEntities` method and returns the standard structured MCP success envelope. The catalog covers name candidates; System and Domain inventory; Group membership and hierarchy; ownership; dependencies; API providers and consumers; annotations; and orphaned entities.

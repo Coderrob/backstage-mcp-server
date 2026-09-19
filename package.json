@@ -86,6 +86,7 @@
     "deps:restore": "sh -c 'bash scripts/deps-crossplatform.sh restore'",
     "deps:update": "sh -c 'bash scripts/deps.sh update'",
     "deps:validate": "sh -c 'bash scripts/deps-crossplatform.sh check'",
+    "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore --embedded-language-formatting=off && eslint . --ext .ts,.js,.mjs,.cjs --fix",
     "lint": "eslint . --ext .ts,.js,.mjs,.cjs --max-warnings 0",
     "lint:fix": "prettier . --write && eslint . --ext .ts,.js,.mjs,.cjs --fix",
     "knip": "knip --treat-config-hints-as-errors",
@@ -108,7 +109,8 @@
     "test:mcp": "yarn test:contract && yarn build && yarn test:cli && yarn test:tools && yarn test:inspector",
     "test:tools": "node scripts/smoke-all-tools.mjs",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "docs:check": "node scripts/check-knowledge.mjs && node --test scripts/check-knowledge.test.mjs"
   },
   "type": "module",
   "types": "dist/index.d.ts",

@@ -17,17 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { entityRefSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogResult,
-  catalogWritePolicy,
-  entityRefSchema,
-  successOutputSchema,
-  toEntityRef,
-  writeAnnotations,
-} from './shared.js';
+import { catalogResult, catalogWritePolicy, toEntityRef, writeAnnotations } from './shared.js';
 
-const inputSchema = z.object({ entityRef: entityRefSchema });
+const inputSchema = z
+  .object({ entityRef: entityRefSchema.describe('Entity reference to refresh.') })
+  .describe('Request a Catalog entity refresh.');
 
 /** Requests a refresh of one Catalog entity. */
 export const refreshEntityTool = defineTool<BackstageMcpContext>()({

@@ -22,6 +22,7 @@ import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotoc
 
 import {
   BACKSTAGE_ENVIRONMENT_VARIABLE,
+  CONTEXTUAL_QUERY_EXPECTATIONS,
   EXPECTED_MCP_TOOL_NAMES,
   HTTP_AUTHORIZATION_SCHEME,
   HTTP_HEADER,
@@ -64,6 +65,7 @@ const CATALOG_REQUEST = Object.freeze({
   REMOVE_LOCATION_BY_ID: `DELETE /api/catalog/locations/${LOCATION_ID}`,
   VALIDATE_ENTITY: 'POST /api/catalog/validate-entity',
 });
+
 const EXPECTED_REQUESTS = [
   CATALOG_REQUEST.ADD_LOCATION,
   CATALOG_REQUEST.GET_ENTITIES,
@@ -78,6 +80,10 @@ const EXPECTED_REQUESTS = [
   CATALOG_REQUEST.REMOVE_ENTITY_BY_UID,
   CATALOG_REQUEST.REMOVE_LOCATION_BY_ID,
   CATALOG_REQUEST.VALIDATE_ENTITY,
+  ...Array.from(
+    { length: 19 },
+    /** Expects one Catalog query per contextual tool. */ () => CATALOG_REQUEST.GET_ENTITIES
+  ),
 ];
 const ROUTES = new Map([
   [
@@ -122,8 +128,27 @@ function assertCatalogRequests(requests) {
     ),
     true
   );
+  assertContextualQueries(requests.slice(-CONTEXTUAL_QUERY_EXPECTATIONS.length));
   const locationRequest = requests[0];
   assert.equal(locationRequest.url.searchParams.get('dryRun'), 'true');
+}
+
+/**
+ * Requires each contextual tool to forward its intended Catalog filter through stdio and HTTP.
+ * @param requests - Captured query requests in tool-call order.
+ */
+function assertContextualQueries(requests) {
+  assert.equal(requests.length, CONTEXTUAL_QUERY_EXPECTATIONS.length);
+  requests.forEach(
+    /** Checks one contextual query's decisive Catalog parameter. */ (catalogRequest, index) => {
+      const [field, value] = CONTEXTUAL_QUERY_EXPECTATIONS[index];
+      assert.equal(
+        catalogRequest.url.searchParams.get(field)?.includes(value),
+        true,
+        `Contextual query ${index} lost ${value}`
+      );
+    }
+  );
 }
 
 /**
@@ -147,6 +172,33 @@ async function callAllTools(client) {
   await callTool(client, MCP_TOOL_NAME.REMOVE_ENTITY_BY_UID, { uid: ENTITY_UID });
   await callTool(client, MCP_TOOL_NAME.REMOVE_LOCATION_BY_ID, { locationId: LOCATION_ID });
   await callTool(client, MCP_TOOL_NAME.VALIDATE_ENTITY, { entity: ENTITY, locationRef: LOCATION_REF });
+  await callContextualTools(client);
+}
+
+/**
+ * Calls every explicit contextual lookup through the packaged MCP process.
+ * @param client - Connected official MCP client.
+ */
+async function callContextualTools(client) {
+  await callTool(client, MCP_TOOL_NAME.FIND_ENTITIES_BY_NAME, { name: 'smoke' });
+  await callTool(client, MCP_TOOL_NAME.FIND_USERS_BY_NAME, { name: { firstName: 'Smoke' } });
+  await callTool(client, MCP_TOOL_NAME.GET_APIS_BY_CONSUMER, { consumerRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_APIS_BY_PROVIDER, { providerRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_CHILD_GROUPS_BY_GROUP, { groupRef: 'group:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_CONSUMERS_BY_API, { apiRef: 'api:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_DEPENDENCIES_BY_ENTITY, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_DEPENDENTS_BY_ENTITY, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_ANNOTATION, { key: 'backstage.io/orphan', value: 'true' });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_DOMAIN, { domainRef: 'domain:default/smoke', recursive: false });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_OWNER, { ownerRef: 'group:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_ENTITIES_BY_SYSTEM, { systemRef: 'system:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_GROUPS_BY_USER, { userRef: 'user:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_ORPHANED_ENTITIES, {});
+  await callTool(client, MCP_TOOL_NAME.GET_OWNERS_BY_ENTITY, { entityRef: ENTITY_REF });
+  await callTool(client, MCP_TOOL_NAME.GET_PROVIDERS_BY_API, { apiRef: 'api:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_SUBDOMAINS_BY_DOMAIN, { domainRef: 'domain:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_SYSTEMS_BY_DOMAIN, { domainRef: 'domain:default/smoke' });
+  await callTool(client, MCP_TOOL_NAME.GET_USERS_BY_GROUP, { groupRef: 'group:default/smoke' });
 }
 
 /**
@@ -226,7 +278,7 @@ async function main() {
     );
     await callAllTools(client);
     assertCatalogRequests(stub.requests);
-    process.stdout.write('All-tools MCP smoke test passed (13 MCP calls, 13 authenticated Catalog requests)\n');
+    process.stdout.write('All-tools MCP smoke test passed (32 MCP calls, 32 authenticated Catalog requests)\n');
   } finally {
     await client.close();
     await stub.close();
