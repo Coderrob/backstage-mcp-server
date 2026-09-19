@@ -13,7 +13,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { definePlugin } from '../mcp/definitions.js';
+import { definePlugin } from '@coderrob/mcp-kernel';
+
 import {
   BACKSTAGE_CATALOG_PLUGIN_NAME,
   BACKSTAGE_CATALOG_PLUGIN_VERSION,

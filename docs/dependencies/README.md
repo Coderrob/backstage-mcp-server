@@ -24,7 +24,7 @@ Use the following documents for the rest of the workflow:
 
 - [`package.json`](../../package.json) defines direct runtime and development dependencies, package scripts, and the Yarn release.
 - [`yarn.lock`](../../yarn.lock) pins the resolved dependency graph.
-- [`.yarnrc.yml`](../../.yarnrc.yml) defines the node-modules linker and documented package extensions.
+- [`.yarnrc.yml`](../../.yarnrc.yml) defines the node-modules linker, package extensions, and the narrow age-gate preapproval for the newly published MCP Kernel package.
 
 Do not document a second static "current versions" table. It becomes stale independently of `package.json`. Integration-specific compatibility decisions belong with their integration documentation, such as the [Backstage Catalog integration](../integrations/backstage-catalog.md).
 

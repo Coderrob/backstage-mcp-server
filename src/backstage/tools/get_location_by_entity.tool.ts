@@ -13,9 +13,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
-import { defineTool } from '../../mcp/definitions.js';
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
 import type { BackstageMcpContext } from '../../types/index.js';
 import {

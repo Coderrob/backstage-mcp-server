@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Extracted the generic MCP runtime and logging contracts into the published `@coderrob/mcp-kernel` dependency; Backstage tools now consume its public package API.
 - Empty Catalog filter records, string values, and value arrays are rejected during MCP input validation instead of becoming silent no-op filters.
 - Updated tool metadata storage to use a global Map instead of Reflect metadata for better compatibility.
 - Modified tool factory to properly extract tool classes from ES modules.

@@ -1,7 +1,9 @@
 # ADR 0001: Adopt a generic MCP application kernel
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-15
+
+The local kernel described by this record was later extracted to the independently published `@coderrob/mcp-kernel` package. See the [current architecture overview](../architecture/overview.md) for the supported dependency boundary.
 
 ## Context
 
@@ -11,13 +13,13 @@ The [baseline analysis](../architecture/mcp-architecture-analysis.md) recommende
 
 ## Decision
 
-Adopt a Backstage-independent MCP application kernel under [`src/mcp`](../../src/mcp) with these properties:
+Adopt a Backstage-independent MCP application kernel, originally under `src/mcp`, with these properties:
 
 - `defineTool`, `defineResource`, `defineResourceTemplate`, `definePrompt`, and `definePlugin` form one canonical definition model.
 - Application dependencies are expressed through a generic `TContext`; Backstage is an application plugin and context implementation.
 - Registries and lifecycle state belong to an application instance rather than process-wide singletons.
 - Feature registration is explicit and deterministic. The runtime does not scan files or decorator metadata.
-- MCP SDK registration and schema conversion are isolated in [`sdk-adapter.ts`](../../src/mcp/sdk-adapter.ts).
+- MCP SDK registration and schema conversion are isolated in the kernel's `sdk-adapter.ts`.
 - Handlers return MCP-native results, including structured content and `isError` semantics, through a single execution and error boundary.
 - Importing the library has no startup side effect; the CLI owns stdio process behavior.
 

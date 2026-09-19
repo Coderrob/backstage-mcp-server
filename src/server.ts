@@ -13,11 +13,17 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import {
+  createMcpServer,
+  createStderrLogger,
+  LogLevel,
+  type McpApplication,
+  requestLogging,
+  stdioTransport,
+} from '@coderrob/mcp-kernel';
+
 import { BackstageCatalogApi } from './backstage/api/backstage-catalog-api.js';
 import { backstageCatalogPlugin, type BackstageMcpContext } from './backstage/backstage.plugin.js';
-import { createMcpServer, type McpApplication } from './mcp/application.js';
-import { requestLogging } from './mcp/middleware.js';
-import { stdioTransport } from './mcp/transports.js';
 import {
   AuthType,
   BACKSTAGE_MCP_SERVER_NAME,
@@ -26,7 +32,6 @@ import {
   CATALOG_OPERATION_TIMEOUT_MS,
 } from './shared/constants/backstage-catalog.js';
 import { ConfigurationError } from './shared/errors/error-handling.js';
-import { createStderrLogger, LogLevel } from './shared/logging/logger.js';
 import { isNonEmptyString } from './shared/validation/guards.js';
 import type { BackstageServerOptions, IAuthConfig, IBackstageCatalogApi } from './types/index.js';
 

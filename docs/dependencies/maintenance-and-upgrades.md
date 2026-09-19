@@ -94,6 +94,6 @@ A nonzero result requires triage, not an unreviewed bulk update. For each releva
 
 ## Integration-sensitive updates
 
-For MCP SDK or Inspector changes, rerun the in-memory contracts, built CLI smoke test, and Inspector validation. SDK registration changes should remain isolated to `src/mcp/sdk-adapter.ts`.
+For MCP SDK, MCP Kernel, or Inspector changes, rerun the in-memory contracts, built CLI smoke test, all-tools test, and Inspector validation. SDK registration changes belong in the `@coderrob/mcp-kernel` repository; this application should update the published dependency only after its package verification succeeds.
 
 For Backstage changes, review the official client API compatibility notes and rerun the adapter and plugin suites. The supported packages and endpoint behavior are recorded in the [Backstage Catalog integration guide](../integrations/backstage-catalog.md) and [ADR 0004](../adr/0004-official-backstage-catalog-client.md).

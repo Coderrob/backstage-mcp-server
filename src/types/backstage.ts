@@ -29,10 +29,9 @@ import type {
   ValidateEntityResponse,
 } from '@backstage/catalog-client';
 import type { CompoundEntityRef, Entity } from '@backstage/catalog-model';
+import type { Logger, McpTransportFactory } from '@coderrob/mcp-kernel';
 
 import type { IAuthConfig } from './auth.js';
-import type { Logger } from './logging.js';
-import type { McpTransportFactory } from './mcp.js';
 
 /** Contract consumed by Backstage Catalog MCP tools. */
 export interface IBackstageCatalogApi {

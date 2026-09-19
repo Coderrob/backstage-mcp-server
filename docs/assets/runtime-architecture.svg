@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="650" viewBox="0 0 2100 650" role="img" aria-labelledby="title description">
+  <title id="title">Backstage MCP Server runtime architecture</title>
+  <desc id="description">An MCP client communicates over standard input and output with the published MCP Kernel package. The Backstage MCP Server composes its Catalog plugin with the kernel and delegates Catalog operations to the official Backstage client and Catalog API.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06182d"/>
+      <stop offset="0.55" stop-color="#0a2545"/>
+      <stop offset="1" stop-color="#101525"/>
+    </linearGradient>
+    <linearGradient id="kernel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#073c54"/>
+      <stop offset="1" stop-color="#17224c"/>
+    </linearGradient>
+    <linearGradient id="application" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#443316"/>
+      <stop offset="1" stop-color="#252131"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d7f1"/>
+    </marker>
+    <style>
+      .heading { fill: #f8fafc; font: 700 38px system-ui, sans-serif; }
+      .label { fill: #f8fafc; font: 700 28px system-ui, sans-serif; text-anchor: middle; }
+      .detail { fill: #bfeaf4; font: 500 19px system-ui, sans-serif; text-anchor: middle; }
+      .owner { fill: #dbeafe; font: 650 20px system-ui, sans-serif; text-anchor: middle; letter-spacing: .4px; }
+      .arrow { stroke: #34d7f1; stroke-width: 8; stroke-linecap: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="2100" height="650" fill="url(#background)"/>
+  <text x="1050" y="74" class="heading" text-anchor="middle">Packaged Backstage MCP runtime</text>
+
+  <g>
+    <rect x="45" y="175" width="235" height="190" rx="24" fill="#092d50" stroke="#34d7f1" stroke-width="4"/>
+    <text x="162" y="250" class="label"><tspan x="162">MCP</tspan><tspan x="162" dy="38">Client</tspan></text>
+    <text x="162" y="335" class="detail">external consumer</text>
+  </g>
+  <line x1="285" y1="270" x2="375" y2="270" class="arrow"/>
+
+  <g>
+    <rect x="385" y="175" width="235" height="190" rx="24" fill="#092d50" stroke="#34d7f1" stroke-width="4"/>
+    <text x="502" y="250" class="label"><tspan x="502">stdio</tspan><tspan x="502" dy="38">JSON-RPC</tspan></text>
+    <text x="502" y="335" class="detail">protocol boundary</text>
+  </g>
+  <line x1="625" y1="270" x2="715" y2="270" class="arrow"/>
+
+  <g>
+    <rect x="725" y="145" width="255" height="250" rx="26" fill="url(#kernel)" stroke="#2dd4bf" stroke-width="5"/>
+    <text x="852" y="232" class="label"><tspan x="852">@coderrob/</tspan><tspan x="852" dy="38">mcp-kernel</tspan></text>
+    <text x="852" y="325" class="detail"><tspan x="852">published npm</tspan><tspan x="852" dy="28">runtime dependency</tspan></text>
+  </g>
+  <line x1="985" y1="270" x2="1085" y2="270" class="arrow"/>
+
+  <g>
+    <rect x="1095" y="145" width="255" height="250" rx="26" fill="url(#application)" stroke="#f6b94f" stroke-width="5"/>
+    <text x="1222" y="225" class="label"><tspan x="1222">Backstage</tspan><tspan x="1222" dy="38">Catalog Plugin</tspan></text>
+    <text x="1222" y="325" class="detail"><tspan x="1222">tools, composition,</tspan><tspan x="1222" dy="28">error mapping</tspan></text>
+  </g>
+  <line x1="1355" y1="270" x2="1455" y2="270" class="arrow"/>
+
+  <g>
+    <rect x="1465" y="175" width="255" height="190" rx="24" fill="#092d50" stroke="#34d7f1" stroke-width="4"/>
+    <text x="1592" y="242" class="label"><tspan x="1592">Official</tspan><tspan x="1592" dy="38">Catalog Client</tspan></text>
+    <text x="1592" y="335" class="detail">Backstage package</text>
+  </g>
+  <line x1="1725" y1="270" x2="1795" y2="270" class="arrow"/>
+
+  <g>
+    <rect x="1805" y="175" width="250" height="190" rx="24" fill="#4b3315" stroke="#f6b94f" stroke-width="4"/>
+    <text x="1930" y="258" class="label"><tspan x="1930">Catalog</tspan><tspan x="1930" dy="38">API</tspan></text>
+    <text x="1930" y="335" class="detail">Backstage service</text>
+  </g>
+
+  <rect x="700" y="118" width="305" height="305" rx="34" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="10 10" opacity=".7"/>
+  <text x="852" y="455" class="owner">MCP KERNEL REPOSITORY</text>
+  <rect x="1065" y="118" width="680" height="305" rx="34" fill="none" stroke="#f6b94f" stroke-width="2" stroke-dasharray="10 10" opacity=".7"/>
+  <text x="1405" y="455" class="owner">BACKSTAGE-MCP-SERVER REPOSITORY</text>
+
+  <rect x="385" y="520" width="1335" height="74" rx="22" fill="#112744" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1052" y="552" class="detail"><tspan x="1052">Dependency direction: Backstage application &#8594; published kernel</tspan><tspan x="1052" dy="27">The kernel has no dependency on Backstage application code.</tspan></text>
+</svg>

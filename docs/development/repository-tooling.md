@@ -20,7 +20,7 @@ corepack yarn install --immutable
 | `corepack yarn lint`               | ESLint strict type-aware rules, imports, JSDoc, complexity, and size limits          | No                      |
 | `corepack yarn lint:fix`           | Runs Prettier and safe ESLint fixes across the repository                            | Yes                     |
 | `corepack yarn typecheck`          | Production and test TypeScript projects compile without emitting                     | No                      |
-| `corepack yarn architecture:check` | Source boundaries, colocated tests, shell-test pairing, and no circular dependencies | No                      |
+| `corepack yarn architecture:check` | Published-kernel boundary, colocated tests, shell-test pairing, and no import cycles | No                      |
 | `corepack yarn knip`               | No unreachable files/exports or unused/undeclared dependencies                       | No                      |
 | `corepack yarn test`               | Every colocated Vitest test and 95% per-file coverage                                | Coverage output only    |
 | `corepack yarn test:shell`         | Every maintained Bash helper passes its isolated BATS suite                          | Temporary fixtures only |

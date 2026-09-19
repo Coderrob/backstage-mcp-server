@@ -1,10 +1,10 @@
 # Backstage MCP Server
 
-A type-safe Model Context Protocol server for the Backstage Software Catalog, built on a reusable schema-first MCP harness.
+A type-safe Model Context Protocol server for the Backstage Software Catalog, built on the published `@coderrob/mcp-kernel` runtime.
 
 It exposes 13 Catalog tools over stdio, uses Backstage's official Catalog client, supports rotating bearer credentials, and ships with black-box SDK and MCP Inspector verification.
 
-![Runtime architecture from an MCP client through the generic harness and Backstage integration to the Catalog API.](docs/assets/runtime-architecture.png)
+![Runtime architecture from an MCP client through the published MCP Kernel dependency and Backstage integration to the Catalog API.](docs/assets/runtime-architecture.svg)
 
 ## What you get
 
@@ -111,54 +111,17 @@ This selects Components or APIs in the `default` namespace. The [Backstage integ
 ## How it works
 
 1. An MCP client launches the packaged CLI and exchanges JSON-RPC over stdio.
-2. The generic harness validates and compiles immutable feature definitions.
+2. The published MCP Kernel validates and compiles immutable feature definitions.
 3. Zod validates input before middleware, authorization, caching, rate limiting, and timeout policies run.
 4. A Backstage tool calls the typed Catalog contract from its application context.
 5. The adapter delegates HTTP behavior to the official Backstage `CatalogClient` and injects the bearer token at the fetch boundary.
 6. Results return as MCP text plus structured content; expected failures use stable error codes and safe details.
 
-Only [`src/mcp/sdk-adapter.ts`](src/mcp/sdk-adapter.ts) translates generic definitions into the installed MCP SDK. See the [current architecture overview](docs/architecture/overview.md) for components, lifecycle, dependency direction, and security boundaries.
+The published [`@coderrob/mcp-kernel`](https://www.npmjs.com/package/@coderrob/mcp-kernel) package owns protocol registration, lifecycle, policies, transports, testing support, and protocol-safe logging. This repository owns only the Backstage application and Catalog integration. See the [current architecture overview](docs/architecture/overview.md) for the dependency boundary.
 
-## Build on the generic harness
+## MCP Kernel dependency
 
-The package also exports the Backstage-independent MCP kernel:
-
-```typescript
-import { z } from 'zod';
-import { createMcpServer, definePlugin, defineTool, jsonResult, stdioTransport } from '@coderrob/backstage-mcp-server';
-
-interface AppContext {
-  greeting: string;
-}
-
-const hello = defineTool<AppContext>()({
-  name: 'hello_user',
-  description: 'Create a greeting.',
-  inputSchema: z.object({ name: z.string().min(1) }),
-  outputSchema: z.object({ message: z.string() }),
-  annotations: { readOnlyHint: true },
-  /** Returns a greeting for the validated name. */
-  handler({ input, context }) {
-    return jsonResult({ message: `${context.greeting}, ${input.name}` });
-  },
-});
-
-const plugin = definePlugin<AppContext>({
-  name: 'greetings',
-  version: '1.0.0',
-  features: [hello],
-});
-
-const app = createMcpServer<AppContext>({
-  identity: { name: 'example-server', version: '1.0.0' },
-  plugins: [plugin],
-  createContext: () => ({ greeting: 'Hello' }),
-});
-
-await app.start(stdioTransport());
-```
-
-Supported primitives are `defineTool`, `defineResource`, `defineResourceTemplate`, `definePrompt`, and `definePlugin`. `connectTestClient(app)` pairs an application with the official SDK's linked in-memory transport for contract tests.
+Generic server authoring, lifecycle, policies, transports, results, testing support, and logging are documented in the [`@coderrob/mcp-kernel` repository](https://github.com/Coderrob/mcp-kernel). This package re-exports the kernel API for compatibility, but new generic consumers should install and import `@coderrob/mcp-kernel` directly.
 
 To contribute a Catalog capability, follow [Adding a Backstage MCP tool](docs/development/adding-tools.md).
 

@@ -13,17 +13,15 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { defineTransport, McpApplicationState, noopLogger } from '@coderrob/mcp-kernel';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BackstageCatalogApi } from './backstage/api/backstage-catalog-api.js';
-import { defineTransport } from './mcp/transports.js';
 import { buildAuthConfig, createBackstageServer, startServer } from './server.js';
 import { AuthType, BackstageToolName } from './shared/constants/backstage-catalog.js';
-import { McpApplicationState } from './shared/constants/mcp-protocol.js';
 import { ConfigurationError } from './shared/errors/error-handling.js';
-import { noopLogger } from './shared/logging/logger.js';
 
 const catalogClient = new BackstageCatalogApi({
   baseUrl: 'https://backstage.example.test',

@@ -20,7 +20,7 @@ Use this page to choose the shortest path to the information you need. Current o
 ### I want to understand the design
 
 1. Start with the present-tense [architecture overview](architecture/overview.md).
-2. Read the [ADR index](adr/README.md) for accepted trade-offs.
+2. Read the [ADR index](adr/README.md) for historical trade-offs and supersession notes.
 3. Consult the historical [architecture analysis](architecture/mcp-architecture-analysis.md) and [generic harness plan](plans/mcp-update.md) when you need migration context.
 
 ### I want to maintain dependencies or automation
@@ -51,7 +51,7 @@ Use this page to choose the shortest path to the information you need. Current o
 
 ## Architecture decisions
 
-The [ADR index](adr/README.md) covers the generic MCP kernel, cohesive source boundaries, verification strategy, official Catalog client, per-file coverage, ECMAScript quality limits, BATS, Knip, and the Node.js/toolchain baseline.
+The [ADR index](adr/README.md) records both active decisions and the superseded local-kernel decisions that preceded the published package. Use the [architecture overview](architecture/overview.md) for the current ownership boundary.
 
 ## Keeping docs accurate
 

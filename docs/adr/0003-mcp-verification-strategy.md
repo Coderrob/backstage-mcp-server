@@ -13,7 +13,7 @@ Use layered MCP verification:
 
 - Colocated Vitest unit tests cover definitions, policies, middleware, results, lifecycle, and manifest behavior directly.
 - Every behavioral production module must have a side-by-side test, and each covered file must independently reach 95% statements, branches, functions, and lines. Type-only modules are exempt.
-- Contract tests connect the official MCP SDK client to the application through linked in-memory transports provided by [`testing.ts`](../../src/mcp/testing.ts).
+- Contract tests connect the official MCP SDK client to the application through linked in-memory transports provided by `@coderrob/mcp-kernel`.
 - A CLI smoke test launches the built stdio artifact and communicates through the SDK client.
 - The open-source MCP Inspector runs against the built stdio artifact, performs strict `tools/list` schema validation, and calls a tool against a deterministic Backstage stub.
 - Inspector state is isolated per run so developer credentials and machine configuration cannot affect results.

@@ -14,14 +14,12 @@
  */
 
 import type { ValidateEntityResponse } from '@backstage/catalog-client';
+import { connectTestClient, McpErrorCode, noopLogger } from '@coderrob/mcp-kernel';
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 
-import { McpErrorCode } from '../mcp/errors.js';
-import { connectTestClient } from '../mcp/testing.js';
 import { createBackstageServer } from '../server.js';
 import { BackstageToolName } from '../shared/constants/backstage-catalog.js';
-import { noopLogger } from '../shared/logging/logger.js';
 import type { IBackstageCatalogApi } from '../types/backstage.js';
 import type { ICatalogApiFixture } from '../types/backstage-testing.js';
 import { getEntitiesInputSchema } from './backstage.plugin.js';

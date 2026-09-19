@@ -1,7 +1,9 @@
 # ADR 0002: Organize cohesive source boundaries in a single package
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-15
+
+The local package layout described by this record ended when the generic kernel moved to `@coderrob/mcp-kernel`. See the [current architecture overview](../architecture/overview.md) for the supported source and package boundaries.
 
 ## Context
 

@@ -15,6 +15,7 @@
 
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { type Logger, LogLevel } from '@coderrob/mcp-kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -25,8 +26,6 @@ import {
   resolveLogLevel,
   runCli,
 } from './cli.js';
-import type { Logger } from './shared/logging/logger.js';
-import { LogLevel } from './shared/logging/logger.js';
 
 const originalExitCode = process.exitCode;
 

@@ -1,6 +1,6 @@
 # MCP Generic Harness Implementation Plan
 
-> **Implementation record:** Most phases in this plan are delivered. Use the [current architecture overview](../architecture/overview.md), [tool-authoring guide](../development/adding-tools.md), and [repository tooling guide](../development/repository-tooling.md) for current instructions.
+> **Historical implementation record:** The generic kernel described by this plan has since moved to the published `@coderrob/mcp-kernel` package. Use the [current architecture overview](../architecture/overview.md), [tool-authoring guide](../development/adding-tools.md), and [repository tooling guide](../development/repository-tooling.md) for current instructions.
 
 ## Objective
 
@@ -10,9 +10,9 @@ The plan is based on the [MCP architecture analysis](../architecture/mcp-archite
 
 ## Implementation status (September 2026)
 
-The canonical path described here is implemented under `src/mcp`, with the Backstage catalog exposed as a typed plugin from `src/backstage/backstage.plugin.ts`. The delivered baseline includes immutable generic definitions, deterministic registration and manifests, SDK isolation, middleware, lifecycle ownership, native structured results, safe errors, timeout/scope/rate/cache policies, tagged invalidation, in-memory protocol tests, a side-effect-free library entry, and a protocol-safe stdio CLI. The verification stack now also includes the official open-source MCP Inspector as an independent stdio, schema-portability, and tool-invocation gate. The application plugin delegates Catalog protocol behavior to Backstage's official client; its supported API and authentication baseline are documented in the [Backstage Catalog integration guide](../integrations/backstage-catalog.md) and [ADR 0004](../adr/0004-official-backstage-catalog-client.md).
+The canonical path described here was first implemented under `src/mcp` and is now maintained and published as `@coderrob/mcp-kernel`, with the Backstage catalog exposed as a typed plugin from `src/backstage/backstage.plugin.ts`. The delivered baseline includes immutable generic definitions, deterministic registration and manifests, SDK isolation, middleware, lifecycle ownership, native structured results, safe errors, timeout/scope/rate/cache policies, tagged invalidation, in-memory protocol tests, a side-effect-free library entry, and a protocol-safe stdio CLI. The verification stack also includes the official open-source MCP Inspector as an independent stdio, schema-portability, and tool-invocation gate. The application plugin delegates Catalog protocol behavior to Backstage's official client; its supported API and authentication baseline are documented in the [Backstage Catalog integration guide](../integrations/backstage-catalog.md) and [ADR 0004](../adr/0004-official-backstage-catalog-client.md).
 
-The legacy decorator, builder, plugin, middleware, strategy, health, and duplicate infrastructure implementations were audited as unreachable from both package entrypoints and removed. The remaining production surface has one generic MCP kernel, one Backstage plugin/adapter, and one shared logger. Every behavioral module has a colocated Vitest file, and coverage is enforced at 95% per file across statements, branches, functions, and lines. Streamable HTTP and distributed policy providers remain later-release work as specified by the non-goals below. The removal and verification floor are recorded in [ADR 0005](../adr/0005-remove-unreachable-compatibility-and-enforce-coverage.md).
+The legacy decorator, builder, plugin, middleware, strategy, health, and duplicate infrastructure implementations were audited as unreachable from both package entrypoints and removed. At that stage, the production surface had one generic MCP kernel, one Backstage plugin/adapter, and one shared logger; the generic pieces now live in `@coderrob/mcp-kernel`. Every behavioral module has a colocated Vitest file, and coverage is enforced at 95% per file across statements, branches, functions, and lines. Streamable HTTP and distributed policy providers remain later-release work as specified by the non-goals below. The removal and verification floor are recorded in [ADR 0005](../adr/0005-remove-unreachable-compatibility-and-enforce-coverage.md).
 
 All thirteen historical Backstage Catalog tools are now schema-first definitions under `src/backstage/tools`. The plugin is a composition boundary rather than an implementation container, and `src/backstage/tools/AGENTS.md` records the scoped authoring and verification convention. The generated manifest, SDK smoke test, MCP Inspector test, and opt-in live Backstage test all verify the same complete tool list.
 
@@ -285,7 +285,7 @@ src/
   index.ts                  # side-effect-free package exports
 ```
 
-Every behavioral module shown above has a colocated `.test.ts` file. The repository remains one package because it has one release artifact and one CLI. The `mcp/` boundary is intentionally independent so it can become a Yarn workspace later if it gains separate consumers and versioning. `yarn architecture:check` prevents new root-level implementation files, rejects application imports from `mcp/`, requires colocated tests, and detects circular dependencies.
+This was the target layout before extraction. At that point every behavioral module shown above had a colocated `.test.ts` file, and the repository remained one package because it had one release artifact and one CLI. The independent `mcp/` boundary later became the separately versioned `@coderrob/mcp-kernel` package. The current `architecture:check` rejects local kernel imports, requires colocated tests for application modules, and detects circular dependencies.
 
 ## Migration map
 
@@ -500,7 +500,7 @@ Publish separate exports:
 }
 ```
 
-Keep the first harness release internal to this package until the Backstage migration and API tests settle. If later published as a standalone package, use semantic versioning and an explicit supported matrix for Node, MCP SDK, and Zod versions.
+The first harness release remained internal until the Backstage migration and API tests settled. It was then published as `@coderrob/mcp-kernel` with semantic versioning and an explicit supported matrix for Node, MCP SDK, and Zod versions.
 
 Do not maintain two working authoring systems. During migration, temporary adapters may translate an old tool into a new definition, but they should be marked deprecated and removed on a dated milestone.
 
