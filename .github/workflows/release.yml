@@ -35,10 +35,14 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Verify tag matches package version
+      - name: Verify tag starts with package version
         run: |
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-          test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"
+          VERSION_TAG="v${PACKAGE_VERSION}"
+          if [[ "$GITHUB_REF_NAME" != "$VERSION_TAG" && "$GITHUB_REF_NAME" != "${VERSION_TAG}_"?* ]]; then
+            echo "::error::Release tag must be ${VERSION_TAG} or start with ${VERSION_TAG}_ (received ${GITHUB_REF_NAME})."
+            exit 1
+          fi
 
       - name: Run linting
         run: yarn lint
