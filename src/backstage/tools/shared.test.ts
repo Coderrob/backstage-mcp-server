@@ -17,10 +17,10 @@ import { McpErrorCode, McpNotFoundError } from '@coderrob/mcp-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { CatalogResultStatus, CatalogSortOrder } from '../../shared/constants/backstage-catalog.js';
+import { queryEntitiesInputSchema } from '../../shared/schema.js';
 import {
   catalogOptionalResult,
   catalogResult,
-  queryEntitiesInputSchema,
   toCatalogMcpError,
   toEntityRef,
   toQueryEntitiesRequest,

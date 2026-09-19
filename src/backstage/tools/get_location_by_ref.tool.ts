@@ -17,10 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import { catalogOptionalResult, catalogReadPolicy, readAnnotations, successOutputSchema } from './shared.js';
+import { catalogOptionalResult, catalogReadPolicy, readAnnotations } from './shared.js';
 
-const inputSchema = z.object({ locationRef: z.string().min(1) });
+const inputSchema = z
+  .object({ locationRef: z.string().min(1).describe('Location reference to retrieve.') })
+  .describe('Retrieve one Catalog location by reference.');
 
 /** Retrieves a Catalog location by reference. */
 export const getLocationByRefTool = defineTool<BackstageMcpContext>()({

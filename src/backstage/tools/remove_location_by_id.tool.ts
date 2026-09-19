@@ -17,10 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import { catalogResult, catalogWritePolicy, destructiveAnnotations, successOutputSchema } from './shared.js';
+import { catalogResult, catalogWritePolicy, destructiveAnnotations } from './shared.js';
 
-const inputSchema = z.object({ locationId: z.string().min(1) });
+const inputSchema = z
+  .object({ locationId: z.string().min(1).describe('Catalog location identifier to remove.') })
+  .describe('Remove one Catalog location by identifier.');
 
 /** Permanently removes one Catalog location by identifier. */
 export const removeLocationByIdTool = defineTool<BackstageMcpContext>()({

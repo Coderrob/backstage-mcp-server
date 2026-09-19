@@ -16,15 +16,9 @@
 import { defineTool } from '@coderrob/mcp-kernel';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { queryEntitiesInputSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogReadPolicy,
-  catalogResult,
-  queryEntitiesInputSchema,
-  readAnnotations,
-  successOutputSchema,
-  toQueryEntitiesRequest,
-} from './shared.js';
+import { catalogReadPolicy, catalogResult, readAnnotations, toQueryEntitiesRequest } from './shared.js';
 
 /** Compatibility alias for querying Catalog entities by filter. */
 export const getEntitiesByQueryTool = defineTool<BackstageMcpContext>()({

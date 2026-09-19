@@ -17,18 +17,16 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { entityRefSchema, fieldsSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogReadPolicy,
-  catalogResult,
-  entityRefSchema,
-  fieldsSchema,
-  readAnnotations,
-  successOutputSchema,
-  toEntityRef,
-} from './shared.js';
+import { catalogReadPolicy, catalogResult, readAnnotations, toEntityRef } from './shared.js';
 
-const inputSchema = z.object({ entityRefs: z.array(entityRefSchema).min(1), fields: fieldsSchema });
+const inputSchema = z
+  .object({
+    entityRefs: z.array(entityRefSchema).min(1).describe('Entity references to retrieve.'),
+    fields: fieldsSchema.describe('Optional entity fields to return.'),
+  })
+  .describe('Retrieve multiple Catalog entities by reference.');
 
 /** Retrieves multiple Catalog entities by reference. */
 export const getEntitiesByRefsTool = defineTool<BackstageMcpContext>()({

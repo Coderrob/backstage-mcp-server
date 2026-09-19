@@ -20,3 +20,8 @@ export interface ICatalogApiFixture<TOperations> {
   readonly client: IBackstageCatalogApi;
   readonly operations: TOperations;
 }
+
+/** Runtime profile variants used to verify tolerant Catalog reads. */
+export interface UserLookupFixtureSpec {
+  profile?: { displayName?: string | number } | number | null | [];
+}

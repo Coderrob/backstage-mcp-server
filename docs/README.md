@@ -58,3 +58,5 @@ The [ADR index](adr/README.md) records both active decisions and the superseded 
 When behavior changes, update the nearest current guide in the same change. Tool-surface changes also require the generated manifest, integration mapping, contract fixtures, and smoke expectations to agree. Prefer links to `package.json` for pinned tool versions rather than copying version numbers into multiple guides.
 
 The [visual asset guide](assets/README.md) records the purpose and update trigger for each infographic. Images support the text and must not become the only source for operational information.
+
+- [Curated Backstage knowledge and skills](knowledge/README.md)

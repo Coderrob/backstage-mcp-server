@@ -17,20 +17,30 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import { catalogOperationPolicy, catalogResult, readAnnotations, successOutputSchema } from './shared.js';
+import { catalogOperationPolicy, catalogResult, readAnnotations } from './shared.js';
 
 type JsonValue = boolean | number | string | null | JsonValue[] | { [key: string]: JsonValue };
 
-const jsonValueSchema = z.custom<JsonValue>();
+const jsonValueSchema = z.custom<JsonValue>().describe('JSON-compatible Backstage entity field value.');
 const entitySchema = z
   .object({
-    apiVersion: z.string().min(1),
-    kind: z.string().min(1),
-    metadata: z.object({ name: z.string().min(1) }).catchall(jsonValueSchema),
+    apiVersion: z.string().min(1).describe('Backstage entity API version.'),
+    kind: z.string().min(1).describe('Backstage entity kind; custom kinds are allowed.'),
+    metadata: z
+      .object({ name: z.string().min(1).describe('Backstage entity name.') })
+      .catchall(jsonValueSchema)
+      .describe('Entity metadata including name and other JSON-compatible fields.'),
   })
-  .catchall(jsonValueSchema);
-const inputSchema = z.object({ entity: entitySchema, locationRef: z.string().min(1) });
+  .catchall(jsonValueSchema)
+  .describe('Backstage entity descriptor to validate.');
+const inputSchema = z
+  .object({
+    entity: entitySchema.describe('Backstage entity descriptor to validate.'),
+    locationRef: z.string().min(1).describe('Source location reference for validation.'),
+  })
+  .describe('Validate an entity within its source location.');
 
 /** Validates an entity using Backstage Catalog processing rules. */
 export const validateEntityTool = defineTool<BackstageMcpContext>()({

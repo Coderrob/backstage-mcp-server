@@ -17,10 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import { catalogResult, catalogWritePolicy, destructiveAnnotations, successOutputSchema } from './shared.js';
+import { catalogResult, catalogWritePolicy, destructiveAnnotations } from './shared.js';
 
-const inputSchema = z.object({ uid: z.string().uuid() });
+const inputSchema = z
+  .object({ uid: z.string().uuid().describe('Catalog entity UID to remove.') })
+  .describe('Remove one Catalog entity by UID.');
 
 /** Permanently removes one Catalog entity by UID. */
 export const removeEntityByUidTool = defineTool<BackstageMcpContext>()({

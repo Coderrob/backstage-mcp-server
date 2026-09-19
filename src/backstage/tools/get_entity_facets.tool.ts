@@ -17,16 +17,19 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { catalogFilterSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogFilterSchema,
-  catalogReadPolicy,
-  catalogResult,
-  readAnnotations,
-  successOutputSchema,
-} from './shared.js';
+import { catalogReadPolicy, catalogResult, readAnnotations } from './shared.js';
 
-const inputSchema = z.object({ filter: catalogFilterSchema.optional(), facets: z.array(z.string().min(1)).min(1) });
+const inputSchema = z
+  .object({
+    filter: catalogFilterSchema.optional().describe('Optional Catalog filter for facet counts.'),
+    facets: z
+      .array(z.string().min(1).describe('Entity field path to facet.'))
+      .min(1)
+      .describe('Nonempty list of facet field paths.'),
+  })
+  .describe('Count distinct values of selected Catalog entity fields.');
 
 /** Retrieves aggregate facet values for Catalog entity fields. */
 export const getEntityFacetsTool = defineTool<BackstageMcpContext>()({

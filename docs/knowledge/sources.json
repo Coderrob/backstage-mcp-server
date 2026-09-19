@@ -1,0 +1,65 @@
+{
+  "descriptor": {
+    "title": "System Descriptor Format",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/descriptor-format/",
+    "source_path": "scratch/docs/features/software-catalog/descriptor-format.md",
+    "sha256": "475531fedf3000c436592cf2f5552aa16734367c7befbef2c538992d45b0f8e0",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "api": {
+    "title": "Catalog API",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/software-catalog-api/",
+    "source_path": "scratch/docs/features/software-catalog/api.md",
+    "sha256": "ec934fc7bf0d9e7ccfadd9dfe7034e7a7c6f5c77892095f7e7e49404917c0587",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "references": {
+    "title": "Entity References",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/references/",
+    "source_path": "scratch/docs/features/software-catalog/references.md",
+    "sha256": "63bca613bfc4cf9aa6be3c036f7978802a15717d77057918bd03a3df37674ad5",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "relations": {
+    "title": "Well-known Relations",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/well-known-relations/",
+    "source_path": "scratch/docs/features/software-catalog/well-known-relations.md",
+    "sha256": "e0c20b985e4804def57111166e6d3d0d693ba03ef5071cf6d9169c1dafc6f945",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "annotations": {
+    "title": "Well-known Annotations",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/well-known-annotations/",
+    "source_path": "scratch/docs/features/software-catalog/well-known-annotations.md",
+    "sha256": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "extensions": {
+    "title": "Extending the Model",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/extending-the-model/",
+    "source_path": "scratch/docs/features/software-catalog/extending-the-model.md",
+    "sha256": "8d7804f41d73a6309db2c89972c307d692cfbaa21541baca51b6b4f71687de12",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  },
+  "life": {
+    "title": "The Life of an Entity",
+    "publisher": "Backstage project contributors",
+    "url": "https://backstage.io/docs/features/software-catalog/life-of-an-entity/",
+    "source_path": "scratch/docs/features/software-catalog/life-of-an-entity.md",
+    "sha256": "0ce248b2e9e31130a38607f032c8b5f89a6bcabe4c8dc2b3824d65b0aa6128af",
+    "reviewed": "2026-09-19",
+    "source_revision": "unknown; supplied local snapshot"
+  }
+}

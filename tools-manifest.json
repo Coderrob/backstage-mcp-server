@@ -22,41 +22,50 @@
         "properties": {
           "type": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Location type; defaults to url when omitted."
           },
           "target": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "URL or path of the Catalog location target."
           },
           "dryRun": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Validate without registering the location when true."
           },
           "onConflict": {
             "type": "string",
             "enum": [
               "reject",
               "refresh"
-            ]
+            ],
+            "description": "How to handle an existing location."
           }
         },
         "required": [
           "target"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Register or validate a Backstage Catalog location."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": false,
@@ -77,6 +86,492 @@
     },
     {
       "kind": "tool",
+      "name": "find_entities_by_name",
+      "plugin": "backstage-catalog",
+      "title": "Find entities by name",
+      "description": "Find candidates by a substring of metadata.name or metadata.title; optionally restrict kind and namespace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entity name or title search term."
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional entity kind to search."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional entity namespace to search."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "description": "Find entities by name or title."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "find_users_by_name",
+      "plugin": "backstage-catalog",
+      "title": "Find users by name",
+      "description": "Find User candidates by firstName, lastName, or both as case-insensitive displayName substrings. Returns all visible matches within lookup bounds; does not infer identity or name order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string",
+                "minLength": 1,
+                "description": "User given-name fragment to match in displayName."
+              },
+              "lastName": {
+                "type": "string",
+                "minLength": 1,
+                "description": "User family-name fragment to match in displayName."
+              }
+            },
+            "additionalProperties": false,
+            "description": "One or both human-name fragments to search."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional User namespace to search."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "description": "Find Users by given name, family name, or both."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_apis_by_consumer",
+      "plugin": "backstage-catalog",
+      "title": "Get APIs by consumer",
+      "description": "Get APIs consumed by the specified entity through apiConsumedBy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$",
+            "description": "Complete API consumer entity reference."
+          }
+        },
+        "required": [
+          "consumerRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find APIs consumed by an entity."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_apis_by_provider",
+      "plugin": "backstage-catalog",
+      "title": "Get APIs by provider",
+      "description": "Get APIs provided by the specified entity through apiProvidedBy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "providerRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$",
+            "description": "Complete API provider entity reference."
+          }
+        },
+        "required": [
+          "providerRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find APIs provided by an entity."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_child_groups_by_group",
+      "plugin": "backstage-catalog",
+      "title": "Get child groups by group",
+      "description": "Get direct child Groups; recursive true includes descendant Groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^group:"
+              }
+            ],
+            "description": "Complete Group reference."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include descendant Groups when true."
+          }
+        },
+        "required": [
+          "groupRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find direct or descendant child Groups."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_consumers_by_api",
+      "plugin": "backstage-catalog",
+      "title": "Get consumers by API",
+      "description": "Get entities that explicitly consume the API through consumesApi.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^api:"
+              }
+            ],
+            "description": "Complete API reference."
+          }
+        },
+        "required": [
+          "apiRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find providers or consumers of an API."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_dependencies_by_entity",
+      "plugin": "backstage-catalog",
+      "title": "Get dependencies by entity",
+      "description": "Get entities the target explicitly depends on, using reverse dependencyOf.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$",
+            "description": "Complete target entity reference."
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find relationships of one Catalog entity."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_dependents_by_entity",
+      "plugin": "backstage-catalog",
+      "title": "Get dependents by entity",
+      "description": "Get entities that explicitly depend on the target through dependsOn.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$",
+            "description": "Complete target entity reference."
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find relationships of one Catalog entity."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
       "name": "get_entities",
       "plugin": "backstage-catalog",
       "title": "Get catalog entities",
@@ -92,18 +587,23 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "One exact Catalog filter value."
                     },
                     {
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "Exact Catalog filter value."
                       },
-                      "minItems": 1
+                      "minItems": 1,
+                      "description": "Alternative values for one filter key."
                     }
-                  ]
-                }
+                  ],
+                  "description": "One exact value or a nonempty list of alternatives."
+                },
+                "description": "AND conditions keyed by Catalog field or relation path."
               },
               {
                 "type": "array",
@@ -113,50 +613,62 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "One exact Catalog filter value."
                       },
                       {
                         "type": "array",
                         "items": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "description": "Exact Catalog filter value."
                         },
-                        "minItems": 1
+                        "minItems": 1,
+                        "description": "Alternative values for one filter key."
                       }
-                    ]
-                  }
+                    ],
+                    "description": "One exact value or a nonempty list of alternatives."
+                  },
+                  "description": "AND conditions keyed by Catalog field or relation path."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "OR alternatives of Catalog filter records."
               }
-            ]
+            ],
+            "description": "Optional exact-match Catalog filter."
           },
           "fields": {
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Catalog entity field path to return."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Optional entity fields to include in the response."
           },
           "order": {
             "type": "object",
             "properties": {
               "field": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Catalog field path used for legacy sorting."
               },
               "order": {
                 "type": "string",
                 "enum": [
                   "asc",
                   "desc"
-                ]
+                ],
+                "description": "Sort direction; ascending when omitted."
               }
             },
             "required": [
               "field"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Legacy single-field sort order."
           },
           "orderFields": {
             "anyOf": [
@@ -165,21 +677,24 @@
                 "properties": {
                   "field": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Catalog field path used for sorting."
                   },
                   "order": {
                     "type": "string",
                     "enum": [
                       "asc",
                       "desc"
-                    ]
+                    ],
+                    "description": "Ascending or descending sort direction."
                   }
                 },
                 "required": [
                   "field",
                   "order"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "One Catalog sort field and direction."
               },
               {
                 "type": "array",
@@ -188,83 +703,301 @@
                   "properties": {
                     "field": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "Catalog field path used for sorting."
                     },
                     "order": {
                       "type": "string",
                       "enum": [
                         "asc",
                         "desc"
-                      ]
+                      ],
+                      "description": "Ascending or descending sort direction."
                     }
                   },
                   "required": [
                     "field",
                     "order"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "One Catalog sort field and direction."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Ordered Catalog sort fields."
               }
-            ]
+            ],
+            "description": "One or more Catalog sort fields."
           },
           "limit": {
             "type": "integer",
             "exclusiveMinimum": 0,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum entities to return in one page."
           },
           "offset": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Zero-based offset for offset pagination."
           },
           "fullTextFilter": {
             "type": "object",
             "properties": {
               "term": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Search term matched by Catalog full-text search."
               },
               "fields": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Entity field path to search."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Optional fields searched for the full-text term."
               }
             },
             "required": [
               "term"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Optional full-text search term and field selection."
           },
           "totalItems": {
             "type": "string",
             "enum": [
               "include",
               "exclude"
-            ]
+            ],
+            "description": "Whether to calculate total item count."
           },
           "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Opaque cursor for the next Catalog query page."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Backstage Catalog entity query, filtering, projection, sorting, and pagination."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entities_by_annotation",
+      "plugin": "backstage-catalog",
+      "title": "Get entities by annotation",
+      "description": "Get entities with the exact annotation key and value; optionally restrict kind and namespace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z0-9.-]+\\/[a-z0-9._-]+$",
+            "description": "Qualified annotation key such as backstage.io/managed-by-location."
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact annotation value to match."
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional entity kind to search."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional entity namespace to search."
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "additionalProperties": false,
+        "description": "Find entities by an exact qualified annotation key and value."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entities_by_domain",
+      "plugin": "backstage-catalog",
+      "title": "Get entities by domain",
+      "description": "Get all visible descendants of a Domain through partOf by default; recursive false returns direct children.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domainRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^domain:"
+              }
+            ],
+            "description": "Complete root Domain reference."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": true,
+            "description": "Include descendant Domains and Systems when true."
+          }
+        },
+        "required": [
+          "domainRef"
+        ],
+        "additionalProperties": false,
+        "description": "Inventory entities within a Domain and its Systems."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entities_by_owner",
+      "plugin": "backstage-catalog",
+      "title": "Get entities by owner",
+      "description": "Get directly owned entities through ownedBy; accepts a User or Group owner.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ownerRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^(?:user|group):"
+              }
+            ],
+            "description": "Complete User or Group owner reference."
+          }
+        },
+        "required": [
+          "ownerRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find entities owned by a User or Group."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -299,18 +1032,23 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "One exact Catalog filter value."
                     },
                     {
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "Exact Catalog filter value."
                       },
-                      "minItems": 1
+                      "minItems": 1,
+                      "description": "Alternative values for one filter key."
                     }
-                  ]
-                }
+                  ],
+                  "description": "One exact value or a nonempty list of alternatives."
+                },
+                "description": "AND conditions keyed by Catalog field or relation path."
               },
               {
                 "type": "array",
@@ -320,50 +1058,62 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "One exact Catalog filter value."
                       },
                       {
                         "type": "array",
                         "items": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "description": "Exact Catalog filter value."
                         },
-                        "minItems": 1
+                        "minItems": 1,
+                        "description": "Alternative values for one filter key."
                       }
-                    ]
-                  }
+                    ],
+                    "description": "One exact value or a nonempty list of alternatives."
+                  },
+                  "description": "AND conditions keyed by Catalog field or relation path."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "OR alternatives of Catalog filter records."
               }
-            ]
+            ],
+            "description": "Optional exact-match Catalog filter."
           },
           "fields": {
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Catalog entity field path to return."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Optional entity fields to include in the response."
           },
           "order": {
             "type": "object",
             "properties": {
               "field": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Catalog field path used for legacy sorting."
               },
               "order": {
                 "type": "string",
                 "enum": [
                   "asc",
                   "desc"
-                ]
+                ],
+                "description": "Sort direction; ascending when omitted."
               }
             },
             "required": [
               "field"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Legacy single-field sort order."
           },
           "orderFields": {
             "anyOf": [
@@ -372,21 +1122,24 @@
                 "properties": {
                   "field": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Catalog field path used for sorting."
                   },
                   "order": {
                     "type": "string",
                     "enum": [
                       "asc",
                       "desc"
-                    ]
+                    ],
+                    "description": "Ascending or descending sort direction."
                   }
                 },
                 "required": [
                   "field",
                   "order"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "One Catalog sort field and direction."
               },
               {
                 "type": "array",
@@ -395,83 +1148,101 @@
                   "properties": {
                     "field": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "Catalog field path used for sorting."
                     },
                     "order": {
                       "type": "string",
                       "enum": [
                         "asc",
                         "desc"
-                      ]
+                      ],
+                      "description": "Ascending or descending sort direction."
                     }
                   },
                   "required": [
                     "field",
                     "order"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "One Catalog sort field and direction."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Ordered Catalog sort fields."
               }
-            ]
+            ],
+            "description": "One or more Catalog sort fields."
           },
           "limit": {
             "type": "integer",
             "exclusiveMinimum": 0,
-            "maximum": 1000
+            "maximum": 1000,
+            "description": "Maximum entities to return in one page."
           },
           "offset": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Zero-based offset for offset pagination."
           },
           "fullTextFilter": {
             "type": "object",
             "properties": {
               "term": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Search term matched by Catalog full-text search."
               },
               "fields": {
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Entity field path to search."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "Optional fields searched for the full-text term."
               }
             },
             "required": [
               "term"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "Optional full-text search term and field selection."
           },
           "totalItems": {
             "type": "string",
             "enum": [
               "include",
               "exclude"
-            ]
+            ],
+            "description": "Whether to calculate total item count."
           },
           "cursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Opaque cursor for the next Catalog query page."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Backstage Catalog entity query, filtering, projection, sorting, and pagination."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -504,22 +1275,26 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Entity reference in kind:namespace/name form."
                 },
                 {
                   "type": "object",
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "Backstage entity kind; custom kinds are allowed."
                     },
                     "namespace": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "Backstage entity namespace."
                     },
                     "name": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "Backstage entity name."
                     }
                   },
                   "required": [
@@ -527,39 +1302,116 @@
                     "namespace",
                     "name"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "Structured Backstage entity reference."
                 }
-              ]
+              ],
+              "description": "Backstage entity reference as a string or structured object."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Entity references to retrieve."
           },
           "fields": {
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Catalog entity field path to return."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Optional entity fields to return."
           }
         },
         "required": [
           "entityRefs"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Retrieve multiple Catalog entities by reference."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_entities_by_system",
+      "plugin": "backstage-catalog",
+      "title": "Get entities by system",
+      "description": "Get direct entities in a System through partOf; recursive true includes descendants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "systemRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^system:"
+              }
+            ],
+            "description": "Complete root System reference."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include nested Systems and their entities when true."
+          }
+        },
+        "required": [
+          "systemRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find entities in a System, optionally including descendant Systems."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -590,22 +1442,26 @@
             "anyOf": [
               {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Entity reference in kind:namespace/name form."
               },
               {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity kind; custom kinds are allowed."
                   },
                   "namespace": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity namespace."
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity name."
                   }
                 },
                 "required": [
@@ -613,29 +1469,36 @@
                   "namespace",
                   "name"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Structured Backstage entity reference."
               }
-            ]
+            ],
+            "description": "Entity reference whose ancestors are requested."
           }
         },
         "required": [
           "entityRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Retrieve the ancestor tree of a Catalog entity."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -666,22 +1529,26 @@
             "anyOf": [
               {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Entity reference in kind:namespace/name form."
               },
               {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity kind; custom kinds are allowed."
                   },
                   "namespace": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity namespace."
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity name."
                   }
                 },
                 "required": [
@@ -689,29 +1556,36 @@
                   "namespace",
                   "name"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Structured Backstage entity reference."
               }
-            ]
+            ],
+            "description": "Entity reference to retrieve."
           }
         },
         "required": [
           "entityRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Retrieve one Catalog entity by reference."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -746,18 +1620,23 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "description": "One exact Catalog filter value."
                     },
                     {
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "Exact Catalog filter value."
                       },
-                      "minItems": 1
+                      "minItems": 1,
+                      "description": "Alternative values for one filter key."
                     }
-                  ]
-                }
+                  ],
+                  "description": "One exact value or a nonempty list of alternatives."
+                },
+                "description": "AND conditions keyed by Catalog field or relation path."
               },
               {
                 "type": "array",
@@ -767,50 +1646,126 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "One exact Catalog filter value."
                       },
                       {
                         "type": "array",
                         "items": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "description": "Exact Catalog filter value."
                         },
-                        "minItems": 1
+                        "minItems": 1,
+                        "description": "Alternative values for one filter key."
                       }
-                    ]
-                  }
+                    ],
+                    "description": "One exact value or a nonempty list of alternatives."
+                  },
+                  "description": "AND conditions keyed by Catalog field or relation path."
                 },
-                "minItems": 1
+                "minItems": 1,
+                "description": "OR alternatives of Catalog filter records."
               }
-            ]
+            ],
+            "description": "Optional Catalog filter for facet counts."
           },
           "facets": {
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Entity field path to facet."
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Nonempty list of facet field paths."
           }
         },
         "required": [
           "facets"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Count distinct values of selected Catalog entity fields."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_groups_by_user",
+      "plugin": "backstage-catalog",
+      "title": "Get groups by user",
+      "description": "Get Groups with an explicit hasMember relation to the User.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^user:"
+              }
+            ],
+            "description": "Complete User reference."
+          }
+        },
+        "required": [
+          "userRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find Groups that contain a User."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -841,22 +1796,26 @@
             "anyOf": [
               {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Entity reference in kind:namespace/name form."
               },
               {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity kind; custom kinds are allowed."
                   },
                   "namespace": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity namespace."
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity name."
                   }
                 },
                 "required": [
@@ -864,29 +1823,36 @@
                   "namespace",
                   "name"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Structured Backstage entity reference."
               }
-            ]
+            ],
+            "description": "Entity reference whose source location is requested."
           }
         },
         "required": [
           "entityRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Retrieve the source location of a Catalog entity."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -915,27 +1881,403 @@
         "properties": {
           "locationRef": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Location reference to retrieve."
           }
         },
         "required": [
           "locationRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Retrieve one Catalog location by reference."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_orphaned_entities",
+      "plugin": "backstage-catalog",
+      "title": "Get orphaned entities",
+      "description": "Get entities with the processed backstage.io/orphan annotation set to true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional orphaned entity kind."
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional orphaned entity namespace."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Find entities marked as orphaned in the Catalog."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_owners_by_entity",
+      "plugin": "backstage-catalog",
+      "title": "Get owners by entity",
+      "description": "Get User or Group entities with an ownerOf relation to the target.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$",
+            "description": "Complete target entity reference."
+          }
+        },
+        "required": [
+          "entityRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find relationships of one Catalog entity."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_providers_by_api",
+      "plugin": "backstage-catalog",
+      "title": "Get providers by API",
+      "description": "Get entities that explicitly provide the API through providesApi.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "apiRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^api:"
+              }
+            ],
+            "description": "Complete API reference."
+          }
+        },
+        "required": [
+          "apiRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find providers or consumers of an API."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_subdomains_by_domain",
+      "plugin": "backstage-catalog",
+      "title": "Get subdomains by domain",
+      "description": "Get direct child Domains; recursive true includes nested subdomains.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domainRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^domain:"
+              }
+            ],
+            "description": "Complete root Domain reference."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include descendant Domains when true."
+          }
+        },
+        "required": [
+          "domainRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find Systems or subdomains within a Domain."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_systems_by_domain",
+      "plugin": "backstage-catalog",
+      "title": "Get systems by domain",
+      "description": "Get direct Systems in a Domain; recursive true includes Systems within nested subdomains.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domainRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^domain:"
+              }
+            ],
+            "description": "Complete root Domain reference."
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Include descendant Domains when true."
+          }
+        },
+        "required": [
+          "domainRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find Systems or subdomains within a Domain."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "policy": {
+        "timeoutMs": 30000,
+        "cache": {
+          "ttlMs": 120000,
+          "tags": [
+            "catalog"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "get_users_by_group",
+      "plugin": "backstage-catalog",
+      "title": "Get users by group",
+      "description": "Get Users with an explicit memberOf relation to the Group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupRef": {
+            "type": "string",
+            "allOf": [
+              {
+                "pattern": "^[a-z][a-z0-9]*:[a-z0-9][-a-z0-9]*\\/[a-z0-9][-a-z0-9_.]*$"
+              },
+              {
+                "pattern": "^group:"
+              }
+            ],
+            "description": "Complete Group reference."
+          }
+        },
+        "required": [
+          "groupRef"
+        ],
+        "additionalProperties": false,
+        "description": "Find members or children of a Group."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "description": "Successful Catalog operation status."
+          },
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,
@@ -966,22 +2308,26 @@
             "anyOf": [
               {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Entity reference in kind:namespace/name form."
               },
               {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity kind; custom kinds are allowed."
                   },
                   "namespace": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity namespace."
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity name."
                   }
                 },
                 "required": [
@@ -989,29 +2335,36 @@
                   "namespace",
                   "name"
                 ],
-                "additionalProperties": false
+                "additionalProperties": false,
+                "description": "Structured Backstage entity reference."
               }
-            ]
+            ],
+            "description": "Entity reference to refresh."
           }
         },
         "required": [
           "entityRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Request a Catalog entity refresh."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1041,27 +2394,33 @@
         "properties": {
           "uid": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Catalog entity UID to remove."
           }
         },
         "required": [
           "uid"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Remove one Catalog entity by UID."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1091,27 +2450,33 @@
         "properties": {
           "locationId": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Catalog location identifier to remove."
           }
         },
         "required": [
           "locationId"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Remove one Catalog location by identifier."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1144,24 +2509,30 @@
             "properties": {
               "apiVersion": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Backstage entity API version."
               },
               "kind": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "description": "Backstage entity kind; custom kinds are allowed."
               },
               "metadata": {
                 "type": "object",
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Backstage entity name."
                   }
                 },
                 "required": [
                   "name"
                 ],
-                "additionalProperties": {}
+                "additionalProperties": {
+                  "description": "JSON-compatible Backstage entity field value."
+                },
+                "description": "Entity metadata including name and other JSON-compatible fields."
               }
             },
             "required": [
@@ -1169,32 +2540,41 @@
               "kind",
               "metadata"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {
+              "description": "JSON-compatible Backstage entity field value."
+            },
+            "description": "Backstage entity descriptor to validate."
           },
           "locationRef": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Source location reference for validation."
           }
         },
         "required": [
           "entity",
           "locationRef"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Validate an entity within its source location."
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "const": "success"
+            "const": "success",
+            "description": "Successful Catalog operation status."
           },
-          "data": {}
+          "data": {
+            "description": "Catalog result data, when the operation returns a value."
+          }
         },
         "required": [
           "status"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Successful Backstage Catalog tool response."
       },
       "annotations": {
         "readOnlyHint": true,

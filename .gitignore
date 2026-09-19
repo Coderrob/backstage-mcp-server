@@ -143,3 +143,5 @@ build-backups/
 .pnp.*
 
 .vscode/
+
+scratch/

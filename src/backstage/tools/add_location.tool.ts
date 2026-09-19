@@ -17,16 +17,19 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName, CatalogLocationConflictMode } from '../../shared/constants/backstage-catalog.js';
+import { successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import { catalogResult, catalogWritePolicy, successOutputSchema, writeAnnotations } from './shared.js';
+import { catalogResult, catalogWritePolicy, writeAnnotations } from './shared.js';
 
 /** Input accepted when registering or dry-running a Catalog location. */
-const addLocationInputSchema = z.object({
-  type: z.string().min(1).optional(),
-  target: z.string().min(1),
-  dryRun: z.boolean().optional(),
-  onConflict: z.nativeEnum(CatalogLocationConflictMode).optional(),
-});
+const addLocationInputSchema = z
+  .object({
+    type: z.string().min(1).optional().describe('Location type; defaults to url when omitted.'),
+    target: z.string().min(1).describe('URL or path of the Catalog location target.'),
+    dryRun: z.boolean().optional().describe('Validate without registering the location when true.'),
+    onConflict: z.nativeEnum(CatalogLocationConflictMode).optional().describe('How to handle an existing location.'),
+  })
+  .describe('Register or validate a Backstage Catalog location.');
 
 /** Adds a location to the Backstage Catalog. */
 export const addLocationTool = defineTool<BackstageMcpContext>()({

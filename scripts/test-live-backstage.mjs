@@ -83,7 +83,7 @@ function credentialEnvironment() {
  * @returns Whether the result is successful.
  */
 function isSuccessfulRead(result) {
-  return !(result.isError) && result.structuredContent?.status === MCP_RESULT_STATUS.SUCCESS;
+  return !result.isError && result.structuredContent?.status === MCP_RESULT_STATUS.SUCCESS;
 }
 
 /**

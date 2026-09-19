@@ -17,17 +17,13 @@ import { defineTool } from '@coderrob/mcp-kernel';
 import { z } from 'zod';
 
 import { BackstageToolName } from '../../shared/constants/backstage-catalog.js';
+import { entityRefSchema, successOutputSchema } from '../../shared/schema.js';
 import type { BackstageMcpContext } from '../../types/index.js';
-import {
-  catalogOptionalResult,
-  catalogReadPolicy,
-  entityRefSchema,
-  readAnnotations,
-  successOutputSchema,
-  toEntityRef,
-} from './shared.js';
+import { catalogOptionalResult, catalogReadPolicy, readAnnotations, toEntityRef } from './shared.js';
 
-const inputSchema = z.object({ entityRef: entityRefSchema });
+const inputSchema = z
+  .object({ entityRef: entityRefSchema.describe('Entity reference whose source location is requested.') })
+  .describe('Retrieve the source location of a Catalog entity.');
 
 /** Retrieves the Catalog location associated with an entity. */
 export const getLocationByEntityTool = defineTool<BackstageMcpContext>()({

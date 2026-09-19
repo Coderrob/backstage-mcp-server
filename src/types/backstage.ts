@@ -33,6 +33,43 @@ import type { Logger, McpTransportFactory } from '@coderrob/mcp-kernel';
 
 import type { IAuthConfig } from './auth.js';
 
+/** Official Catalog query operation shared by adapters and lookup algorithms. */
+export type CatalogQuery = (
+  request?: QueryEntitiesRequest,
+  options?: CatalogRequestOptions
+) => Promise<QueryEntitiesResponse>;
+
+/** Typed relationship query used by contextual Catalog lookup tools. */
+export interface CatalogRelationLookup {
+  relation: string;
+  targetRef: string;
+  kind?: string | string[];
+  recursive?: boolean;
+}
+
+/** Mutable traversal state shared between relation batches. */
+export interface CatalogTraversalState {
+  seen: Set<string>;
+  pending: string[];
+  items: Entity[];
+  kind?: string | string[];
+}
+
+/** Explicit annotation lookup parameters shared by contextual tools. */
+export interface CatalogAnnotationLookup {
+  key: string;
+  value: string;
+  kind?: string;
+  namespace?: string;
+}
+
+/** Name search parameters shared by contextual tools. */
+export interface CatalogNameLookup {
+  name: string;
+  kind?: string;
+  namespace?: string;
+}
+
 /** Contract consumed by Backstage Catalog MCP tools. */
 export interface IBackstageCatalogApi {
   /**
@@ -52,7 +89,7 @@ export interface IBackstageCatalogApi {
    * @param options - Optional Catalog request options.
    * @returns Matching entities and pagination metadata.
    */
-  queryEntities(request?: QueryEntitiesRequest, options?: CatalogRequestOptions): Promise<QueryEntitiesResponse>;
+  queryEntities: CatalogQuery;
 
   /**
    * Gets the ancestry of an entity.

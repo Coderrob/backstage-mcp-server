@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backstage knowledge article metadata",
+  "type": "object",
+  "required": ["id", "title", "classification", "categories", "status", "reviewed", "sources", "schema"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^backstage\\.[a-z-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "classification": {
+      "type": "object",
+      "required": ["scheme", "code"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "const": "BKC"
+        },
+        "code": {
+          "enum": ["BKC.100", "BKC.200", "BKC.210", "BKC.300", "BKC.400", "BKC.500"]
+        }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "annotations",
+          "catalog-client",
+          "crud",
+          "domain",
+          "entity-reference",
+          "entity-yaml",
+          "facet",
+          "filter",
+          "kind",
+          "labels",
+          "lookup",
+          "maintenance",
+          "mcp",
+          "pagination",
+          "provenance",
+          "query",
+          "relations",
+          "spec.type",
+          "system",
+          "user"
+        ]
+      }
+    },
+    "status": {
+      "enum": ["curated", "needs-review"]
+    },
+    "reviewed": {
+      "type": "string",
+      "format": "date"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["descriptor", "api", "references", "relations", "annotations", "extensions", "life"]
+      }
+    },
+    "schema": {
+      "type": "object",
+      "required": ["@context", "@type", "identifier", "headline", "inLanguage", "dateModified", "about", "citation"],
+      "properties": {
+        "@context": {
+          "const": "https://schema.org"
+        },
+        "@type": {
+          "const": "TechArticle"
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^urn:backstage-mcp:knowledge:[a-z-]+$"
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inLanguage": {
+          "const": "en"
+        },
+        "dateModified": {
+          "type": "string",
+          "format": "date"
+        },
+        "about": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["@type", "termCode", "name", "inDefinedTermSet"],
+            "properties": {
+              "@type": {
+                "const": "DefinedTerm"
+              },
+              "termCode": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "inDefinedTermSet": {
+                "const": "urn:backstage-mcp:classification:BKC"
+              }
+            }
+          }
+        },
+        "citation": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["@type", "name", "url"],
+            "properties": {
+              "@type": {
+                "const": "CreativeWork"
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

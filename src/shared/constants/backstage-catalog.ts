@@ -73,17 +73,88 @@ export enum AuthType {
   BEARER = 'bearer',
 }
 
+/** Documented Backstage entity kinds; custom Catalog kinds remain valid. */
+export enum BackstageEntityKind {
+  API = 'API',
+  COMPONENT = 'Component',
+  DOMAIN = 'Domain',
+  GROUP = 'Group',
+  LOCATION = 'Location',
+  RESOURCE = 'Resource',
+  SYSTEM = 'System',
+  TEMPLATE = 'Template',
+  USER = 'User',
+}
+
+/** Selected well-known Backstage annotation keys; custom keys remain valid. */
+export enum BackstageAnnotationKey {
+  MANAGED_BY_LOCATION = 'backstage.io/managed-by-location',
+  MANAGED_BY_ORIGIN_LOCATION = 'backstage.io/managed-by-origin-location',
+  ORPHAN = 'backstage.io/orphan',
+  SOURCE_LOCATION = 'backstage.io/source-location',
+  TECHDOCS_REF = 'backstage.io/techdocs-ref',
+}
+
+/** Exact string used by Backstage for the orphan marker annotation. */
+export const BACKSTAGE_ORPHAN_ANNOTATION_VALUE = 'true';
+
+/** Standard entity paths used by contextual Catalog filters and searches. */
+export enum CatalogLookupField {
+  METADATA_ANNOTATIONS = 'metadata.annotations',
+  METADATA_NAME = 'metadata.name',
+  METADATA_NAMESPACE = 'metadata.namespace',
+  METADATA_TITLE = 'metadata.title',
+  RELATIONS = 'relations',
+}
+
+/** Documented directional Catalog relations; custom relation types remain valid. */
+export enum BackstageRelation {
+  API_CONSUMED_BY = 'apiConsumedBy',
+  API_PROVIDED_BY = 'apiProvidedBy',
+  CHILD_OF = 'childOf',
+  CONSUMES_API = 'consumesApi',
+  DEPENDENCY_OF = 'dependencyOf',
+  DEPENDS_ON = 'dependsOn',
+  HAS_MEMBER = 'hasMember',
+  HAS_PART = 'hasPart',
+  MEMBER_OF = 'memberOf',
+  OWNED_BY = 'ownedBy',
+  OWNER_OF = 'ownerOf',
+  PARENT_OF = 'parentOf',
+  PART_OF = 'partOf',
+  PROVIDES_API = 'providesApi',
+}
+
 /** Stable names for the complete Backstage Catalog MCP tool surface. */
 export enum BackstageToolName {
   ADD_LOCATION = 'add_location',
+  FIND_ENTITIES_BY_NAME = 'find_entities_by_name',
+  FIND_USERS_BY_NAME = 'find_users_by_name',
+  GET_APIS_BY_CONSUMER = 'get_apis_by_consumer',
+  GET_APIS_BY_PROVIDER = 'get_apis_by_provider',
+  GET_CHILD_GROUPS_BY_GROUP = 'get_child_groups_by_group',
+  GET_CONSUMERS_BY_API = 'get_consumers_by_api',
+  GET_DEPENDENCIES_BY_ENTITY = 'get_dependencies_by_entity',
+  GET_DEPENDENTS_BY_ENTITY = 'get_dependents_by_entity',
   GET_ENTITIES = 'get_entities',
+  GET_ENTITIES_BY_ANNOTATION = 'get_entities_by_annotation',
+  GET_ENTITIES_BY_DOMAIN = 'get_entities_by_domain',
+  GET_ENTITIES_BY_OWNER = 'get_entities_by_owner',
   GET_ENTITIES_BY_QUERY = 'get_entities_by_query',
   GET_ENTITIES_BY_REFS = 'get_entities_by_refs',
+  GET_ENTITIES_BY_SYSTEM = 'get_entities_by_system',
   GET_ENTITY_ANCESTORS = 'get_entity_ancestors',
   GET_ENTITY_BY_REF = 'get_entity_by_ref',
   GET_ENTITY_FACETS = 'get_entity_facets',
+  GET_GROUPS_BY_USER = 'get_groups_by_user',
   GET_LOCATION_BY_ENTITY = 'get_location_by_entity',
   GET_LOCATION_BY_REF = 'get_location_by_ref',
+  GET_ORPHANED_ENTITIES = 'get_orphaned_entities',
+  GET_OWNERS_BY_ENTITY = 'get_owners_by_entity',
+  GET_PROVIDERS_BY_API = 'get_providers_by_api',
+  GET_SUBDOMAINS_BY_DOMAIN = 'get_subdomains_by_domain',
+  GET_SYSTEMS_BY_DOMAIN = 'get_systems_by_domain',
+  GET_USERS_BY_GROUP = 'get_users_by_group',
   REFRESH_ENTITY = 'refresh_entity',
   REMOVE_ENTITY_BY_UID = 'remove_entity_by_uid',
   REMOVE_LOCATION_BY_ID = 'remove_location_by_id',

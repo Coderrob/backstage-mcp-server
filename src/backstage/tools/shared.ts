@@ -30,65 +30,13 @@ import {
   CATALOG_CACHE_TAG,
   CATALOG_CACHE_TTL_MS,
   CATALOG_OPERATION_TIMEOUT_MS,
-  CATALOG_QUERY_LIMIT_MAXIMUM,
   CATALOG_RATE_LIMIT_MAXIMUM,
   CATALOG_RATE_LIMIT_WINDOW_MS,
   CatalogHttpStatus,
   CatalogResultStatus,
   CatalogSortOrder,
-  CatalogTotalItemsMode,
 } from '../../shared/constants/backstage-catalog.js';
-
-/** Common success envelope emitted by Catalog tools. */
-export const successOutputSchema = z.object({
-  status: z.literal(CatalogResultStatus.SUCCESS),
-  data: z.unknown().optional(),
-});
-
-/** String or structured compound entity reference accepted by Catalog tools. */
-export const entityRefSchema = z.union([
-  z.string().min(1),
-  z.object({ kind: z.string().min(1), namespace: z.string().min(1), name: z.string().min(1) }),
-]);
-
-const filterValueSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
-
-/**
- * Reports whether a Catalog filter contains a condition.
- * @param filter - Parsed Catalog filter record.
- * @returns Whether at least one filter key exists.
- */
-function hasFilterEntries(filter: Readonly<Record<string, unknown>>): boolean {
-  return Object.keys(filter).length > 0;
-}
-
-/** One non-empty key-value Catalog filter set. */
-const filterRecordSchema = z
-  .record(filterValueSchema)
-  .refine(hasFilterEntries, 'Catalog filter records cannot be empty');
-
-/** One AND filter record or multiple OR filter records. */
-export const catalogFilterSchema = z.union([filterRecordSchema, z.array(filterRecordSchema).min(1)]);
-
-/** Optional response-field projection. */
-export const fieldsSchema = z.array(z.string().min(1)).min(1).optional();
-
-const orderFieldSchema = z.object({ field: z.string().min(1), order: z.nativeEnum(CatalogSortOrder) });
-
-/** Query input shared by the modern and compatibility entity-query tools. */
-export const queryEntitiesInputSchema = z.object({
-  filter: catalogFilterSchema.optional(),
-  fields: fieldsSchema,
-  order: z.object({ field: z.string().min(1), order: z.nativeEnum(CatalogSortOrder).optional() }).optional(),
-  orderFields: z.union([orderFieldSchema, z.array(orderFieldSchema).min(1)]).optional(),
-  limit: z.number().int().positive().max(CATALOG_QUERY_LIMIT_MAXIMUM).optional(),
-  offset: z.number().int().nonnegative().optional(),
-  fullTextFilter: z
-    .object({ term: z.string().trim().min(1), fields: z.array(z.string().min(1)).min(1).optional() })
-    .optional(),
-  totalItems: z.nativeEnum(CatalogTotalItemsMode).optional(),
-  cursor: z.string().min(1).optional(),
-});
+import { entityRefSchema, queryEntitiesInputSchema } from '../../shared/schema.js';
 
 /** Standard annotations for read-only Catalog operations. */
 export const readAnnotations: ToolAnnotations = {
