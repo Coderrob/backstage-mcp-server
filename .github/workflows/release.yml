@@ -39,9 +39,15 @@ jobs:
         run: |
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           VERSION_TAG="v${PACKAGE_VERSION}"
-          if [[ "$GITHUB_REF_NAME" != "$VERSION_TAG" && "$GITHUB_REF_NAME" != "${VERSION_TAG}_"?* ]]; then
-            echo "::error::Release tag must be ${VERSION_TAG} or start with ${VERSION_TAG}_ (received ${GITHUB_REF_NAME})."
-            exit 1
+          if [[ "$GITHUB_REF_NAME" != "$VERSION_TAG" ]]; then
+            SHA_PREFIX="${GITHUB_REF_NAME#${VERSION_TAG}_}"
+            COMMIT_SHA="$(git rev-parse HEAD)"
+            if [[ "$GITHUB_REF_NAME" != "${VERSION_TAG}_"* ||
+                  ! "$SHA_PREFIX" =~ ^[0-9a-f]{7,64}$ ||
+                  "$COMMIT_SHA" != "$SHA_PREFIX"* ]]; then
+              echo "::error::Release tag must be ${VERSION_TAG} or ${VERSION_TAG}_<commit SHA prefix> (received ${GITHUB_REF_NAME})."
+              exit 1
+            fi
           fi
 
       - name: Run linting

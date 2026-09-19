@@ -72,7 +72,7 @@ The MCP-specific gate builds the published artifacts and exercises the packaged 
 
 ## Release policy
 
-Release tags must start with the version in `package.json`: `v<package-version>` or `v<package-version>_<commit-sha-prefix>`. The underscore after the version keeps `v1.0.0_884e28b` valid without accidentally accepting a different version such as `v1.0.01`. The release workflow repeats every lint, type, architecture, unused-code, unit, shell, build, manifest, and MCP protocol gate before publishing. npm publication includes provenance, and the GitHub release is created with generated notes only after publication succeeds.
+Release tags must start with the version in `package.json`: `v<package-version>` or `v<package-version>_<commit-sha-prefix>`. The suffix must contain at least seven lowercase hexadecimal characters matching the start of the tagged commit SHA. The underscore keeps `v1.0.0_884e28b` valid without accidentally accepting a different version such as `v1.0.01`. The release workflow repeats every lint, type, architecture, unused-code, unit, shell, build, manifest, and MCP protocol gate before publishing. npm publication includes provenance, and the GitHub release is created with generated notes only after publication succeeds.
 
 All GitHub Actions are pinned to full commit SHAs with version comments. Dependabot maintains those immutable pins through the `github-actions` ecosystem.
 
