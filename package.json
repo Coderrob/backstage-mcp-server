@@ -6,7 +6,7 @@
     "@backstage/catalog-model": "^1.10.1",
     "@coderrob/mcp-kernel": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.31.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@coderrob/eslint-plugin-zero-tolerance": "^1.2.6",
